@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VSD HW1｜專有名詞互動學習首頁</title>
+<style>
+:root{--bg:#f3f7f1;--ink:#172019;--muted:#607064;--green:#315f25;--green2:#57853c;--line:#d7e4d3;--paper:#fff;--soft:#eaf3e5}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.7}
+.hero{background:radial-gradient(circle at 82% 18%,#6e9b50 0 5%,transparent 6%),linear-gradient(135deg,#122019,#315f25 60%,#527d3c);color:#fff;padding:64px 20px 55px}
+.wrap{max-width:1180px;margin:auto} .badge{display:inline-block;padding:6px 12px;border:1px solid #ffffff55;border-radius:999px;background:#ffffff14;font-size:13px}
+h1{font-size:clamp(35px,6vw,62px);line-height:1.08;margin:16px 0 12px} .hero p{max-width:850px;font-size:18px;color:#edf5e9}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:25px} .stat{padding:11px 15px;background:#ffffff12;border:1px solid #ffffff35;border-radius:12px} .stat b{font-size:22px}
+main{max-width:1180px;margin:auto;padding:28px 18px 70px} h2{font-size:27px;margin:14px 0 8px} .sub{color:var(--muted);margin-top:0}
+.map{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0 34px} .phase{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px} .phase b{color:var(--green)} .phase small{display:block;color:var(--muted);margin-top:5px}
+.flow{display:flex;gap:7px;align-items:center;overflow:auto;padding:8px 0 20px} .flow span{white-space:nowrap;background:var(--soft);border:1px solid #c8dac0;border-radius:999px;padding:7px 11px;font-size:13px} .flow i{font-style:normal;color:#83917f}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.chapter{display:grid;grid-template-columns:185px 1fr;text-decoration:none;color:inherit;background:var(--paper);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 6px 20px #23331d0b;transition:.2s}
+.chapter:hover{transform:translateY(-3px);box-shadow:0 12px 28px #23331d18;border-color:#a9c49c}
+.art{min-height:205px;position:relative;overflow:hidden;background:linear-gradient(145deg,#dcebd4,#8eb276);display:flex;align-items:center;justify-content:center}
+.art:before{content:"";position:absolute;width:135px;height:135px;border:24px solid #ffffff35;border-radius:50%;right:-40px;top:-35px}
+.art:after{content:"";position:absolute;width:100px;height:100px;background:#ffffff25;transform:rotate(45deg);left:-45px;bottom:-45px}
+.num{position:absolute;top:12px;left:14px;font-size:13px;font-weight:800;letter-spacing:.12em;color:#274b1c} .icon{font-size:68px;filter:drop-shadow(0 5px 8px #274b1c33);z-index:1}
+.wave{position:absolute;bottom:-25px;width:140%;height:65px;background:#ffffff32;border-radius:50% 50% 0 0}
+.cardbody{padding:18px 20px} .eyebrow{font-size:12px;font-weight:800;letter-spacing:.08em;color:#6a8a59} h3{font-size:22px;margin:3px 0 6px;color:#294f1e} .keys{font-size:13px;font-weight:700;color:#64765e;margin:0 0 8px} .cardbody p:not(.keys){font-size:14px;margin:0 0 10px;color:#536052} .go{font-weight:800;color:#315f25}
+.legend{background:#fff;border:1px solid var(--line);border-radius:17px;padding:20px;margin:30px 0} .legend-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px} .tag{background:#f7faf5;border-left:4px solid #6f9b57;padding:12px;border-radius:8px} .tag b{display:block}
+.notice{background:#fff7d9;border:1px solid #eadca0;border-radius:14px;padding:15px;margin-top:22px}
+footer{text-align:center;color:#738071;padding:28px}
+@media(max-width:900px){.map{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+@media(max-width:620px){.chapter{grid-template-columns:1fr}.art{min-height:145px}.map,.legend-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap">
+<span class="badge">VLSI System Design 2026 Fall · HW1 Glossary Hub</span>
+<h1>VSD HW1<br>專有名詞互動學習首頁</h1>
+<p>把十份名詞頁整合成一張學習地圖：先從硬體與 RISC-V 指令編碼進入 ALU，再走到 IEEE-754 與 FPU，最後銜接模擬、檔案結構、工具與評分規則。點下面任何「圖片式卡片」即可進入對應的互動下拉頁。</p>
+<div class="stats"><div class="stat"><b>10</b> 個主題頁</div><div class="stat"><b>314</b> 個下拉條目</div><div class="stat"><b>2+</b> 每個名詞至少兩個例子</div><div class="stat"><b>4</b> 大知識分類</div></div>
+</div></header>
+
+<main>
+<section>
+<h2>整體專有名詞分布</h2>
+<p class="sub">十章不是彼此獨立，而是沿著「基礎 → 指令 → 浮點運算 → 驗證繳交」逐步連接。</p>
+<div class="map">
+<div class="phase"><b>① 基礎與編碼</b><small>01–02｜硬體名詞、RISC-V instruction fields、decode</small></div>
+<div class="phase"><b>② ALU 指令系統</b><small>03–05｜RV32IM、RV32B、Custom DSP，共同構成 HW1 ALU 主體</small></div>
+<div class="phase"><b>③ IEEE-754 / FPU</b><small>06–09｜浮點格式、特殊值、ADD/SUB+GRS、FPU interface</small></div>
+<div class="phase"><b>④ 驗證與提交</b><small>10｜Simulation、VCS、Superlint、檔案階層、評分與遲交</small></div>
+</div>
+<div class="flow"><span>硬體基礎</span><i>→</i><span>Instruction Format</span><i>→</i><span>RV32IM</span><i>→</i><span>RV32B</span><i>→</i><span>DSP</span><i>→</i><span>IEEE-754</span><i>→</i><span>Special Cases</span><i>→</i><span>ADD/SUB + GRS</span><i>→</i><span>FPU I/O</span><i>→</i><span>Simulation & Submission</span></div>
+</section>
+
+<section>
+<h2>十個圖片式入口</h2>
+<p class="sub">每張卡片都是可點擊連結；所有頁面放在同一資料夾時即可離線互相開啟。</p>
+<div class="grid">
+    <a class="chapter c1" href="01_課程架構與基本硬體名詞.html">
+      <div class="art">
+        <div class="num">01</div>
+        <div class="icon">🧩</div>
+        <div class="wave"></div>
+      </div>
+      <div class="cardbody">
+        <div class="eyebrow">CHAPTER 01 · 19 個條目</div>
+        <h3>硬體基礎</h3>
+        <p class="keys">VSD · VLSI · ALU · FPU · RTL</p>
+        <p>建立整份 HW1 的硬體語言與架構基礎。</p>
+        <span class="go">進入互動名詞頁 →</span>
+      </div>
+    </a>
+    <a class="chapter c2" href="02_RISC-V指令欄位.html">
+      <div class="art">
+        <div class="num">02</div>
+        <div class="icon">🧱</div>
+        <div class="wave"></div>
+      </div>
+      <div class="cardbody">
+        <div class="eyebrow">CHAPTER 02 · 23 個條目</div>
+        <h3>RISC-V 指令欄位</h3>
+        <p class="keys">opcode · funct7 · funct3 · rs1 · rs2 · rd</p>
+        <p>看懂 32-bit instruction 如何切欄位、如何 decode。</p>
+        <span class="go">進入互動名詞頁 →</span>
+      </div>
+    </a>
+    <a class="chapter c3" href="03_RV32IM_14個ALU指令.html">
+      <div class="art">
+        <div class="num">03</div>
+        <div class="icon">⚙️</div>
+        <div class="wave"></div>
+      </div>
+      <div class="cardbody">
+        <div class="eyebrow">CHAPTER 03 · 25 個條目</div>
+        <h3>RV32IM ALU</h3>
+        <p class="keys">ADD · SUB · Shift · Compare · MUL</p>
+        <p>14 個 RV32IM 指令與 signed/unsigned、high/low 32-bit。</p>
+        <span class="go">進入互動名詞頁 →</span>
+      </div>
+    </a>
+    <a class="chapter c4" href="04_RV32B_12個Bit-Manipulation指令.html">
+      <div class="art">
+        <div class="num">04</div>
+        <div class="icon">🔢</div>
+        <div class="wave"></div>
+      </div>
+      <div class="cardbody">
+        <div class="eyebrow">CHAPTER 04 · 29 個條目</div>
+        <h3>RV32B Bit Manipulation</h3>
+        <p class="keys">CLZ · CTZ · CPOP · ROL/ROR · BSET/BCLR/BEXT</p>
+        <p>12 個位元操作指令與 bit index、mask、rotate。</p>
+        <span class="go">進入互動名詞頁 →</span>
+      </div>
+    </a>
+    <a class="chapter c5" href="05_Custom_DSP_5個指令.html">
+      <div class="art">
+        <div class="num">05</div>
+        <div class="icon">🎛️</div>
+        <div class="wave"></div>
+      </div>
+      <div class="cardbody">
+        <div class="eyebrow">CHAPTER 05 · 27 個條目</div>
+        <h3>Custom DSP</h3>
+        <p class="keys">DOTP4 · SADD8 · SSUB8 · ABS · CLIP8</p>
+        <p>5 個自訂 DSP 指令、packed byte lane 與 saturation。</p>
+        <span class="go">進入互動名詞頁 →</span>
+      </div>
+    </a>
+    <a class="chapter c6" href="06_IEEE-754浮點數.html">
+      <div class="art">
+        <div class="num">06</div>
+        <div class="icon">📐</div>
+        <div class="wave"></div>
+      </div>
+      <div class="cardbody">
+        <div class="eyebrow">CHAPTER 06 · 31 個條目</div>
+        <h3>IEEE-754 浮點數</h3>
+        <p class="keys">Sign · Exponent · Fraction · Mantissa · GRS</p>
+        <p>32-bit single precision 的表示法、bias 與 round-to-even 基礎。</p>
+        <span class="go">進入互動名詞頁 →</span>
+      </div>
+    </a>
+    <a class="chapter c7" href="07_FPU特殊值與比較.html">
+      <div class="art">
+        <div class="num">07</div>
+        <div class="icon">♾️</div>
+        <div class="wave"></div>
+      </div>
+      <div class="cardbody">
+        <div class="eyebrow">CHAPTER 07 · 32 個條目</div>
+        <h3>FPU 特殊值與比較</h3>
+        <p class="keys">NaN · Infinity · Zero · MIN · MAX</p>
+        <p>先辨識特殊值，再理解浮點 MIN/MAX 的比較行為。</p>
+        <span class="go">進入互動名詞頁 →</span>
+      </div>
+    </a>
+    <a class="chapter c8" href="08_FPU_ADD-SUB流程與GRS.html">
+      <div class="art">
+        <div class="num">08</div>
+        <div class="icon">🧮</div>
+        <div class="wave"></div>
+      </div>
+      <div class="cardbody">
+        <div class="eyebrow">CHAPTER 08 · 36 個條目</div>
+        <h3>FPU ADD/SUB + GRS</h3>
+        <p class="keys">Align · Mantissa · Normalize · G/R/S · Round</p>
+        <p>完整浮點加減法資料路徑與 round-to-nearest-even。</p>
+        <span class="go">進入互動名詞頁 →</span>
+      </div>
+    </a>
+    <a class="chapter c9" href="09_FPU介面與資料傳輸.html">
+      <div class="art">
+        <div class="num">09</div>
+        <div class="icon">🔌</div>
+        <div class="wave"></div>
+      </div>
+      <div class="cardbody">
+        <div class="eyebrow">CHAPTER 09 · 39 個條目</div>
+        <h3>FPU 介面與資料傳輸</h3>
+        <p class="keys">clk · rst · enable · ai/bi · co · valid</p>
+        <p>從 feed data 到 wait valid、compare golden 的 transaction 流程。</p>
+        <span class="go">進入互動名詞頁 →</span>
+      </div>
+    </a>
+    <a class="chapter c10" href="10_模擬檔案工具與評分.html">
+      <div class="art">
+        <div class="num">10</div>
+        <div class="icon">🧰</div>
+        <div class="wave"></div>
+      </div>
+      <div class="cardbody">
+        <div class="eyebrow">CHAPTER 10 · 53 個條目</div>
+        <h3>模擬、工具與評分</h3>
+        <p class="keys">VCS · Superlint · Testbench · TAR · Moodle</p>
+        <p>整理 simulation、file hierarchy、commands、grading 與 late policy。</p>
+        <span class="go">進入互動名詞頁 →</span>
+      </div>
+    </a></div>
+</section>
+
+<section class="legend">
+<h2>分類方式</h2>
+<div class="legend-grid">
+<div class="tag"><b>架構／介面類</b>ALU、FPU、RTL、module、signal、clock、reset、enable、valid、datapath。</div>
+<div class="tag"><b>ISA／指令類</b>opcode、funct7、funct3、RV32IM、RV32B、DSP、shift、comparison、bit manipulation。</div>
+<div class="tag"><b>數值／演算法類</b>IEEE-754、sign/exponent/fraction、NaN/Inf/Zero、alignment、normalization、GRS、rounding。</div>
+<div class="tag"><b>驗證／工具類</b>testbench、pattern、golden、simulation、VCS、Superlint、coverage。</div>
+<div class="tag"><b>檔案／提交類</b>Src、Sim、Pattern、.sv、.csv、.pdf、.tar、Moodle、SoC Lab environment。</div>
+<div class="tag"><b>評分類</b>ALU 40%、FPU 40%、Report 20%、lint/format penalty、late submission multiplier。</div>
+</div>
+</section>
+
+<div class="notice"><b>建議閱讀順序：</b>第一次讀建議依 01 → 10；若正在寫 ALU，集中讀 02–05；若正在寫 FPU，集中讀 06–09；要跑測試或準備繳交時直接進 10。</div>
+</main>
+<footer>VSD HW1 · Interactive Glossary Index · 10 Chapters / 314 Terms</footer>
+</body></html>
