@@ -1,0 +1,6 @@
+Icarus zero-delay functional GLS
+Compile: PASS
+Simulation: PASS
+Expected: 0 1 1 0
+Actual:   0 1 1 0
+Mismatch: 0
