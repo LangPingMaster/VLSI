@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ControlStructures.html — Verilog if / case / casex / casez / for</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#64748b;--blue:#2563eb;--teal:#0f766e;--green:#059669;--orange:#d97706;--red:#dc2626;--line:#dbe3ec;--code:#0f172a}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;line-height:1.82}
+header{background:linear-gradient(135deg,#1e3a8a,#0f766e 62%,#115e59);color:#fff;padding:52px 24px 44px}
+header .inner,.wrap,nav .bar{max-width:1180px;margin:auto}
+header h1{margin:0 0 10px;font-size:2.2rem}header p{max-width:1000px;margin:5px 0;opacity:.96}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.tag{padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);font-size:.88rem}
+nav{position:sticky;top:0;z-index:20;background:rgba(245,247,251,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+nav .bar{padding:8px 20px;display:flex;gap:10px;overflow:auto;white-space:nowrap}nav a{color:#0f766e;text-decoration:none;padding:5px 9px;border-radius:8px;font-size:.9rem}nav a:hover{background:#e2e8f0}
+.wrap{padding:28px 20px 80px}.card{background:var(--card);border-radius:18px;padding:26px;margin:22px 0;box-shadow:0 8px 28px rgba(15,23,42,.07)}
+h2{margin:0 0 16px;color:#134e4a;border-left:6px solid #14b8a6;padding-left:12px}h3{color:#1d4ed8;margin-top:26px}
+code,pre{font-family:Consolas,"Courier New",monospace}pre{background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;overflow:auto;line-height:1.55}
+table{width:100%;border-collapse:collapse;margin:16px 0}th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{padding:14px 16px;border-radius:10px;margin:16px 0}.note{background:#fff7ed;border-left:5px solid #f59e0b}.tip{background:#eff6ff;border-left:5px solid #3b82f6}.warn{background:#fef2f2;border-left:5px solid #ef4444}.key{background:#ecfdf5;border-left:5px solid #10b981}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}.mini{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px}
+.toc ol{columns:2;column-gap:34px}.toc li{margin:7px 0;break-inside:avoid}.toc a{color:#0f766e;text-decoration:none}
+.quiz{border:1px dashed #94a3b8;border-radius:14px;padding:14px 16px;margin:12px 0;background:#fff}.quiz summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+@media(max-width:800px){header h1{font-size:1.7rem}.toc ol{columns:1}}
+</style>
+</head>
+<body>
+<header><div class="inner">
+<h1>Verilog 常用控制結構：if / case / casex / casez / for</h1>
+<p>詳細說明 Behavioral / RTL 中常見的流程控制結構，並加入 MUX、Decoder、Priority Encoder、ALU、FSM、Bit Count 等大量範例。</p>
+<div class="tags"><span class="tag">if / else</span><span class="tag">case</span><span class="tag">casex</span><span class="tag">casez</span><span class="tag">for loop</span><span class="tag">synthesis</span></div>
+</div></header>
+
+<nav><div class="bar">
+<a href="#overview">總覽</a><a href="#if">if</a><a href="#case">case</a><a href="#casex">casex</a><a href="#casez">casez</a><a href="#for">for</a><a href="#compare">比較</a><a href="#examples">大量例子</a><a href="#pitfalls">常見錯誤</a>
+</div></nav>
+
+<main class="wrap">
+<section class="card toc"><h2>目錄</h2><ol>
+<li><a href="#overview">控制結構是什麼？</a></li><li><a href="#if">if / else</a></li><li><a href="#case">case</a></li>
+<li><a href="#casex">casex</a></li><li><a href="#casez">casez</a></li><li><a href="#for">for loop</a></li>
+<li><a href="#compare">五種結構比較</a></li><li><a href="#examples">大量 Verilog 範例</a></li>
+<li><a href="#synthesis">Synthesis 觀點</a></li><li><a href="#latch">Latch 問題</a></li><li><a href="#pitfalls">常見錯誤</a></li>
+</ol></section>
+
+<section class="card" id="overview"><h2>1. 控制結構是什麼？</h2>
+<p>在 Behavioral Modeling 中，控制結構用來描述「不同條件下硬體該選哪條資料路徑、執行哪個動作」。課程將 <code>if</code>、<code>case</code>、<code>casex</code>、<code>casez</code>、<code>for</code> 列為常見 synthesis tool 支援的 constructs。</p>
+<div class="grid3">
+<div class="mini"><h3 style="margin-top:0">if</h3><p>條件判斷、priority logic。</p></div>
+<div class="mini"><h3 style="margin-top:0">case</h3><p>selector / opcode / state decode。</p></div>
+<div class="mini"><h3 style="margin-top:0">casex / casez</h3><p>wildcard / don't-care matching。</p></div>
+<div class="mini"><h3 style="margin-top:0">for</h3><p>重複描述相似硬體。</p></div>
+</div>
+<div class="key"><b>關鍵：</b>它們不是在 CPU 上「跑流程」，而是在描述要合成出的硬體結構。</div>
+</section>
+
+<section class="card" id="if"><h2>2. if / else Statement</h2>
+<h3>基本語法</h3><pre><code>if (condition)
+    statement1;
+else
+    statement2;</code></pre>
+<h3>例 1：2-to-1 MUX</h3><pre><code>always @(*) begin
+    if (sel)
+        y = b;
+    else
+        y = a;
+end</code></pre>
+<h3>例 2：課程中的巢狀 if 4-to-1 MUX</h3><pre><code>always @(*) begin
+    if (s1) begin
+        if (s0) out = i3;
+        else    out = i2;
+    end
+    else begin
+        if (s0) out = i1;
+        else    out = i0;
+    end
+end</code></pre>
+<h3>例 3：Priority Encoder</h3><pre><code>always @(*) begin
+    if      (req[3]) code = 2'd3;
+    else if (req[2]) code = 2'd2;
+    else if (req[1]) code = 2'd1;
+    else             code = 2'd0;
+end</code></pre>
+<div class="tip"><b>if / else if 有優先順序。</b>若多個條件同時成立，最前面的條件優先。</div>
+</section>
+
+<section class="card" id="case"><h2>3. case Statement</h2>
+<h3>基本語法</h3><pre><code>case (expression)
+    value1 : statement1;
+    value2 : statement2;
+    default: statement_default;
+endcase</code></pre>
+<h3>課程 4-to-1 MUX</h3><pre><code>always @(I0 or I1 or I2 or I3 or S)
+case (S)
+    2'b00: Y = I0;
+    2'b01: Y = I1;
+    2'b10: Y = I2;
+    2'b11: Y = I3;
+endcase</code></pre>
+<h3>建議加入 default</h3><pre><code>always @(*) begin
+    case(sel)
+        2'b00: y = a;
+        2'b01: y = b;
+        2'b10: y = c;
+        2'b11: y = d;
+        default: y = 0;
+    endcase
+end</code></pre>
+<div class="key"><code>case</code> 很適合 MUX、ALU opcode、FSM state decoding。</div>
+</section>
+
+<section class="card" id="casex"><h2>4. casex Statement</h2>
+<p>課程說明 <code>casex</code> 把 <b>x 與 z 都當成 don't care</b>，只比較非 x / z 的位置。</p>
+<h3>課程範例：Count Trailing Zeros</h3><pre><code>always @(data)
+casex (data)
+    4'bxxx1: out = 0;
+    4'bxx10: out = 1;
+    4'bx100: out = 2;
+    4'b1000: out = 3;
+    4'b0000: out = 4;
+    default: out = 3'b111;
+endcase</code></pre>
+<p><code>4'bxxx1</code> 代表只要最低位是 1，其餘位元不重要。</p>
+<div class="warn"><b>實務注意：</b>casex 可能把 simulation 中真正的未知 X 也掩蓋成 don't care，因此 RTL 使用要非常謹慎。</div>
+</section>
+
+<section class="card" id="casez"><h2>5. casez Statement</h2>
+<p>課程說明 <code>casez</code> 將 <b>z 視為 don't care</b>；相較 casex，它不會同樣把所有 x 都忽略。</p>
+<h3>Priority Pattern</h3><pre><code>always @(*) begin
+    casez(req)
+        4'b1???: code = 2'd3;
+        4'b01??: code = 2'd2;
+        4'b001?: code = 2'd1;
+        4'b0001: code = 2'd0;
+        default: code = 2'd0;
+    endcase
+end</code></pre>
+<div class="note"><code>?</code> 常用作 wildcard pattern，讓不重要的位元不必逐一列出。</div>
+</section>
+
+<section class="card" id="for"><h2>6. for Loop</h2>
+<h3>基本語法</h3><pre><code>for (initialization; condition; update)
+    statement;</code></pre>
+<h3>課程範例：Count Zeros in a Byte</h3><pre><code>integer i;
+
+always @(data) begin
+    out = 0;
+    for (i = 0; i <= 7; i = i + 1)
+        if (data[i] == 0)
+            out = out + 1;
+end</code></pre>
+<p>此程式逐一檢查 8 個 bit，每遇到一個 0 就累加 out。</p>
+<div class="key"><b>可合成 for loop 通常會被展開。</b>它不代表硬體一定花 8 個 clock 跑 8 次。</div>
+</section>
+
+<section class="card" id="compare"><h2>7. 五種結構比較</h2>
+<table>
+<tr><th>結構</th><th>適合用途</th><th>特色</th></tr>
+<tr><td><code>if</code></td><td>priority / condition</td><td>有先後優先順序</td></tr>
+<tr><td><code>case</code></td><td>MUX / opcode / state</td><td>精確 selector matching</td></tr>
+<tr><td><code>casex</code></td><td>wildcard pattern</td><td>x、z 都可 don't care</td></tr>
+<tr><td><code>casez</code></td><td>wildcard pattern</td><td>z / ? 可 don't care</td></tr>
+<tr><td><code>for</code></td><td>重複邏輯</td><td>常被 synthesis 展開</td></tr>
+</table>
+</section>
+
+<section class="card" id="examples"><h2>8. 大量 Verilog 範例</h2>
+<h3>例 1：if — Enable</h3><pre><code>always @(*) begin
+    if (en) y = a & b;
+    else    y = 0;
+end</code></pre>
+
+<h3>例 2：if — Max</h3><pre><code>always @(*) begin
+    if (a > b) max = a;
+    else       max = b;
+end</code></pre>
+
+<h3>例 3：if / else if — Saturation</h3><pre><code>always @(*) begin
+    if      (x > 8'd200) y = 8'd200;
+    else if (x < 8'd20)  y = 8'd20;
+    else                 y = x;
+end</code></pre>
+
+<h3>例 4：if — Register Enable</h3><pre><code>always @(posedge clk)
+    if (en)
+        q <= d;</code></pre>
+
+<h3>例 5：if — Async Reset</h3><pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) q <= 0;
+    else        q <= d;
+end</code></pre>
+
+<h3>例 6：case — 4-to-1 MUX</h3><pre><code>always @(*) begin
+    case(sel)
+        2'd0: y = a;
+        2'd1: y = b;
+        2'd2: y = c;
+        2'd3: y = d;
+    endcase
+end</code></pre>
+
+<h3>例 7：case — ALU</h3><pre><code>always @(*) begin
+    case(op)
+        3'b000: y = a + b;
+        3'b001: y = a - b;
+        3'b010: y = a & b;
+        3'b011: y = a | b;
+        3'b100: y = a ^ b;
+        default: y = 0;
+    endcase
+end</code></pre>
+
+<h3>例 8：case — Decoder</h3><pre><code>always @(*) begin
+    case(sel)
+        2'b00: y = 4'b0001;
+        2'b01: y = 4'b0010;
+        2'b10: y = 4'b0100;
+        2'b11: y = 4'b1000;
+    endcase
+end</code></pre>
+
+<h3>例 9：case — FSM</h3><pre><code>always @(*) begin
+    next_state = state;
+    case(state)
+        IDLE: if (start) next_state = RUN;
+        RUN : if (done)  next_state = IDLE;
+        default: next_state = IDLE;
+    endcase
+end</code></pre>
+
+<h3>例 10：casex — Priority Match</h3><pre><code>always @(*) begin
+    casex(req)
+        4'b1xxx: code = 2'd3;
+        4'b01xx: code = 2'd2;
+        4'b001x: code = 2'd1;
+        4'b0001: code = 2'd0;
+        default: code = 0;
+    endcase
+end</code></pre>
+
+<h3>例 11：casez — Priority Encoder</h3><pre><code>always @(*) begin
+    casez(req)
+        4'b1???: code = 2'd3;
+        4'b01??: code = 2'd2;
+        4'b001?: code = 2'd1;
+        4'b0001: code = 2'd0;
+        default: code = 0;
+    endcase
+end</code></pre>
+
+<h3>例 12：for — Count Ones</h3><pre><code>integer i;
+always @(*) begin
+    count = 0;
+    for (i = 0; i < 8; i = i + 1)
+        if (data[i])
+            count = count + 1;
+end</code></pre>
+
+<h3>例 13：for — Reverse Bits</h3><pre><code>integer i;
+always @(*) begin
+    for (i = 0; i < 8; i = i + 1)
+        y[i] = a[7-i];
+end</code></pre>
+
+<h3>例 14：for — Parity</h3><pre><code>integer i;
+always @(*) begin
+    parity = 0;
+    for (i = 0; i < 8; i = i + 1)
+        parity = parity ^ data[i];
+end</code></pre>
+
+<h3>例 15：for — Find First One</h3><pre><code>integer i;
+always @(*) begin
+    found = 0;
+    pos = 0;
+    for (i = 0; i < 8; i = i + 1) begin
+        if (!found && data[i]) begin
+            found = 1;
+            pos = i;
+        end
+    end
+end</code></pre>
+
+<h3>例 16：for — Reset Register Array</h3><pre><code>integer i;
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        for (i = 0; i < 8; i = i + 1)
+            regs[i] <= 0;
+    end
+end</code></pre>
+</section>
+
+<section class="card" id="synthesis"><h2>9. Synthesis 觀點</h2>
+<div class="grid3">
+<div class="mini"><h3 style="margin-top:0">if</h3><p>常形成 MUX / priority MUX。</p></div>
+<div class="mini"><h3 style="margin-top:0">case</h3><p>常形成 selection / decode logic。</p></div>
+<div class="mini"><h3 style="margin-top:0">for</h3><p>固定範圍時通常展開成重複硬體。</p></div>
+</div>
+<div class="note">課程明確把 <code>case/casex/casez/default</code>、<code>if/else</code>、<code>for loop</code> 列為 synthesis tools 常見支援的 language constructs。</div>
+</section>
+
+<section class="card" id="latch"><h2>10. Incomplete Assignment 與 Latch</h2>
+<h3>錯誤</h3><pre><code>always @(*) begin
+    if (en)
+        y = a;
+end</code></pre>
+<p>en=0 時 y 沒有新值，可能推導出 latch。</p>
+<h3>修正</h3><pre><code>always @(*) begin
+    if (en) y = a;
+    else    y = b;
+end</code></pre>
+<p>case 也是同樣原則：要覆蓋所有情況，常用 <code>default</code> 或 block 一開始先給 default value。</p>
+</section>
+
+<section class="card" id="pitfalls"><h2>11. 常見錯誤與考試重點</h2>
+<div class="warn"><b>if / else if：</b>有 priority，別忽略先後順序。</div>
+<div class="warn"><b>case：</b>combinational logic 未涵蓋所有狀態可能推導 latch。</div>
+<div class="warn"><b>casex：</b>可能掩蓋真實 X，實務上須謹慎。</div>
+<div class="warn"><b>for：</b>不要誤以為等同「跑 N 個 clock」；固定迴圈通常被硬體展開。</div>
+<div class="warn"><b>累加型 for：</b>進入 combinational block 時要先初始化 accumulator。</div>
+</section>
+
+<section class="card"><h2>12. 自我測驗</h2>
+<details class="quiz"><summary>Q1：if / else if 有 priority 嗎？</summary><p>有，越前面的條件優先。</p></details>
+<details class="quiz"><summary>Q2：case 最常用於什麼？</summary><p>MUX、opcode decode、state decode。</p></details>
+<details class="quiz"><summary>Q3：casex 把什麼當 don't care？</summary><p>x 與 z。</p></details>
+<details class="quiz"><summary>Q4：casez 的特色？</summary><p>z（以及常用 ? pattern）可作 wildcard。</p></details>
+<details class="quiz"><summary>Q5：for loop 8 次是否等於 8 個 clock？</summary><p>通常不是；固定範圍可由 synthesis 展開成硬體。</p></details>
+</section>
+
+<section class="card"><h2>13. 一頁記憶版</h2>
+<table>
+<tr><th>關鍵字</th><th>一句話記憶</th></tr>
+<tr><td>if</td><td>條件 + priority</td></tr>
+<tr><td>case</td><td>selector 精確選擇</td></tr>
+<tr><td>casex</td><td>x / z wildcard</td></tr>
+<tr><td>casez</td><td>z / ? wildcard</td></tr>
+<tr><td>for</td><td>重複描述，常被展開</td></tr>
+</table>
+<div class="key"><b>最後一句：</b>if 強調條件與優先順序；case 強調 selector；casex/casez 強調 wildcard；for 強調重複硬體描述。</div>
+</section>
+
+<div class="footer">ControlStructures.html — Verilog if / case / casex / casez / for 詳細教學</div>
+</main>
+</body>
+</html>

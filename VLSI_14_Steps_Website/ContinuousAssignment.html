@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContinuousAssignment.html — Verilog Continuous Assignment（連續指定）完整教學</title>
+<style>
+:root{
+  --bg:#f5f7fb; --card:#ffffff; --text:#1f2937; --muted:#64748b;
+  --blue:#2563eb; --cyan:#0891b2; --green:#059669; --orange:#d97706;
+  --red:#dc2626; --purple:#7c3aed; --line:#dbe3ec; --code:#0f172a;
+  --teal:#0f766e; --soft:#f8fafc;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;
+  line-height:1.82;
+}
+header{
+  background:linear-gradient(135deg,#1e40af,#0f766e 60%,#115e59);
+  color:#fff;padding:52px 24px 44px;
+}
+header .inner{max-width:1180px;margin:auto}
+header h1{margin:0 0 10px;font-size:2.25rem}
+header p{margin:5px 0;max-width:980px;opacity:.96}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tag{
+  padding:5px 10px;border-radius:999px;
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);
+  font-size:.88rem
+}
+nav{
+  position:sticky;top:0;z-index:20;background:rgba(245,247,251,.95);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px)
+}
+nav .bar{
+  max-width:1180px;margin:auto;padding:8px 20px;
+  display:flex;gap:10px;overflow:auto;white-space:nowrap
+}
+nav a{
+  text-decoration:none;color:#0f766e;padding:5px 9px;border-radius:8px;font-size:.9rem
+}
+nav a:hover{background:#e2e8f0}
+.wrap{max-width:1180px;margin:auto;padding:28px 20px 80px}
+.card{
+  background:var(--card);border-radius:18px;padding:26px;margin:22px 0;
+  box-shadow:0 8px 28px rgba(15,23,42,.07);
+}
+h2{
+  margin:0 0 16px;color:#134e4a;
+  border-left:6px solid #14b8a6;padding-left:12px
+}
+h3{color:#1d4ed8;margin-top:26px}
+h4{color:#7c3aed;margin:18px 0 8px}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{
+  background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;
+  overflow:auto;line-height:1.55;position:relative
+}
+.inline{
+  background:#e2e8f0;padding:2px 6px;border-radius:6px;
+  font-family:Consolas,"Courier New",monospace
+}
+.copy-btn{
+  float:right;border:0;border-radius:8px;padding:6px 10px;
+  background:#334155;color:#fff;cursor:pointer;font-size:.8rem
+}
+.copy-btn:hover{background:#475569}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}
+th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{
+  padding:14px 16px;border-radius:10px;margin:16px 0
+}
+.note{background:#fff7ed;border-left:5px solid #f59e0b}
+.tip{background:#eff6ff;border-left:5px solid #3b82f6}
+.warn{background:#fef2f2;border-left:5px solid #ef4444}
+.key{background:#ecfdf5;border-left:5px solid #10b981}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mini{
+  background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px
+}
+.flow{
+  display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:22px 0
+}
+.box{
+  min-width:150px;text-align:center;padding:14px 16px;
+  border:2px solid #67e8f9;background:#ecfeff;border-radius:13px;font-weight:700
+}
+.box small{display:block;color:#475569;font-weight:500;margin-top:5px}
+.arrow{font-size:1.6rem;color:#64748b}
+.toc ol{columns:2;column-gap:34px}
+.toc li{margin:7px 0;break-inside:avoid}
+.toc a{color:#0f766e;text-decoration:none}
+.quiz{border:1px dashed #94a3b8;border-radius:14px;padding:14px 16px;margin:12px 0;background:#fff}
+.quiz summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+@media(max-width:800px){
+  header h1{font-size:1.75rem}
+  .toc ol{columns:1}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <h1>Verilog Continuous Assignment（連續指定）完整教學</h1>
+    <p>
+      從 <code>assign</code> 的核心概念開始，理解為什麼它適合描述 combinational logic、
+      它如何驅動 wire、何時重新計算，以及它和 procedural assignment 的差別。
+    </p>
+    <p>本頁加入大量 Boolean、MUX、Comparator、Adder、Decoder、Shift、Concatenation 等範例。</p>
+    <div class="tags">
+      <span class="tag">assign</span>
+      <span class="tag">wire / net</span>
+      <span class="tag">combinational logic</span>
+      <span class="tag">operators</span>
+      <span class="tag">conditional operator</span>
+      <span class="tag">synthesis</span>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="bar">
+    <a href="#overview">總覽</a>
+    <a href="#syntax">基本語法</a>
+    <a href="#event">事件與更新</a>
+    <a href="#operators">運算子</a>
+    <a href="#examples">大量例子</a>
+    <a href="#conditional">?:</a>
+    <a href="#vectors">向量</a>
+    <a href="#delay">delay</a>
+    <a href="#vsalways">assign vs always</a>
+    <a href="#pitfalls">常見錯誤</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section class="card toc">
+  <h2>目錄</h2>
+  <ol>
+    <li><a href="#overview">Continuous Assignment 是什麼？</a></li>
+    <li><a href="#syntax">基本語法</a></li>
+    <li><a href="#event">為什麼叫「連續」指定？</a></li>
+    <li><a href="#wire">與 wire / net 的關係</a></li>
+    <li><a href="#operators">常用 operators</a></li>
+    <li><a href="#examples">大量實例</a></li>
+    <li><a href="#conditional">Conditional Operator</a></li>
+    <li><a href="#vectors">Vectors 與 Concatenation</a></li>
+    <li><a href="#delay">Delay 寫法</a></li>
+    <li><a href="#vsalways">assign 與 always @(*) 比較</a></li>
+    <li><a href="#synthesis">Synthesis 觀點</a></li>
+    <li><a href="#pitfalls">常見錯誤與考試重點</a></li>
+  </ol>
+</section>
+
+<section class="card" id="overview">
+  <h2>1. Continuous Assignment 到底是什麼？</h2>
+  <p>
+    在課程投影片中，Continuous Assignment 被介紹成一種描述
+    <b>combinational logic</b> 的方便方式：由 operands 與 operators 組成運算式，
+    並把結果持續驅動到 net。
+  </p>
+
+  <div class="flow">
+    <div class="box">輸入訊號<small>a, b, sel...</small></div>
+    <div class="arrow">→</div>
+    <div class="box">expression<small>例如 a &amp; b</small></div>
+    <div class="arrow">→</div>
+    <div class="box">assign</div>
+    <div class="arrow">→</div>
+    <div class="box">wire / net<small>輸出</small></div>
+  </div>
+
+  <div class="key">
+    <b>一句話：</b><br>
+    <code>assign</code> 表示「右邊只要有任何輸入改變，左邊的 net 就立即依照這個運算式重新計算」。
+  </div>
+</section>
+
+<section class="card" id="syntax">
+  <h2>2. 基本語法</h2>
+
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>assign target_net = expression;</code></pre>
+
+  <p>例如：</p>
+
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire out;
+assign out = a & b;</code></pre>
+
+  <table>
+    <tr><th>部分</th><th>意義</th></tr>
+    <tr><td><code>assign</code></td><td>Continuous assignment 關鍵字</td></tr>
+    <tr><td><code>out</code></td><td>被驅動的 net</td></tr>
+    <tr><td><code>a & b</code></td><td>右側 expression</td></tr>
+    <tr><td><code>;</code></td><td>敘述結束</td></tr>
+  </table>
+
+  <div class="tip">
+    在傳統 Verilog 中，continuous assignment 的左值通常是 <code>wire</code> / net，
+    而不是 procedural <code>reg</code>。
+  </div>
+</section>
+
+<section class="card" id="event">
+  <h2>3. 為什麼叫「Continuous（連續）」Assignment？</h2>
+
+  <p>
+    它不是「只執行一次」。而是建立一條持續存在的硬體規則：
+  </p>
+
+<pre><code>assign y = a & b;</code></pre>
+
+  <p>概念上：</p>
+
+  <div class="flow">
+    <div class="box">a 或 b 改變</div>
+    <div class="arrow">→</div>
+    <div class="box">重新計算 a &amp; b</div>
+    <div class="arrow">→</div>
+    <div class="box">更新 y</div>
+  </div>
+
+  <p>
+    因此它非常符合真實組合邏輯的行為：AND gate 的輸入一變，輸出也跟著改變。
+  </p>
+
+  <div class="note">
+    課程投影片將 continuous assignment 描述為：
+    在 target variable 與 Boolean expression 之間建立 event-scheduling rule，
+    並隱藏 module 內部實際 gate 結構。
+  </div>
+</section>
+
+<section class="card" id="wire">
+  <h2>4. Continuous Assignment 與 wire / net 的關係</h2>
+
+  <h3>4.1 最典型寫法</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire out;
+assign out = a & b;</code></pre>
+
+  <h3>4.2 宣告同時賦值</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] c = a + b;</code></pre>
+
+  <p>
+    課程投影片特別提到，這種寫法可以在 wire 宣告時就附上 continuous assignment。
+  </p>
+
+  <h3>4.3 多個 continuous assignments</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire p, q, y;
+
+assign p = a & b;
+assign q = c | d;
+assign y = p ^ q;</code></pre>
+
+  <p>
+    每一條 <code>assign</code> 都可以看成獨立存在的 combinational hardware。
+    不是從上到下依序執行。
+  </p>
+</section>
+
+<section class="card" id="operators">
+  <h2>5. Continuous Assignment 中常見 Operators</h2>
+
+  <table>
+    <tr><th>類別</th><th>Operators</th><th>例子</th></tr>
+    <tr><td>Arithmetic</td><td><code>+ - * / %</code></td><td><code>assign y = a + b;</code></td></tr>
+    <tr><td>Relational</td><td><code>&gt; &gt;= &lt; &lt;=</code></td><td><code>assign gt = a &gt; b;</code></td></tr>
+    <tr><td>Logical</td><td><code>! &amp;&amp; ||</code></td><td><code>assign valid = en &amp;&amp; ready;</code></td></tr>
+    <tr><td>Equality</td><td><code>== !=</code></td><td><code>assign eq = (a == b);</code></td></tr>
+    <tr><td>Bitwise</td><td><code>~ &amp; | ^ ^~ ~^</code></td><td><code>assign y = a ^ b;</code></td></tr>
+    <tr><td>Reduction</td><td><code>&amp; | ~&amp; ~| ^ ~^</code></td><td><code>assign parity = ^data;</code></td></tr>
+    <tr><td>Shift</td><td><code>&lt;&lt; &gt;&gt;</code></td><td><code>assign y = a &lt;&lt; 2;</code></td></tr>
+    <tr><td>Conditional</td><td><code>?:</code></td><td><code>assign y = sel ? a : b;</code></td></tr>
+    <tr><td>Concatenation</td><td><code>{ }</code></td><td><code>assign y = {a,b};</code></td></tr>
+  </table>
+</section>
+
+<section class="card" id="examples">
+  <h2>6. 大量 Continuous Assignment 範例</h2>
+
+  <h3>例 1：AND Gate</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire y;
+assign y = a & b;</code></pre>
+
+  <h3>例 2：OR Gate</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire y;
+assign y = a | b;</code></pre>
+
+  <h3>例 3：NOT Gate</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire y;
+assign y = ~a;</code></pre>
+
+  <h3>例 4：XOR Gate</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire y;
+assign y = a ^ b;</code></pre>
+
+  <h3>例 5：複合 Boolean Function</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire f;
+assign f = (x1 & x2) | (~x2 & x3);</code></pre>
+
+  <p>
+    這正是課程中用來對照 Structural / Dataflow / Behavioral 的經典函數。
+  </p>
+
+  <h3>例 6：1-bit Full Adder</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire sum, cout;
+
+assign sum  = x ^ y ^ cin;
+assign cout = (x & y) | (x & cin) | (y & cin);</code></pre>
+
+  <h3>例 7：8-bit Adder</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] sum;
+assign sum = a + b;</code></pre>
+
+  <h3>例 8：帶 Carry 的 Adder</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [8:0] result;
+
+assign result = a + b;
+
+wire       cout = result[8];
+wire [7:0] sum  = result[7:0];</code></pre>
+
+  <h3>例 9：一次完成 Sum + Carry</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] sum;
+wire       cout;
+
+assign {cout, sum} = a + b;</code></pre>
+
+  <h3>例 10：Equality Comparator</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire eq;
+assign eq = (a == b);</code></pre>
+
+  <h3>例 11：Magnitude Comparator</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire gt, eq, lt;
+
+assign gt = (a > b);
+assign eq = (a == b);
+assign lt = (a < b);</code></pre>
+
+  <h3>例 12：2-to-1 MUX</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire y;
+assign y = sel ? in1 : in0;</code></pre>
+
+  <h3>例 13：4-to-1 MUX（Nested Conditional Operator）</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] y;
+
+assign y = (sel == 2'b00) ? a :
+           (sel == 2'b01) ? b :
+           (sel == 2'b10) ? c :
+                            d;</code></pre>
+
+  <h3>例 14：Decoder</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [3:0] y;
+
+assign y = 4'b0001 << a;</code></pre>
+
+  <h3>例 15：Logical AND</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire active;
+assign active = valid && ready;</code></pre>
+
+  <div class="note">
+    <code>&amp;</code> 是 bitwise AND；<code>&amp;&amp;</code> 是 logical AND。
+    兩者在多位元 operand 上的語意不同。
+  </div>
+
+  <h3>例 16：Reduction AND</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire all_one;
+assign all_one = &data;</code></pre>
+
+  <p>
+    如果 <code>data[7:0]</code> 的每一個 bit 都是 1，<code>all_one=1</code>。
+  </p>
+
+  <h3>例 17：Parity Generator</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire parity;
+assign parity = ^data;</code></pre>
+
+  <h3>例 18：Shift Left</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] y;
+assign y = a << 2;</code></pre>
+
+  <h3>例 19：Shift Right</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] y;
+assign y = a >> 1;</code></pre>
+
+  <h3>例 20：Mask Operation</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] lower;
+assign lower = data & 8'h0F;</code></pre>
+
+  <h3>例 21：Set Specific Bits</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] y;
+assign y = data | 8'b0000_0011;</code></pre>
+
+  <h3>例 22：Toggle Bits</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] y;
+assign y = data ^ 8'b1010_1010;</code></pre>
+
+  <h3>例 23：Sign Bit Check</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire negative;
+assign negative = data[7];</code></pre>
+
+  <h3>例 24：Zero Detector</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire zero;
+assign zero = (data == 8'h00);</code></pre>
+
+  <h3>例 25：Range Check</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire in_range;
+assign in_range = (x >= 8'd10) && (x <= 8'd100);</code></pre>
+</section>
+
+<section class="card" id="conditional">
+  <h2>7. Conditional Operator <code>?:</code></h2>
+
+  <p>
+    課程投影片指出，conditional operator 的典型形式為：
+  </p>
+
+<pre><code>condition ? true_expression : false_expression</code></pre>
+
+  <p>它很像 software 的 if-then-else，但在硬體裡常對應到 multiplexer。</p>
+
+  <h3>7.1 2-to-1 MUX</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>assign y = sel ? x_in1 : x_in2;</code></pre>
+
+  <h3>7.2 ALU Operation Select</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>assign result = (op == ADD) ? (a + b) : (a - b);</code></pre>
+
+  <h3>7.3 Nested Conditional</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>assign z = ({s1,s0} == 2'b00) ? IA :
+           ({s1,s0} == 2'b01) ? IB :
+           ({s1,s0} == 2'b10) ? IC :
+           ({s1,s0} == 2'b11) ? ID :
+                                1'bx;</code></pre>
+</section>
+
+<section class="card" id="vectors">
+  <h2>8. Vectors 與 Concatenation</h2>
+
+  <h3>8.1 Bit Select</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire msb;
+assign msb = data[7];</code></pre>
+
+  <h3>8.2 Part Select</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [3:0] upper;
+assign upper = data[7:4];</code></pre>
+
+  <h3>8.3 Concatenation</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] y;
+assign y = {a[3:0], b[3:0]};</code></pre>
+
+  <h3>8.4 Replication</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] mask;
+assign mask = {8{enable}};</code></pre>
+
+  <h3>8.5 Zero Extension</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [15:0] y;
+assign y = {8'b0, data8};</code></pre>
+
+  <h3>8.6 Sign Extension</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [15:0] y;
+assign y = {{8{data8[7]}}, data8};</code></pre>
+</section>
+
+<section class="card" id="delay">
+  <h2>9. Continuous Assignment 中的 Delay</h2>
+
+  <p>課程投影片也展示了 delay 寫法：</p>
+
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire #10 inv = ~in;</code></pre>
+
+  <p>
+    這表示模擬時加入 delay。它常用於模擬 timing behavior。
+  </p>
+
+  <div class="warn">
+    <b>重要：</b>這類 delay 語法主要是 simulation behavior。
+    在一般 RTL synthesis flow 中，不應把它當成「要求硬體真的產生 10 個時間單位延遲」的方式。
+  </div>
+</section>
+
+<section class="card" id="vsalways">
+  <h2>10. assign 與 always @(*) 有什麼差別？</h2>
+
+  <div class="grid2">
+    <div class="mini">
+      <h3 style="margin-top:0">Continuous Assignment</h3>
+<pre><code>wire y;
+assign y = a & b;</code></pre>
+      <p>簡單、直接，非常適合單一 expression。</p>
+    </div>
+
+    <div class="mini">
+      <h3 style="margin-top:0">Procedural Combinational</h3>
+<pre><code>reg y;
+always @(*) begin
+    y = a & b;
+end</code></pre>
+      <p>適合較複雜的 if / case / 多步驟組合邏輯。</p>
+    </div>
+  </div>
+
+  <div class="key">
+    若兩者描述的 Boolean function 相同，synthesis 後可能得到相同或等價的硬體。
+  </div>
+</section>
+
+<section class="card" id="synthesis">
+  <h2>11. Synthesis 怎麼看 Continuous Assignment？</h2>
+
+  <div class="flow">
+    <div class="box">Verilog expression</div>
+    <div class="arrow">→</div>
+    <div class="box">Boolean / arithmetic logic</div>
+    <div class="arrow">→</div>
+    <div class="box">Optimization</div>
+    <div class="arrow">→</div>
+    <div class="box">Standard Cells</div>
+  </div>
+
+  <h3>11.1 MUX</h3>
+<pre><code>assign y = sel ? a : b;</code></pre>
+  <p>通常會被推導成 multiplexer。</p>
+
+  <h3>11.2 Adder</h3>
+<pre><code>assign y = a + b;</code></pre>
+  <p>通常會被推導成 combinational adder logic。</p>
+
+  <h3>11.3 Comparator</h3>
+<pre><code>assign eq = (a == b);</code></pre>
+  <p>會形成 equality comparison logic。</p>
+
+  <h3>11.4 Boolean Logic Optimization</h3>
+<pre><code>assign y = (a & b) | (a & c);</code></pre>
+  <p>
+    Synthesis 工具可能把它最佳化成等價形式 <code>a & (b | c)</code>。
+  </p>
+</section>
+
+<section class="card" id="pitfalls">
+  <h2>12. 常見錯誤與考試重點</h2>
+
+  <h3>錯誤 1：造成 combinational loop</h3>
+  <p>課程投影片直接提醒要避免 logic loop，例如：</p>
+
+<pre><code>assign a = b + a;</code></pre>
+
+  <div class="warn">
+    右側又依賴自己，可能形成 combinational feedback loop。
+    除非是非常特殊且刻意的電路，不應在一般 RTL 中這樣寫。
+  </div>
+
+  <h3>錯誤 2：把 assign 當成 sequential execution</h3>
+<pre><code>assign a = x & y;
+assign b = a | z;</code></pre>
+
+  <p>
+    這不是「先執行第一行、再執行第二行」。
+    兩個 continuous assignments 同時存在，像兩組硬體同時工作。
+  </p>
+
+  <h3>錯誤 3：左邊使用 procedural reg</h3>
+<pre><code>// 傳統 Verilog 中不建議/不合法的典型概念
+reg y;
+assign y = a & b;</code></pre>
+
+  <p>continuous assignment 的 target 應該是 net 型別。</p>
+
+  <h3>錯誤 4：混淆 bitwise 與 logical operator</h3>
+<pre><code>// bitwise
+assign y1 = a & b;
+
+// logical
+assign y2 = a && b;</code></pre>
+
+  <p>
+    對單 bit 可能看起來相似，但多位元資料時語意不同。
+  </p>
+
+  <h3>錯誤 5：width 不匹配</h3>
+<pre><code>wire [3:0] y;
+wire [7:0] a;
+
+assign y = a;</code></pre>
+
+  <p>
+    高位可能被截掉。寫 RTL 時要特別留意 vector width。
+  </p>
+</section>
+
+<section class="card">
+  <h2>13. 自我測驗</h2>
+
+  <details class="quiz">
+    <summary>Q1：為什麼 assign 適合描述 combinational logic？</summary>
+    <p>因為任何 RHS 輸入改變時，輸出都會依據 expression 重新計算，符合組合邏輯持續反應的特性。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q2：assign y = sel ? a : b; 通常對應什麼硬體？</summary>
+    <p>2-to-1 multiplexer。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q3：assign y = a + b; 是不是軟體加法？</summary>
+    <p>不是。Synthesis 會把它轉成硬體 adder。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q4：assign a = a + b; 有什麼問題？</summary>
+    <p>可能形成 combinational feedback / logic loop。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q5：多條 assign 會按照程式順序執行嗎？</summary>
+    <p>不會。它們描述同時存在、持續運作的硬體關係。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q6：Continuous assignment 最常驅動什麼型別？</summary>
+    <p>wire / net。</p>
+  </details>
+</section>
+
+<section class="card">
+  <h2>14. 一頁記憶版</h2>
+
+  <div class="grid3">
+    <div class="mini">
+      <h3 style="margin-top:0">語法</h3>
+      <p><code>assign y = expression;</code></p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">用途</h3>
+      <p>描述 combinational logic。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">Target</h3>
+      <p>通常是 wire / net。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">特性</h3>
+      <p>RHS 改變 → LHS 持續更新。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">常見硬體</h3>
+      <p>Gate、MUX、Adder、Comparator、Decoder。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">注意</h3>
+      <p>避免 logic loop 與 width mismatch。</p>
+    </div>
+  </div>
+
+  <div class="key">
+    <b>最後一句：</b><br>
+    Continuous Assignment 的重點不是「assign 這個字」，而是建立一個
+    <b>永久存在的 combinational relationship</b>：輸入改變，輸出就依照 expression 改變。
+  </div>
+</section>
+
+<div class="footer">
+  ContinuousAssignment.html — Verilog Continuous Assignment 詳細教學
+</div>
+
+</main>
+
+<script>
+function copyCode(btn){
+  const code = btn.parentElement.querySelector("code").innerText;
+  navigator.clipboard.writeText(code).then(()=>{
+    const old = btn.innerText;
+    btn.innerText = "Copied!";
+    setTimeout(()=>btn.innerText = old, 1200);
+  });
+}
+</script>
+
+</body>
+</html>

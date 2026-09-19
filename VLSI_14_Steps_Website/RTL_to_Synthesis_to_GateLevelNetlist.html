@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RTL_to_Synthesis_to_GateLevelNetlist.html</title>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#64748b;
+  --blue:#2563eb;--teal:#0f766e;--green:#059669;--orange:#d97706;
+  --red:#dc2626;--purple:#7c3aed;--line:#dbe3ec;--code:#0f172a;
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;line-height:1.82}
+header{background:linear-gradient(135deg,#1e3a8a,#0f766e 60%,#115e59);color:#fff;padding:52px 24px 44px}
+header .inner,nav .bar,.wrap{max-width:1180px;margin:auto}
+header h1{margin:0 0 10px;font-size:2.15rem}
+header p{margin:5px 0;max-width:1020px;opacity:.96}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tag{padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);font-size:.88rem}
+nav{position:sticky;top:0;z-index:20;background:rgba(245,247,251,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+nav .bar{padding:8px 20px;display:flex;gap:10px;overflow:auto;white-space:nowrap}
+nav a{color:#0f766e;text-decoration:none;padding:5px 9px;border-radius:8px;font-size:.9rem}
+nav a:hover{background:#e2e8f0}
+.wrap{padding:28px 20px 80px}
+.card{background:var(--card);border-radius:18px;padding:26px;margin:22px 0;box-shadow:0 8px 28px rgba(15,23,42,.07)}
+h2{margin:0 0 16px;color:#134e4a;border-left:6px solid #14b8a6;padding-left:12px}
+h3{color:#1d4ed8;margin-top:26px}
+h4{color:#7c3aed}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;overflow:auto;line-height:1.55}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}
+th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{padding:14px 16px;border-radius:10px;margin:16px 0}
+.note{background:#fff7ed;border-left:5px solid #f59e0b}
+.tip{background:#eff6ff;border-left:5px solid #3b82f6}
+.warn{background:#fef2f2;border-left:5px solid #ef4444}
+.key{background:#ecfdf5;border-left:5px solid #10b981}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mini{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px}
+.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:24px 0}
+.box{min-width:150px;text-align:center;padding:14px 16px;border:2px solid #67e8f9;background:#ecfeff;border-radius:13px;font-weight:700}
+.box small{display:block;color:#475569;font-weight:500;margin-top:5px}
+.arrow{font-size:1.5rem;color:#64748b}
+.toc ol{columns:2;column-gap:34px}
+.toc li{margin:7px 0;break-inside:avoid}
+.toc a{color:#0f766e;text-decoration:none}
+.quiz{border:1px dashed #94a3b8;border-radius:14px;padding:14px 16px;margin:12px 0;background:#fff}
+.quiz summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+@media(max-width:800px){header h1{font-size:1.65rem}.toc ol{columns:1}}
+</style>
+</head>
+<body>
+
+<header><div class="inner">
+<h1>RTL → Synthesis → Gate-Level Netlist 完整教學</h1>
+<p>從 RTL 描述開始，一路說明 synthesis 如何推導硬體、最佳化 Boolean / datapath、映射到 standard cells，最後產生 Gate-Level Netlist。</p>
+<p>並用 AND、MUX、Adder、Register、Counter、FSM、Full Adder 等大量例子對照「RTL 寫法」與「合成後可能長什麼樣子」。</p>
+<div class="tags">
+<span class="tag">RTL</span><span class="tag">Synthesis</span><span class="tag">Optimization</span>
+<span class="tag">Technology Mapping</span><span class="tag">Standard Cell</span><span class="tag">Gate-Level Netlist</span>
+<span class="tag">.lib / .db</span><span class="tag">ASIC Flow</span>
+</div>
+</div></header>
+
+<nav><div class="bar">
+<a href="#overview">總覽</a><a href="#rtl">RTL</a><a href="#synth">Synthesis</a><a href="#opt">Optimization</a>
+<a href="#mapping">Mapping</a><a href="#netlist">Gate Netlist</a><a href="#examples">大量例子</a>
+<a href="#library">Library</a><a href="#verify">驗證</a><a href="#pitfalls">常見誤解</a>
+</div></nav>
+
+<main class="wrap">
+
+<section class="card toc"><h2>目錄</h2><ol>
+<li><a href="#overview">整體流程</a></li>
+<li><a href="#rtl">RTL 是什麼？</a></li>
+<li><a href="#synth">Synthesis 在做什麼？</a></li>
+<li><a href="#infer">Hardware Inference</a></li>
+<li><a href="#opt">Logic / Datapath Optimization</a></li>
+<li><a href="#mapping">Technology Mapping</a></li>
+<li><a href="#netlist">Gate-Level Netlist</a></li>
+<li><a href="#examples">大量 RTL → Gate 例子</a></li>
+<li><a href="#library">Standard Cell Library</a></li>
+<li><a href="#constraints">Constraints 的角色</a></li>
+<li><a href="#verify">前後驗證</a></li>
+<li><a href="#pitfalls">常見誤解與考試重點</a></li>
+</ol></section>
+
+<section class="card" id="overview">
+<h2>1. 整體流程：RTL → Synthesis → Gate-Level Netlist</h2>
+<div class="flow">
+<div class="box">RTL Verilog<small>assign / always / if / case</small></div>
+<div class="arrow">→</div>
+<div class="box">Elaboration<small>展開參數與階層</small></div>
+<div class="arrow">→</div>
+<div class="box">Inference<small>MUX / FF / Adder...</small></div>
+<div class="arrow">→</div>
+<div class="box">Optimization<small>area / timing / power</small></div>
+<div class="arrow">→</div>
+<div class="box">Technology Mapping<small>Standard Cells</small></div>
+<div class="arrow">→</div>
+<div class="box">Gate-Level Netlist<small>cell instances + nets</small></div>
+</div>
+
+<div class="key"><b>一句話：</b>RTL 描述「功能與暫存器傳輸行為」，Synthesis 把它轉成實際 gates / cells 的連線。</div>
+
+<p>
+課程強調 Behavioral Model 的價值之一，就是可以避免手動處理 gate-level 細節，並把最佳化工作交給 synthesis tool。
+</p>
+</section>
+
+<section class="card" id="rtl">
+<h2>2. RTL 是什麼？</h2>
+<p>
+RTL = <b>Register Transfer Level</b>。它描述資料如何經過 combinational logic，
+在 clock edge 被 register 儲存，再流向下一級。
+</p>
+
+<h3>2.1 Combinational RTL</h3>
+<pre><code>assign y = (a & b) | c;</code></pre>
+
+<h3>2.2 Sequential RTL</h3>
+<pre><code>always @(posedge clk)
+    q <= d;</code></pre>
+
+<h3>2.3 RTL 的重點不是 gate 名稱</h3>
+<pre><code>always @(posedge clk) begin
+    if (en)
+        q <= a + b;
+end</code></pre>
+
+<p>這段 RTL 沒有指定「用哪顆 adder cell、哪顆 DFF cell」，那些由 synthesis / library mapping 決定。</p>
+</section>
+
+<section class="card" id="synth">
+<h2>3. Synthesis 到底在做什麼？</h2>
+
+<div class="grid3">
+<div class="mini"><h3 style="margin-top:0">1. 讀懂 RTL</h3><p>解析 module、port、always、assign、operator。</p></div>
+<div class="mini"><h3 style="margin-top:0">2. 推導硬體</h3><p>辨識 MUX、FF、Adder、Comparator、Decoder。</p></div>
+<div class="mini"><h3 style="margin-top:0">3. 最佳化</h3><p>減少 gate、縮短 critical path、調整 cell strength。</p></div>
+<div class="mini"><h3 style="margin-top:0">4. Mapping</h3><p>將 generic logic 映射到 standard-cell library。</p></div>
+<div class="mini"><h3 style="margin-top:0">5. 輸出 Netlist</h3><p>產生 cell instances 與 nets。</p></div>
+</div>
+</section>
+
+<section class="card" id="infer">
+<h2>4. Hardware Inference：RTL 如何變成硬體？</h2>
+
+<table>
+<tr><th>RTL 寫法</th><th>Synthesis 常推導出的硬體</th></tr>
+<tr><td><code>a & b</code></td><td>AND / NAND 組合邏輯</td></tr>
+<tr><td><code>a | b</code></td><td>OR / NOR 組合邏輯</td></tr>
+<tr><td><code>a ^ b</code></td><td>XOR logic</td></tr>
+<tr><td><code>sel ? a : b</code></td><td>MUX</td></tr>
+<tr><td><code>a + b</code></td><td>Adder</td></tr>
+<tr><td><code>a == b</code></td><td>Comparator</td></tr>
+<tr><td><code>always @(posedge clk)</code></td><td>Flip-Flops / Registers</td></tr>
+<tr><td><code>if(en) q &lt;= d;</code></td><td>Enable MUX + Register 或 enable FF</td></tr>
+</table>
+</section>
+
+<section class="card" id="opt">
+<h2>5. Logic Optimization</h2>
+
+<h3>5.1 Boolean Optimization</h3>
+<pre><code>assign y = (a & b) | (a & c);</code></pre>
+
+<p>邏輯等價於：</p>
+<pre><code>assign y = a & (b | c);</code></pre>
+
+<p>Synthesis tool 可能採用更省面積或更符合 timing 的等價實作。</p>
+
+<h3>5.2 課程中的 Boolean Optimization 範例</h3>
+<p>
+課程展示一個由多個 AND / OR structural primitives 組成的 Boolean network，
+並標示 Before synthesis / After synthesis，強調 synthesis 不只是翻譯，還會做最佳化。
+</p>
+
+<div class="note">
+實際最佳結果依 library、timing constraint、area goal、fanout 等條件而不同，不一定永遠選「gate 數最少」。
+</div>
+</section>
+
+<section class="card" id="mapping">
+<h2>6. Technology Mapping</h2>
+
+<p>
+Synthesis 前的內部邏輯可能只是 generic AND、OR、MUX、FF。
+Technology Mapping 會根據目標 standard-cell library，選用實際可製造的 cells。
+</p>
+
+<div class="flow">
+<div class="box">Generic Logic<small>AND / OR / FF / MUX</small></div>
+<div class="arrow">→</div>
+<div class="box">Library Search<small>timing / area / power</small></div>
+<div class="arrow">→</div>
+<div class="box">Mapped Cells<small>NAND2_X1, DFF_X1...</small></div>
+</div>
+
+<h3>Drive Strength</h3>
+<p>
+課程指出同一類邏輯 function 可能有 1X、2X、4X、8X 等 drive strength variants，
+讓 synthesis tool 在 area、delay、load capacitance 之間折衷。
+</p>
+</section>
+
+<section class="card" id="netlist">
+<h2>7. Gate-Level Netlist 是什麼？</h2>
+
+<p>
+Gate-Level Netlist 不再以高層次 <code>if</code>、<code>+</code>、<code>case</code> 為主，
+而是列出「哪些 standard cells 被 instantiated、它們怎麼接線」。
+</p>
+
+<h3>RTL</h3>
+<pre><code>assign y = a & b;</code></pre>
+
+<h3>可能的 Gate-Level Netlist（示意）</h3>
+<pre><code>AND2_X1 U1 (
+    .A1(a),
+    .A2(b),
+    .ZN(y)
+);</code></pre>
+
+<h3>Register RTL</h3>
+<pre><code>always @(posedge clk)
+    q <= d;</code></pre>
+
+<h3>可能的 Gate-Level Netlist（示意）</h3>
+<pre><code>DFFQ_X1 U_REG (
+    .D(d),
+    .CK(clk),
+    .Q(q)
+);</code></pre>
+
+<div class="note">cell 名稱如 <code>AND2_X1</code>、<code>DFFQ_X1</code> 是示意；真正名稱取決於使用的 standard-cell library。</div>
+</section>
+
+<section class="card" id="examples">
+<h2>8. 大量 RTL → Synthesis → Gate-Level 例子</h2>
+
+<h3>例 1：AND Gate</h3>
+<pre><code>// RTL
+assign y = a & b;
+
+// Gate-level concept
+AND2 U1 (.A(a), .B(b), .Y(y));</code></pre>
+
+<h3>例 2：OR Gate</h3>
+<pre><code>assign y = a | b;
+
+// possible mapped cell
+OR2_X1 U1 (...);</code></pre>
+
+<h3>例 3：NOT Gate</h3>
+<pre><code>assign y = ~a;
+
+// possible mapped cell
+INV_X1 U1 (...);</code></pre>
+
+<h3>例 4：2-to-1 MUX</h3>
+<pre><code>assign y = sel ? b : a;
+
+// synthesis may map to
+MUX2_X1 U1 (...);</code></pre>
+
+<h3>例 5：Comparator</h3>
+<pre><code>assign eq = (a == b);
+
+// synthesis builds XOR/XNOR + reduction logic
+// or maps to available comparator structures</code></pre>
+
+<h3>例 6：4-to-1 MUX</h3>
+<pre><code>always @(*) begin
+    case(sel)
+        2'b00: y = d0;
+        2'b01: y = d1;
+        2'b10: y = d2;
+        2'b11: y = d3;
+    endcase
+end</code></pre>
+<p>可能映射成多層 MUX cells。</p>
+
+<h3>例 7：Adder</h3>
+<pre><code>assign sum = a + b;</code></pre>
+<p>Synthesis 推導 adder network；實際可能由 full-adder cells、NAND/XOR 結構或 library 中的 arithmetic cells 實作。</p>
+
+<h3>例 8：1-bit Full Adder（課程 Dataflow）</h3>
+<pre><code>assign s    = x ^ y ^ cin;
+assign cout = (x & y) | (x & cin) | (y & cin);</code></pre>
+
+<p>課程也給了 Behavioral 版本：</p>
+<pre><code>always @(x or y or cin)
+    {cout, s} = x + y + cin;</code></pre>
+
+<p>兩種 RTL/Dataflow 描述都可以在 synthesis 後得到功能等價的 gate-level implementation。</p>
+
+<h3>例 9：DFF</h3>
+<pre><code>always @(posedge clk)
+    q <= d;</code></pre>
+<p>→ DFF cell。</p>
+
+<h3>例 10：Register Enable</h3>
+<pre><code>always @(posedge clk)
+    if (en)
+        q <= d;</code></pre>
+<p>→ 可能是 enable FF，或 MUX + DFF。</p>
+
+<h3>例 11：Async Reset Register</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        q <= 0;
+    else
+        q <= d;
+end</code></pre>
+<p>→ 可能映射到具有 asynchronous reset pin 的 DFF cell。</p>
+
+<h3>例 12：Counter</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        count <= 0;
+    else
+        count <= count + 1'b1;
+end</code></pre>
+<p>→ Register bank + incrementer logic。</p>
+
+<h3>例 13：Shift Register</h3>
+<pre><code>always @(posedge clk) begin
+    q[0] <= din;
+    q[1] <= q[0];
+    q[2] <= q[1];
+    q[3] <= q[2];
+end</code></pre>
+<p>→ 4 個串接的 flip-flops。</p>
+
+<h3>例 14：FSM</h3>
+<pre><code>always @(posedge clk)
+    state <= next_state;
+
+always @(*) begin
+    case(state)
+        IDLE: next_state = start ? RUN : IDLE;
+        RUN : next_state = done  ? IDLE : RUN;
+    endcase
+end</code></pre>
+<p>→ State registers + next-state combinational logic。</p>
+
+<h3>例 15：Pipeline</h3>
+<pre><code>always @(posedge clk) begin
+    s1 <= a + b;
+    s2 <= s1 ^ c;
+end</code></pre>
+<p>→ Adder logic + stage-1 register + XOR logic + stage-2 register。</p>
+</section>
+
+<section class="card" id="library">
+<h2>9. Standard Cell Library 在 Synthesis 裡的角色</h2>
+
+<p>
+課程列出 library view formats，其中：
+</p>
+
+<table>
+<tr><th>檔案</th><th>用途</th></tr>
+<tr><td><code>.lib / .db</code></td><td>Timing & Power View，包含 propagation delay、setup/hold、dynamic/leakage power 等資訊</td></tr>
+<tr><td><code>.v / .slib</code></td><td>Functional View，可作 gate-level Verilog simulation</td></tr>
+<tr><td><code>.lef</code></td><td>P&amp;R 使用的 abstract geometry</td></tr>
+<tr><td><code>.gds / .gdsii</code></td><td>完整 physical layout mask data</td></tr>
+<tr><td><code>.cdl / .spi</code></td><td>SPICE / LVS circuit view</td></tr>
+</table>
+
+<div class="key">
+Synthesis 最重要的不是只知道「AND gate 存在」，而是要知道 library 中有哪些 cells，以及每顆 cell 的 timing / area / power 特性。
+</div>
+</section>
+
+<section class="card" id="constraints">
+<h2>10. Constraints 為什麼會影響合成結果？</h2>
+
+<p class="note">
+以下屬於延伸實務說明：課程片段本身強調 synthesis optimization 與 cell drive-strength tradeoff，但沒有在本段完整列出 constraint command。
+</p>
+
+<p>
+同一段 RTL，在不同 clock period、area goal、fanout / load 條件下，可能得到不同 gate-level netlist。
+</p>
+
+<pre><code>// RTL 一樣
+assign y = a & b;
+
+// 但若 timing 很緊，tool 可能選較強 cell
+AND2_X4 ...
+
+// timing 寬鬆時，可能選較小 cell
+AND2_X1 ...</code></pre>
+</section>
+
+<section class="card" id="verify">
+<h2>11. Synthesis 前後怎麼驗證？</h2>
+
+<div class="grid2">
+<div class="mini">
+<h3 style="margin-top:0">RTL Simulation</h3>
+<p>確認 RTL function 是否符合 specification。</p>
+</div>
+<div class="mini">
+<h3 style="margin-top:0">Gate-Level Simulation</h3>
+<p>用 mapped netlist + cell functional models 驗證合成後功能。</p>
+</div>
+</div>
+
+<p>
+課程指出 <code>.v / .slib</code> 可作 functional view，用於 gate-level Verilog netlist / behavioral description 的 functional simulation。
+</p>
+
+<div class="tip">
+課程 Blocking/Nonblocking 範例也直接比較 behavioral simulation 與 gate-level 結果，提醒 RTL coding style 必須讓 RTL behavior 與 gate-level hardware 一致。
+</div>
+</section>
+
+<section class="card" id="pitfalls">
+<h2>12. 常見誤解與考試重點</h2>
+
+<h3>誤解 1：Synthesis = 把每一行 RTL 翻成一顆 gate</h3>
+<p>錯。Synthesis 會做 inference、optimization、technology mapping，不是逐行機械翻譯。</p>
+
+<h3>誤解 2：RTL 長得像什麼，gate netlist 就一定長得一樣</h3>
+<p>錯。只要功能與時序需求等價，tool 可以重寫 Boolean network。</p>
+
+<h3>誤解 3：Gate-Level Netlist 就是 Layout</h3>
+<p>錯。Netlist 主要描述 cells 與 connectivity；layout 還需要 placement、routing、physical verification 等後續流程。</p>
+
+<h3>誤解 4：所有 DFF 都一樣</h3>
+<p>錯。library 中可能有不同 reset/preset、drive strength、threshold voltage、scan 等 variants。</p>
+
+<h3>誤解 5：cell 越大一定越好</h3>
+<p>錯。drive 越強常代表 area / power 也更高，需要平衡。</p>
+</section>
+
+<section class="card">
+<h2>13. 自我測驗</h2>
+<details class="quiz"><summary>Q1：RTL 與 Gate-Level Netlist 最大差別？</summary><p>RTL 描述高層次資料與暫存器行為；Gate-Level Netlist 描述實際 cell instances 與 nets。</p></details>
+<details class="quiz"><summary>Q2：a+b 在 synthesis 時可能變成什麼？</summary><p>Adder logic，具體由何種 cells 組成取決於 library 與 optimization。</p></details>
+<details class="quiz"><summary>Q3：sel ? a : b 常推導什麼？</summary><p>Multiplexer。</p></details>
+<details class="quiz"><summary>Q4：always @(posedge clk) 常推導什麼？</summary><p>Flip-flop / register。</p></details>
+<details class="quiz"><summary>Q5：為什麼同一段 RTL 可能得到不同 netlist？</summary><p>因為 library、timing、area、power、load 與 optimization goals 不同。</p></details>
+<details class="quiz"><summary>Q6：.lib / .db 主要放什麼？</summary><p>Cell timing 與 power 資訊，例如 propagation delay、setup/hold、dynamic/leakage power。</p></details>
+</section>
+
+<section class="card">
+<h2>14. 一頁記憶版</h2>
+<table>
+<tr><th>Stage</th><th>你要記住的事</th></tr>
+<tr><td>RTL</td><td>描述功能、資料路徑、register behavior</td></tr>
+<tr><td>Inference</td><td>辨識 MUX / FF / Adder / Comparator</td></tr>
+<tr><td>Optimization</td><td>改善 area / timing / power</td></tr>
+<tr><td>Technology Mapping</td><td>映射到 standard-cell library</td></tr>
+<tr><td>Gate-Level Netlist</td><td>cell instances + connectivity</td></tr>
+<tr><td>Next</td><td>Gate-level verification → P&amp;R → STA / DRC / LVS → GDSII</td></tr>
+</table>
+
+<div class="key"><b>最後一句：</b>RTL 告訴 synthesis tool「我要什麼功能」；standard-cell library 告訴它「你有哪些積木可以用」；synthesis 最後決定「用哪些 cells、怎麼接，才能滿足設計目標」。</div>
+</section>
+
+<div class="footer">RTL_to_Synthesis_to_GateLevelNetlist.html — VLSI System Design 教學</div>
+</main>
+</body>
+</html>

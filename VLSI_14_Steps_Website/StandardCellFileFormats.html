@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StandardCellFileFormats.html — Standard Cell 的檔案格式完整教學</title>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#64748b;
+  --blue:#2563eb;--teal:#0f766e;--green:#059669;--orange:#d97706;
+  --red:#dc2626;--purple:#7c3aed;--line:#dbe3ec;--code:#0f172a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;line-height:1.82}
+header{background:linear-gradient(135deg,#1e3a8a,#0f766e 60%,#115e59);color:#fff;padding:52px 24px 44px}
+header .inner,nav .bar,.wrap{max-width:1180px;margin:auto}
+header h1{margin:0 0 10px;font-size:2.16rem}
+header p{margin:5px 0;max-width:1020px;opacity:.96}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tag{padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);font-size:.88rem}
+nav{position:sticky;top:0;z-index:20;background:rgba(245,247,251,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+nav .bar{padding:8px 20px;display:flex;gap:10px;overflow:auto;white-space:nowrap}
+nav a{color:#0f766e;text-decoration:none;padding:5px 9px;border-radius:8px;font-size:.9rem}
+nav a:hover{background:#e2e8f0}
+.wrap{padding:28px 20px 80px}
+.card{background:var(--card);border-radius:18px;padding:26px;margin:22px 0;box-shadow:0 8px 28px rgba(15,23,42,.07)}
+h2{margin:0 0 16px;color:#134e4a;border-left:6px solid #14b8a6;padding-left:12px}
+h3{color:#1d4ed8;margin-top:26px}
+h4{color:#7c3aed;margin:18px 0 8px}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;overflow:auto;line-height:1.55}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}
+th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{padding:14px 16px;border-radius:10px;margin:16px 0}
+.note{background:#fff7ed;border-left:5px solid #f59e0b}
+.tip{background:#eff6ff;border-left:5px solid #3b82f6}
+.warn{background:#fef2f2;border-left:5px solid #ef4444}
+.key{background:#ecfdf5;border-left:5px solid #10b981}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mini{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px}
+.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:24px 0}
+.box{min-width:155px;text-align:center;padding:14px 16px;border:2px solid #67e8f9;background:#ecfeff;border-radius:13px;font-weight:700}
+.box small{display:block;color:#475569;font-weight:500;margin-top:5px}
+.arrow{font-size:1.5rem;color:#64748b}
+.toc ol{columns:2;column-gap:34px}
+.toc li{margin:7px 0;break-inside:avoid}
+.toc a{color:#0f766e;text-decoration:none}
+.quiz{border:1px dashed #94a3b8;border-radius:14px;padding:14px 16px;margin:12px 0;background:#fff}
+.quiz summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+@media(max-width:800px){header h1{font-size:1.68rem}.toc ol{columns:1}}
+</style>
+</head>
+<body>
+
+<header><div class="inner">
+<h1>Standard Cell 的檔案格式完整教學</h1>
+<p>詳細說明 Standard Cell Library 中常見的五大 view：<code>.lib/.db</code>、<code>.lef</code>、<code>.v/.slib</code>、<code>.gds/.gdsii</code>、<code>.cdl/.spi</code>，以及它們在 Synthesis、STA、Gate-Level Simulation、P&amp;R、LVS、SPICE、Tape-out 中扮演的角色。</p>
+<p>本頁以課程「Library View Formats」為主軸，再加入大量具體檔案內容範例與完整 ASIC flow 對照。</p>
+<div class="tags">
+<span class="tag">.lib / .db</span><span class="tag">.lef</span><span class="tag">.v / .slib</span>
+<span class="tag">.gds / .gdsii</span><span class="tag">.cdl / .spi</span>
+<span class="tag">Timing</span><span class="tag">P&amp;R</span><span class="tag">LVS</span>
+</div>
+</div></header>
+
+<nav><div class="bar">
+<a href="#overview">總覽</a><a href="#lib">.lib/.db</a><a href="#lef">.lef</a>
+<a href="#verilog">.v/.slib</a><a href="#gds">.gds</a><a href="#cdl">.cdl/.spi</a>
+<a href="#char">Characterization</a><a href="#nldm">NLDM</a><a href="#flow">完整流程</a>
+<a href="#examples">大量例子</a><a href="#pitfalls">常見誤解</a>
+</div></nav>
+
+<main class="wrap">
+
+<section class="card toc">
+<h2>目錄</h2>
+<ol>
+<li><a href="#overview">為什麼一顆 Cell 要有很多檔案？</a></li>
+<li><a href="#lib">.lib / .db：Timing &amp; Power View</a></li>
+<li><a href="#lef">.lef：Abstract Physical View</a></li>
+<li><a href="#verilog">.v / .slib：Functional View</a></li>
+<li><a href="#gds">.gds / .gdsii：Full Physical View</a></li>
+<li><a href="#cdl">.cdl / .spi：Circuit View</a></li>
+<li><a href="#char">Cell Characterization</a></li>
+<li><a href="#nldm">NLDM Timing Table</a></li>
+<li><a href="#flow">從 Synthesis 到 Tape-out</a></li>
+<li><a href="#examples">大量檔案內容例子</a></li>
+<li><a href="#compare">五種格式總比較</a></li>
+<li><a href="#pitfalls">常見誤解與考試重點</a></li>
+</ol>
+</section>
+
+<section class="card" id="overview">
+<h2>1. 為什麼一顆 Standard Cell 要有很多檔案？</h2>
+
+<p>
+同一顆 standard cell，例如一顆 inverter，對不同 EDA tool 來說需要完全不同的資訊：
+Synthesis 想知道 timing / power，P&amp;R 想知道尺寸與 pin 位置，simulator 想知道邏輯功能，
+LVS 想知道 transistor-level connectivity，而 fabrication 最後需要完整 mask layout。
+</p>
+
+<div class="flow">
+<div class="box">同一顆 Cell<small>例如 INV_X1</small></div>
+<div class="arrow">→</div>
+<div class="box">Timing View<small>.lib / .db</small></div>
+<div class="box">Physical Abstract<small>.lef</small></div>
+<div class="box">Functional View<small>.v / .slib</small></div>
+<div class="box">Full Layout<small>.gds</small></div>
+<div class="box">Circuit View<small>.cdl / .spi</small></div>
+</div>
+
+<div class="key">
+<b>核心觀念：</b>這些檔案不是五顆不同的 cell，而是<b>同一顆 cell 的不同 view</b>。
+</div>
+</section>
+
+<section class="card" id="lib">
+<h2>2. .lib / .db：Timing &amp; Power View</h2>
+
+<p>
+課程明確指出 <code>.lib / .db</code> 是 <b>Timing &amp; Power View</b>，
+主要包含 propagation delay、setup/hold times、dynamic power、leakage power，以及 NLDM / CCS 等模型。
+</p>
+
+<h3>2.1 .lib 是什麼？</h3>
+<p>
+<code>.lib</code> 通常是文字格式的 Liberty library。
+它會描述 cell、pin、function、timing arc、capacitance、transition、power 等資訊。
+</p>
+
+<h3>2.2 .db 是什麼？</h3>
+<p>
+在常見 Synopsys flow 中，<code>.db</code> 可理解為由 Liberty library 編譯而成、供工具快速讀取的 binary database。
+</p>
+
+<div class="note">
+上面對 <code>.db</code> 的 binary database 說明屬於實務補充；課程投影片直接把 <code>.lib/.db</code> 合併列為 Timing &amp; Power View。
+</div>
+
+<h3>2.3 示意 .lib 內容</h3>
+<pre><code>cell (INV_X1) {
+    area : 1.20;
+
+    pin (A) {
+        direction : input;
+        capacitance : 0.002;
+    }
+
+    pin (ZN) {
+        direction : output;
+        function : "!A";
+
+        timing() {
+            related_pin : "A";
+            cell_rise(...);
+            cell_fall(...);
+            rise_transition(...);
+            fall_transition(...);
+        }
+    }
+}</code></pre>
+
+<h3>2.4 Synthesis 為什麼需要它？</h3>
+<p>
+因為 synthesis 不只是要知道「INV_X1 是反相器」，還需要比較不同 cell 的 area、delay、power，
+才能決定該選 X1、X2、X4 或其他等價 cell。
+</p>
+
+<h3>2.5 STA 為什麼需要它？</h3>
+<p>
+STA 要沿 timing paths 累加 cell delay，並檢查 setup / hold。
+因此 timing arcs、input slew、output load 等模型都非常重要。
+</p>
+</section>
+
+<section class="card" id="lef">
+<h2>3. .lef：Library Exchange Format</h2>
+
+<p>
+課程指出 LEF 是 <b>abstract geometry</b>，包含：
+cell boundary（bounding box）、obstruction layers、pin locations，主要給 P&amp;R 使用。
+</p>
+
+<div class="key">
+<b>LEF 不是完整 layout。</b>它是「給 place-and-route 看得懂的抽象版圖」。
+</div>
+
+<h3>3.1 為什麼 P&amp;R 不需要完整 transistor geometry？</h3>
+<p>
+Placement 階段最重要的是知道 cell 多寬、多高；routing 最重要的是知道 pin 在哪裡、
+哪些區域不能走線。這些資訊 LEF 就足夠。
+</p>
+
+<h3>3.2 示意 LEF</h3>
+<pre><code>MACRO INV_X1
+  CLASS CORE ;
+  ORIGIN 0 0 ;
+  SIZE 1.2 BY 2.8 ;
+
+  PIN A
+    DIRECTION INPUT ;
+    PORT
+      LAYER metal1 ;
+      RECT 0.10 1.10 0.20 1.30 ;
+    END
+  END A
+
+  PIN ZN
+    DIRECTION OUTPUT ;
+    PORT
+      LAYER metal1 ;
+      RECT 1.00 1.10 1.10 1.30 ;
+    END
+  END ZN
+END INV_X1</code></pre>
+
+<h3>3.3 LEF 中常見資訊</h3>
+<table>
+<tr><th>資訊</th><th>用途</th></tr>
+<tr><td>Cell Size</td><td>Placement 知道 cell 占多大</td></tr>
+<tr><td>Pin Location</td><td>Router 知道從哪裡接線</td></tr>
+<tr><td>Routing Layer</td><td>Router 知道 pin 在哪一層金屬</td></tr>
+<tr><td>Obstruction</td><td>避免 routing 穿過不可用區域</td></tr>
+</table>
+</section>
+
+<section class="card" id="verilog">
+<h2>4. .v / .slib：Functional View</h2>
+
+<p>
+課程將 <code>.v / .slib</code> 定義為 <b>Functional View</b>，
+主要是 gate-level Verilog netlist / behavioral description，用於 functional simulation。
+</p>
+
+<h3>4.1 Inverter functional model</h3>
+<pre><code>module INV_X1 (
+    input  A,
+    output ZN
+);
+    assign ZN = ~A;
+endmodule</code></pre>
+
+<h3>4.2 NAND functional model</h3>
+<pre><code>module NAND2_X1 (
+    input A1,
+    input A2,
+    output ZN
+);
+    assign ZN = ~(A1 & A2);
+endmodule</code></pre>
+
+<h3>4.3 DFF functional model</h3>
+<pre><code>module DFF_X1 (
+    input D,
+    input CK,
+    output reg Q
+);
+    always @(posedge CK)
+        Q <= D;
+endmodule</code></pre>
+
+<h3>4.4 Gate-Level Simulation</h3>
+<pre><code>// synthesized netlist
+INV_X1  U1 (.A(a), .ZN(n1));
+NAND2_X1 U2 (.A1(n1), .A2(b), .ZN(y));</code></pre>
+
+<p>
+Simulator 需要知道 <code>INV_X1</code>、<code>NAND2_X1</code> 是什麼，因此會載入 library 的 functional Verilog model。
+</p>
+</section>
+
+<section class="card" id="gds">
+<h2>5. .gds / .gdsii：Full Physical View</h2>
+
+<p>
+課程指出 GDS / GDSII 包含完整 mask layout data，
+包括 diffusion、poly、metal 等所有實體層資訊，可用於 fabrication。
+</p>
+
+<div class="flow">
+<div class="box">Cell Layout</div>
+<div class="arrow">→</div>
+<div class="box">GDS/GDSII<small>完整 polygons / layers</small></div>
+<div class="arrow">→</div>
+<div class="box">Chip Final Layout</div>
+<div class="arrow">→</div>
+<div class="box">Fabrication</div>
+</div>
+
+<h3>5.1 GDS 與 LEF 的差別</h3>
+<table>
+<tr><th>項目</th><th>LEF</th><th>GDS</th></tr>
+<tr><td>細節程度</td><td>抽象</td><td>完整</td></tr>
+<tr><td>Cell boundary</td><td>有</td><td>有</td></tr>
+<tr><td>Pin location</td><td>有</td><td>有完整 geometry</td></tr>
+<tr><td>Diffusion / Poly</td><td>通常不需完整細節</td><td>完整</td></tr>
+<tr><td>主要用途</td><td>P&amp;R</td><td>Final layout / fabrication</td></tr>
+</table>
+
+<div class="warn">不要把 LEF 當 GDS：LEF 是抽象 physical view；GDS 才是完整 mask layout view。</div>
+</section>
+
+<section class="card" id="cdl">
+<h2>6. .cdl / .spi：Circuit View</h2>
+
+<p>
+課程指出 <code>.cdl / .spi</code> 是 <b>Circuit View</b>，
+包含 SPICE transistor-level netlist，用於 LVS 與 SPICE simulations。
+</p>
+
+<h3>6.1 Inverter SPICE 示意</h3>
+<pre><code>.SUBCKT INV_X1 A ZN VDD VSS
+
+MP1 ZN A VDD VDD PMOS W=... L=...
+MN1 ZN A VSS VSS NMOS W=... L=...
+
+.ENDS INV_X1</code></pre>
+
+<h3>6.2 為什麼 LVS 要用 Circuit View？</h3>
+<p>
+LVS = Layout Versus Schematic。工具會從 layout extract 出 transistor/connectivity，
+再與 schematic/circuit netlist 比對，因此需要 transistor-level circuit reference。
+</p>
+
+<h3>6.3 SPICE Simulation</h3>
+<p>
+若要量真實 transistor-level delay、slew、power，就需要 circuit model，而不是只看 Verilog Boolean function。
+</p>
+</section>
+
+<section class="card" id="char">
+<h2>7. Cell Characterization 與檔案格式的關係</h2>
+
+<p>
+課程定義 Cell Characterization 為：
+對 transistor-level cell 在不同 PVT corners 下執行大量 SPICE simulations，
+量測 delay、slew rate、power。
+</p>
+
+<div class="flow">
+<div class="box">.cdl / .spi<small>Transistor Netlist</small></div>
+<div class="arrow">+</div>
+<div class="box">PVT Conditions</div>
+<div class="arrow">→</div>
+<div class="box">SPICE Characterization</div>
+<div class="arrow">→</div>
+<div class="box">Timing / Power Tables</div>
+<div class="arrow">→</div>
+<div class="box">.lib / .db</div>
+</div>
+
+<div class="key">
+<b>這個關係非常重要：</b><br>
+<code>.cdl/.spi</code> 是 cell 的 transistor-level circuit；<br>
+characterization 從這個 circuit 量出 timing/power；<br>
+結果再被整理進 <code>.lib/.db</code>。
+</div>
+</section>
+
+<section class="card" id="nldm">
+<h2>8. NLDM：Timing Table 為什麼是二維？</h2>
+
+<p>
+課程指出 NLDM 的 delay 以 2D lookup table 儲存，
+索引是：
+<b>Input Slew (Transition Time)</b> 與 <b>Output Load Capacitance</b>。
+</p>
+
+<table>
+<tr><th>Input Slew ↓ / Load →</th><th>Small Load</th><th>Medium Load</th><th>Large Load</th></tr>
+<tr><td>Fast Slew</td><td>小 delay</td><td>較大</td><td>更大</td></tr>
+<tr><td>Medium Slew</td><td>較大</td><td>更大</td><td>更大</td></tr>
+<tr><td>Slow Slew</td><td>更大</td><td>更大</td><td>通常最差</td></tr>
+</table>
+
+<p class="note">
+上表數值關係是概念示意，不是課程提供的實際 cell 數據；課程明確支持的是「NLDM 為 2D lookup table，以 input slew 與 output load capacitance 為索引」。
+</p>
+
+<h3>示意 Liberty table</h3>
+<pre><code>cell_rise(delay_template) {
+    index_1("0.01, 0.05, 0.10");  // input slew
+    index_2("0.001, 0.01, 0.05"); // output load
+
+    values(
+      "0.02, 0.03, 0.05",
+      "0.03, 0.04, 0.07",
+      "0.05, 0.07, 0.10"
+    );
+}</code></pre>
+</section>
+
+<section class="card" id="flow">
+<h2>9. 完整 ASIC Flow：每種格式在哪裡出現？</h2>
+
+<div class="flow">
+<div class="box">RTL</div><div class="arrow">→</div>
+<div class="box">Synthesis<small>.lib/.db</small></div><div class="arrow">→</div>
+<div class="box">Gate Netlist<small>.v</small></div><div class="arrow">→</div>
+<div class="box">P&amp;R<small>.lef + .lib</small></div><div class="arrow">→</div>
+<div class="box">Layout</div><div class="arrow">→</div>
+<div class="box">GDS</div>
+</div>
+
+<h3>9.1 Synthesis</h3>
+<p>主要需要 timing/power library，依 cell delay、area、power 進行 technology mapping。</p>
+
+<h3>9.2 Gate-Level Simulation</h3>
+<p>需要 synthesized gate-level netlist 與 standard-cell functional Verilog model。</p>
+
+<h3>9.3 Place &amp; Route</h3>
+<p>需要 LEF 的 cell size / pin / obstruction，以及 timing library 做 timing-driven optimization。</p>
+
+<h3>9.4 LVS</h3>
+<p>需要 extracted layout circuit 與 CDL/SPICE reference circuit 做比對。</p>
+
+<h3>9.5 Final Tape-out</h3>
+<p>最後使用完整 GDS/GDSII physical layout data。</p>
+</section>
+
+<section class="card" id="examples">
+<h2>10. 大量檔案例子：同一顆 INV_X1 看五種 View</h2>
+
+<h3>例 1：Functional Verilog</h3>
+<pre><code>module INV_X1(input A, output ZN);
+    assign ZN = ~A;
+endmodule</code></pre>
+
+<h3>例 2：Liberty Function</h3>
+<pre><code>cell (INV_X1) {
+    area : 1.2;
+    pin(A)  { direction : input; }
+    pin(ZN) {
+        direction : output;
+        function : "!A";
+    }
+}</code></pre>
+
+<h3>例 3：LEF Geometry</h3>
+<pre><code>MACRO INV_X1
+  SIZE 1.2 BY 2.8 ;
+  PIN A
+    DIRECTION INPUT ;
+  END A
+  PIN ZN
+    DIRECTION OUTPUT ;
+  END ZN
+END INV_X1</code></pre>
+
+<h3>例 4：SPICE Circuit</h3>
+<pre><code>.SUBCKT INV_X1 A ZN VDD VSS
+MP1 ZN A VDD VDD PMOS
+MN1 ZN A VSS VSS NMOS
+.ENDS INV_X1</code></pre>
+
+<h3>例 5：GDS View</h3>
+<p>GDS 不適合用簡單文字直接呈現；概念上會包含 INV_X1 的 diffusion、poly、contact、metal polygons 等完整 layout geometry。</p>
+
+<h3>例 6：NAND2_X1 的 Functional View</h3>
+<pre><code>module NAND2_X1(
+    input A1,
+    input A2,
+    output ZN
+);
+    assign ZN = ~(A1 & A2);
+endmodule</code></pre>
+
+<h3>例 7：NAND2_X1 的 Circuit View</h3>
+<pre><code>.SUBCKT NAND2_X1 A1 A2 ZN VDD VSS
+* PMOS network
+MP1 ZN A1 VDD VDD PMOS
+MP2 ZN A2 VDD VDD PMOS
+
+* NMOS network
+MN1 ZN A1 n1  VSS NMOS
+MN2 n1 A2 VSS VSS NMOS
+.ENDS NAND2_X1</code></pre>
+
+<h3>例 8：DFF 的 Functional View</h3>
+<pre><code>module DFF_X1(
+    input D,
+    input CK,
+    output reg Q
+);
+    always @(posedge CK)
+        Q <= D;
+endmodule</code></pre>
+
+<h3>例 9：DFF 在 .lib 裡的重要 timing</h3>
+<pre><code>// Conceptual entries
+setup_rising(...)
+hold_rising(...)
+rising_edge(...)
+cell_rise(...)
+cell_fall(...)</code></pre>
+
+<p class="note">
+上述 keyword 片段用來幫助理解 sequential cell timing view；課程只明確指出 .lib/.db 會包含 setup/hold、propagation delay、power 等資訊，並未在這頁逐一列出完整 Liberty syntax。
+</p>
+
+<h3>例 10：P&amp;R 只讀 LEF 可以做什麼？</h3>
+<p>
+知道 DFF 多寬、CK/D/Q pins 在哪裡、哪些區域可以進線，進而完成 placement 與 routing。
+</p>
+
+<h3>例 11：為什麼 Gate-Level Simulation 不需要 GDS？</h3>
+<p>
+Functional simulation 只關心 cell 的 logic behavior，因此載入 <code>.v/.slib</code> 即可，不需要完整 diffusion/poly geometry。
+</p>
+
+<h3>例 12：為什麼 LVS 不只看 Verilog？</h3>
+<p>
+LVS 比較 transistor-level connectivity，所以需要 circuit view，例如 <code>.cdl/.spi</code>，而不是只有 Boolean functional model。
+</p>
+
+<h3>例 13：為什麼 STA 不讀 GDS 當 timing library？</h3>
+<p>
+STA 需要的是 characterized delay/setup/hold/power tables，因此使用 <code>.lib/.db</code>；完整 polygon layout 不是 timing lookup table。
+</p>
+
+<h3>例 14：一個 library corner 的概念</h3>
+<pre><code>slow_process / low_voltage / high_temperature
+fast_process / high_voltage / low_temperature</code></pre>
+<p>
+這是 PVT corner 的概念性寫法；實際 corner 名稱由 library provider 定義。
+</p>
+</section>
+
+<section class="card" id="compare">
+<h2>11. 五大檔案格式總比較</h2>
+
+<table>
+<tr>
+<th>格式</th><th>View</th><th>內容</th><th>主要 EDA 階段</th><th>一句話記憶</th>
+</tr>
+<tr>
+<td><code>.lib/.db</code></td><td>Timing &amp; Power</td><td>delay、setup/hold、dynamic/leakage power</td><td>Synthesis / STA</td><td>「這顆 cell 有多快、多耗電」</td>
+</tr>
+<tr>
+<td><code>.lef</code></td><td>Abstract Physical</td><td>boundary、pins、obstructions</td><td>P&amp;R</td><td>「這顆 cell 多大、pin 在哪」</td>
+</tr>
+<tr>
+<td><code>.v/.slib</code></td><td>Functional</td><td>Verilog logic behavior</td><td>Gate-level simulation</td><td>「這顆 cell 邏輯上做什麼」</td>
+</tr>
+<tr>
+<td><code>.gds/.gdsii</code></td><td>Full Physical</td><td>diffusion/poly/metal 等完整 mask layout</td><td>Final layout / fabrication</td><td>「這顆 cell 真正長什麼樣」</td>
+</tr>
+<tr>
+<td><code>.cdl/.spi</code></td><td>Circuit</td><td>SPICE transistor-level netlist</td><td>LVS / SPICE</td><td>「這顆 cell 裡 transistor 怎麼接」</td>
+</tr>
+</table>
+</section>
+
+<section class="card" id="pitfalls">
+<h2>12. 常見誤解與考試重點</h2>
+
+<h3>誤解 1：.lib 就是 Verilog library</h3>
+<p>錯。.lib 主要是 timing/power characterization，不是 functional Verilog model。</p>
+
+<h3>誤解 2：LEF = GDS</h3>
+<p>錯。LEF 是 abstract geometry；GDS/GDSII 是 full physical layout。</p>
+
+<h3>誤解 3：.v 是拿去 fabrication</h3>
+<p>錯。.v/.slib 是 functional view，主要用於 gate-level functional simulation。</p>
+
+<h3>誤解 4：CDL 是 timing table</h3>
+<p>錯。CDL/SPI 是 transistor-level circuit netlist；timing/power tables 在 .lib/.db。</p>
+
+<h3>誤解 5：Cell delay 可以只存一個數字</h3>
+<p>錯。課程介紹 NLDM，delay 依 input slew 與 output load capacitance 查 2D table。</p>
+
+<h3>誤解 6：Characterization 與 SPICE 無關</h3>
+<p>錯。課程明確說 characterization 是跨 PVT corners 執行大量 transistor-level SPICE simulations。</p>
+</section>
+
+<section class="card">
+<h2>13. 自我測驗</h2>
+
+<details class="quiz"><summary>Q1：Synthesis / STA 最重要的 standard-cell view 是哪個？</summary>
+<p><code>.lib/.db</code>，因為包含 timing / power / setup / hold 等資訊。</p></details>
+
+<details class="quiz"><summary>Q2：P&amp;R 用什麼格式看 cell boundary 與 pin location？</summary>
+<p><code>.lef</code>。</p></details>
+
+<details class="quiz"><summary>Q3：Gate-level functional simulation 需要哪個 view？</summary>
+<p><code>.v/.slib</code> functional model。</p></details>
+
+<details class="quiz"><summary>Q4：完整 mask layout 是哪個格式？</summary>
+<p><code>.gds/.gdsii</code>。</p></details>
+
+<details class="quiz"><summary>Q5：LVS / SPICE 使用哪個 circuit view？</summary>
+<p><code>.cdl/.spi</code>。</p></details>
+
+<details class="quiz"><summary>Q6：NLDM 的兩個主要 index 是什麼？</summary>
+<p>Input slew（transition time）與 output load capacitance。</p></details>
+</section>
+
+<section class="card">
+<h2>14. 一頁記憶版</h2>
+
+<div class="grid3">
+<div class="mini"><h3 style="margin-top:0">.lib / .db</h3><p>Timing + Power</p></div>
+<div class="mini"><h3 style="margin-top:0">.lef</h3><p>Abstract Geometry</p></div>
+<div class="mini"><h3 style="margin-top:0">.v / .slib</h3><p>Functional Behavior</p></div>
+<div class="mini"><h3 style="margin-top:0">.gds / .gdsii</h3><p>Full Physical Layout</p></div>
+<div class="mini"><h3 style="margin-top:0">.cdl / .spi</h3><p>Transistor Circuit</p></div>
+<div class="mini"><h3 style="margin-top:0">NLDM</h3><p>Slew × Load → Delay</p></div>
+</div>
+
+<div class="key">
+<b>最後一句：</b><br>
+同一顆 standard cell 同時存在「功能、時間/功耗、抽象實體、完整實體、電晶體電路」等不同 views；
+EDA flow 每個階段只讀它真正需要的那一種資訊。
+</div>
+</section>
+
+<div class="footer">StandardCellFileFormats.html — VLSI System Design 詳細教學</div>
+</main>
+</body>
+</html>

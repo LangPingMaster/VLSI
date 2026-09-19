@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InitialAlways_Blocks.html — Verilog initial 與 always 區塊完整教學</title>
+<style>
+:root{
+  --bg:#f5f7fb; --card:#fff; --text:#1f2937; --muted:#64748b;
+  --blue:#2563eb; --teal:#0f766e; --green:#059669; --orange:#d97706;
+  --red:#dc2626; --purple:#7c3aed; --line:#dbe3ec; --code:#0f172a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;
+  line-height:1.82
+}
+header{
+  background:linear-gradient(135deg,#1e3a8a,#0f766e 60%,#115e59);
+  color:white;padding:52px 24px 44px
+}
+header .inner{max-width:1180px;margin:auto}
+header h1{margin:0 0 10px;font-size:2.25rem}
+header p{max-width:980px;margin:5px 0;opacity:.96}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tag{
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);
+  padding:5px 10px;border-radius:999px;font-size:.88rem
+}
+nav{
+  position:sticky;top:0;z-index:20;background:rgba(245,247,251,.95);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px)
+}
+nav .bar{
+  max-width:1180px;margin:auto;padding:8px 20px;display:flex;gap:10px;
+  overflow:auto;white-space:nowrap
+}
+nav a{color:#0f766e;text-decoration:none;padding:5px 9px;border-radius:8px;font-size:.9rem}
+nav a:hover{background:#e2e8f0}
+.wrap{max-width:1180px;margin:auto;padding:28px 20px 80px}
+.card{
+  background:var(--card);border-radius:18px;padding:26px;margin:22px 0;
+  box-shadow:0 8px 28px rgba(15,23,42,.07)
+}
+h2{margin:0 0 16px;color:#134e4a;border-left:6px solid #14b8a6;padding-left:12px}
+h3{color:#1d4ed8;margin-top:26px}
+h4{color:#7c3aed;margin:18px 0 8px}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{
+  background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;
+  overflow:auto;line-height:1.55;position:relative
+}
+.inline{background:#e2e8f0;padding:2px 6px;border-radius:6px;font-family:Consolas,monospace}
+.copy-btn{
+  float:right;border:0;border-radius:8px;padding:6px 10px;
+  background:#334155;color:#fff;cursor:pointer;font-size:.8rem
+}
+.copy-btn:hover{background:#475569}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}
+th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{
+  padding:14px 16px;border-radius:10px;margin:16px 0
+}
+.note{background:#fff7ed;border-left:5px solid #f59e0b}
+.tip{background:#eff6ff;border-left:5px solid #3b82f6}
+.warn{background:#fef2f2;border-left:5px solid #ef4444}
+.key{background:#ecfdf5;border-left:5px solid #10b981}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mini{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px}
+.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:22px 0}
+.box{
+  min-width:155px;text-align:center;padding:14px 16px;border:2px solid #67e8f9;
+  background:#ecfeff;border-radius:13px;font-weight:700
+}
+.box small{display:block;color:#475569;font-weight:500;margin-top:5px}
+.arrow{font-size:1.6rem;color:#64748b}
+.toc ol{columns:2;column-gap:34px}
+.toc li{margin:7px 0;break-inside:avoid}
+.toc a{color:#0f766e;text-decoration:none}
+.timeline{
+  border-left:4px solid #60a5fa;margin:18px 0 18px 14px;padding-left:22px
+}
+.timeline div{margin:14px 0}
+.timeline b{color:#1d4ed8}
+.quiz{border:1px dashed #94a3b8;border-radius:14px;padding:14px 16px;margin:12px 0;background:#fff}
+.quiz summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+@media(max-width:800px){
+  header h1{font-size:1.75rem}.toc ol{columns:1}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <h1>Verilog：initial 與 always 區塊完整教學</h1>
+    <p>
+      本頁以課程的 Procedural Constructs 為主軸，詳細說明 initial 與 always 的執行時機、
+      begin/end、delay、event control、combinational 與 sequential 用法，並加入大量範例。
+    </p>
+    <div class="tags">
+      <span class="tag">initial</span>
+      <span class="tag">always</span>
+      <span class="tag">begin / end</span>
+      <span class="tag">#delay</span>
+      <span class="tag">@ event control</span>
+      <span class="tag">posedge / negedge</span>
+      <span class="tag">testbench</span>
+      <span class="tag">RTL</span>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="bar">
+    <a href="#overview">總覽</a>
+    <a href="#initial">initial</a>
+    <a href="#always">always</a>
+    <a href="#beginend">begin/end</a>
+    <a href="#event">event control</a>
+    <a href="#comb">組合邏輯</a>
+    <a href="#seq">時序邏輯</a>
+    <a href="#tb">Testbench</a>
+    <a href="#examples">大量例子</a>
+    <a href="#pitfalls">常見錯誤</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section class="card toc">
+  <h2>目錄</h2>
+  <ol>
+    <li><a href="#overview">initial / always 是什麼？</a></li>
+    <li><a href="#initial">initial block 詳細說明</a></li>
+    <li><a href="#always">always block 詳細說明</a></li>
+    <li><a href="#beginend">begin / end 與單一敘述</a></li>
+    <li><a href="#delay">Delay：#5、#10</a></li>
+    <li><a href="#event">Event Control：@、posedge、negedge</a></li>
+    <li><a href="#comb">always 描述組合邏輯</a></li>
+    <li><a href="#seq">always 描述時序邏輯</a></li>
+    <li><a href="#tb">initial / always 在 Testbench 的角色</a></li>
+    <li><a href="#examples">大量 Verilog 範例</a></li>
+    <li><a href="#blocking">Blocking / Nonblocking</a></li>
+    <li><a href="#pitfalls">常見錯誤與考試重點</a></li>
+  </ol>
+</section>
+
+<section class="card" id="overview">
+  <h2>1. initial 與 always 是什麼？</h2>
+
+  <p>
+    <code>initial</code> 與 <code>always</code> 都是 Verilog 的 <b>procedural blocks</b>。
+    也就是說，它們裡面可以放 procedural statements，例如 assignment、if、case、for、
+    delay、event control 等。
+  </p>
+
+  <div class="grid2">
+    <div class="mini">
+      <h3 style="margin-top:0;color:#d97706">initial</h3>
+      <p><b>模擬時間 0 開始。</b></p>
+      <p><b>整個 block 只執行一次。</b></p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0;color:#059669">always</h3>
+      <p><b>模擬時間 0 開始。</b></p>
+      <p><b>執行完後會持續重複。</b></p>
+    </div>
+  </div>
+
+  <div class="key">
+    課程投影片的核心定義就是：<br>
+    <b>initial：executes precisely once during simulation。</b><br>
+    <b>always：executes continuously during simulation。</b>
+  </div>
+</section>
+
+<section class="card" id="initial">
+  <h2>2. initial Block 詳細說明</h2>
+
+  <h3>2.1 最簡單形式</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>reg x;
+
+initial
+    x = 1'b0;</code></pre>
+
+  <p>
+    模擬一開始，<code>x</code> 被設成 0。這個 initial block 執行完後就結束，不會自動重跑。
+  </p>
+
+  <h3>2.2 多個敘述：使用 begin / end</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>reg x, y, z;
+
+initial begin
+    x = 1'b0;
+    y = 1'b1;
+    z = 1'b0;
+end</code></pre>
+
+  <p>這和課程投影片中的 complex statement 概念相同。</p>
+
+  <h3>2.3 initial 裡使用 delay</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>initial begin
+    x = 1'b0;
+    #10 x = 1'b1;
+end</code></pre>
+
+  <div class="timeline">
+    <div><b>t = 0</b>：x = 0</div>
+    <div><b>等待 10 個 time units</b></div>
+    <div><b>t = 10</b>：x = 1</div>
+    <div><b>initial 結束</b></div>
+  </div>
+
+  <h3>2.4 initial 最常見用途</h3>
+  <div class="grid3">
+    <div class="mini"><b>Testbench 初始化</b><br>設定 input、reset、control signal。</div>
+    <div class="mini"><b>產生 stimulus</b><br>不同時間送不同測試資料。</div>
+    <div class="mini"><b>控制模擬流程</b><br>例如最後呼叫 <code>$finish</code>。</div>
+  </div>
+
+  <div class="note">
+    <b>課程來源明確說明的是 simulation 行為。</b>
+    一般 ASIC RTL 設計中，initial 常主要出現在 testbench；不同工具與實作平台對 initial 的 synthesizability
+    可能有不同支援，因此不要把 testbench 用法直接等同於一般可合成 ASIC RTL。
+  </div>
+</section>
+
+<section class="card" id="always">
+  <h2>3. always Block 詳細說明</h2>
+
+  <p>
+    <code>always</code> 會不斷重複執行。實際上，它通常會搭配 delay 或 event control，
+    否則可能在 simulation time 不前進的情況下無限迴圈。
+  </p>
+
+  <h3>3.1 課程中的 clock generator</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>reg clock;
+
+initial clock = 1'b0;
+
+always #5
+    clock = ~clock;</code></pre>
+
+  <div class="timeline">
+    <div><b>t = 0</b>：clock = 0</div>
+    <div><b>t = 5</b>：clock = 1</div>
+    <div><b>t = 10</b>：clock = 0</div>
+    <div><b>t = 15</b>：clock = 1</div>
+    <div><b>...</b>：持續切換</div>
+  </div>
+
+  <p>
+    這會產生週期 10 time units 的 clock。
+  </p>
+
+  <h3>3.2 always 搭配事件</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk) begin
+    q <= d;
+end</code></pre>
+
+  <p>
+    這個 always block 並不是「一直不停算」，而是每次遇到 <code>clk</code> 的正緣時執行一次。
+  </p>
+</section>
+
+<section class="card" id="beginend">
+  <h2>4. begin / end：一個 statement 與多個 statements</h2>
+
+  <h3>4.1 單一敘述可以不寫 begin/end</h3>
+<pre><code>initial x = 1'b0;</code></pre>
+
+  <h3>4.2 多個敘述要用 begin/end 包起來</h3>
+<pre><code>initial begin
+    x = 0;
+    y = 1;
+    z = 0;
+end</code></pre>
+
+  <h3>4.3 always 也是一樣</h3>
+<pre><code>always @(posedge clk) begin
+    q1 <= d;
+    q2 <= q1;
+    q3 <= q2;
+end</code></pre>
+
+  <div class="warn">
+    <b>常見錯誤：</b>忘記 begin/end，造成只有第一行屬於 if / always，而後面的敘述實際上跑到區塊外。
+  </div>
+</section>
+
+<section class="card" id="delay">
+  <h2>5. Delay Control：<code>#5</code>、<code>#10</code></h2>
+
+  <h3>5.1 單純等待</h3>
+<pre><code>initial begin
+    a = 0;
+    #10;
+    a = 1;
+end</code></pre>
+
+  <h3>5.2 在 assignment 前加 delay</h3>
+<pre><code>initial begin
+    a = 0;
+    #10 a = 1;
+end</code></pre>
+
+  <h3>5.3 多段 stimulus</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>initial begin
+    sel = 0;
+    a   = 0;
+    b   = 1;
+
+    #10 sel = 1;
+    #10 a   = 1;
+    #10 b   = 0;
+end</code></pre>
+
+  <div class="note">
+    這種 <code>#delay</code> 很適合 testbench 模擬 stimulus。
+    對一般 synchronous RTL，硬體時序通常應透過 clock、register、counter、FSM 等方式描述，
+    而不是靠 <code>#10</code> 要求真實電路等待固定時間。
+  </div>
+</section>
+
+<section class="card" id="event">
+  <h2>6. Event Control：<code>@</code>、posedge、negedge</h2>
+
+  <h3>6.1 任一輸入改變時觸發</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(a or b or sel) begin
+    if (sel)
+        y = b;
+    else
+        y = a;
+end</code></pre>
+
+  <h3>6.2 使用 <code>@(*)</code></h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(*) begin
+    if (sel)
+        y = b;
+    else
+        y = a;
+end</code></pre>
+
+  <p>
+    <code>@(*)</code> 表示工具自動將右側讀到的相關訊號納入 sensitivity list，
+    可避免人工漏寫輸入訊號。
+  </p>
+
+  <h3>6.3 正緣觸發</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk) begin
+    q <= d;
+end</code></pre>
+
+  <h3>6.4 負緣觸發</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(negedge clk) begin
+    q <= d;
+end</code></pre>
+
+  <p>
+    課程投影片列出的 edge-triggered event control 正是
+    <code>@(posedge clock)</code> 與 <code>@(negedge clock)</code>。
+  </p>
+</section>
+
+<section class="card" id="comb">
+  <h2>7. always 描述 Combinational Logic</h2>
+
+  <h3>7.1 2-to-1 MUX</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module mux2(
+    input  a, b, sel,
+    output reg y
+);
+    always @(*) begin
+        if (sel)
+            y = b;
+        else
+            y = a;
+    end
+endmodule</code></pre>
+
+  <h3>7.2 4-to-1 MUX</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(*) begin
+    case (sel)
+        2'b00: y = d0;
+        2'b01: y = d1;
+        2'b10: y = d2;
+        2'b11: y = d3;
+    endcase
+end</code></pre>
+
+  <p>
+    課程也用 <code>always @(*)</code> 搭配巢狀 <code>if...else</code> 描述 4-to-1 MUX。
+  </p>
+
+  <h3>7.3 Full Adder</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(*) begin
+    {cout, sum} = a + b + cin;
+end</code></pre>
+
+  <div class="key">
+    Combinational always block 的重點是：<br>
+    <b>1. sensitivity 要完整；2. 每條路徑都要對輸出賦值；3. 通常使用 blocking assignment <code>=</code>。</b>
+  </div>
+</section>
+
+<section class="card" id="seq">
+  <h2>8. always 描述 Sequential Logic</h2>
+
+  <h3>8.1 D Flip-Flop</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk) begin
+    q <= d;
+end</code></pre>
+
+  <h3>8.2 4-bit Shift Register</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk) begin
+    qout[0] <= sin;
+    qout[1] <= qout[0];
+    qout[2] <= qout[1];
+    qout[3] <= qout[2];
+end</code></pre>
+
+  <p>
+    這和課程投影片的 4-bit shift register 例子相同，使用 nonblocking assignment 描述同步更新。
+  </p>
+
+  <h3>8.3 Counter</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk) begin
+    count <= count + 1'b1;
+end</code></pre>
+
+  <h3>8.4 帶非同步 Reset</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        q <= 8'h00;
+    else
+        q <= d;
+end</code></pre>
+
+  <h3>8.5 課程中的 4-bit Counter 風格</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(negedge clock or posedge clear)
+    if (clear)
+        qout <= 4'd0;
+    else
+        qout <= qout + 1'b1;</code></pre>
+</section>
+
+<section class="card" id="tb">
+  <h2>9. initial 與 always 在 Testbench 裡怎麼配合？</h2>
+
+  <div class="flow">
+    <div class="box">initial<small>初始化 / stimulus</small></div>
+    <div class="arrow">+</div>
+    <div class="box">always<small>產生 clock</small></div>
+    <div class="arrow">→</div>
+    <div class="box">DUT<small>接受測試</small></div>
+  </div>
+
+  <h3>完整小型 Testbench</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>`timescale 1ns/1ps
+
+module tb;
+
+    reg clk;
+    reg rst_n;
+    reg d;
+    wire q;
+
+    dff DUT (
+        .clk(clk),
+        .rst_n(rst_n),
+        .d(d),
+        .q(q)
+    );
+
+    // clock generator
+    initial clk = 1'b0;
+    always #5 clk = ~clk;
+
+    // stimulus
+    initial begin
+        rst_n = 1'b0;
+        d     = 1'b0;
+
+        #12 rst_n = 1'b1;
+        #8  d = 1'b1;
+        #10 d = 1'b0;
+        #10 d = 1'b1;
+
+        #20 $finish;
+    end
+
+endmodule</code></pre>
+
+  <p>
+    這裡兩個 procedural blocks 會<b>平行存在</b>：
+    一個 initial 負責 stimulus，另一個 always 持續產生 clock。
+  </p>
+</section>
+
+<section class="card" id="examples">
+  <h2>10. 大量 initial / always 範例</h2>
+
+  <h3>例 1：初始化多個訊號</h3>
+<pre><code>initial begin
+    a = 0;
+    b = 0;
+    sel = 0;
+end</code></pre>
+
+  <h3>例 2：一次性 pulse</h3>
+<pre><code>initial begin
+    start = 0;
+    #20 start = 1;
+    #10 start = 0;
+end</code></pre>
+
+  <h3>例 3：Reset Pulse</h3>
+<pre><code>initial begin
+    rst_n = 0;
+    #25 rst_n = 1;
+end</code></pre>
+
+  <h3>例 4：Clock Generator</h3>
+<pre><code>initial clk = 0;
+always #5 clk = ~clk;</code></pre>
+
+  <h3>例 5：較慢 Clock</h3>
+<pre><code>initial slow_clk = 0;
+always #20 slow_clk = ~slow_clk;</code></pre>
+
+  <h3>例 6：Combinational AND</h3>
+<pre><code>always @(*) begin
+    y = a & b;
+end</code></pre>
+
+  <h3>例 7：MUX</h3>
+<pre><code>always @(*) begin
+    y = sel ? b : a;
+end</code></pre>
+
+  <h3>例 8：Priority Encoder</h3>
+<pre><code>always @(*) begin
+    if      (req[3]) code = 2'd3;
+    else if (req[2]) code = 2'd2;
+    else if (req[1]) code = 2'd1;
+    else             code = 2'd0;
+end</code></pre>
+
+  <h3>例 9：ALU</h3>
+<pre><code>always @(*) begin
+    case(op)
+        3'b000: y = a + b;
+        3'b001: y = a - b;
+        3'b010: y = a & b;
+        3'b011: y = a | b;
+        default: y = 0;
+    endcase
+end</code></pre>
+
+  <h3>例 10：DFF</h3>
+<pre><code>always @(posedge clk)
+    q <= d;</code></pre>
+
+  <h3>例 11：Register Enable</h3>
+<pre><code>always @(posedge clk) begin
+    if (en)
+        q <= d;
+end</code></pre>
+
+  <h3>例 12：Synchronous Reset</h3>
+<pre><code>always @(posedge clk) begin
+    if (!rst_n)
+        q <= 0;
+    else
+        q <= d;
+end</code></pre>
+
+  <h3>例 13：Asynchronous Reset</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        q <= 0;
+    else
+        q <= d;
+end</code></pre>
+
+  <h3>例 14：Toggle Flip-Flop</h3>
+<pre><code>always @(posedge clk) begin
+    if (toggle)
+        q <= ~q;
+end</code></pre>
+
+  <h3>例 15：Shift Register</h3>
+<pre><code>always @(posedge clk) begin
+    q <= {din, q[3:1]};
+end</code></pre>
+
+  <h3>例 16：Counter + Enable</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        count <= 0;
+    else if (en)
+        count <= count + 1'b1;
+end</code></pre>
+
+  <h3>例 17：FSM State Register</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        state <= IDLE;
+    else
+        state <= next_state;
+end</code></pre>
+
+  <h3>例 18：FSM Next-State Logic</h3>
+<pre><code>always @(*) begin
+    next_state = state;
+
+    case(state)
+        IDLE: if (start) next_state = RUN;
+        RUN : if (done)  next_state = IDLE;
+    endcase
+end</code></pre>
+
+  <h3>例 19：等待事件後再執行</h3>
+<pre><code>initial begin
+    @(posedge ready);
+    start = 1;
+    #10 start = 0;
+end</code></pre>
+
+  <h3>例 20：重複送測試向量</h3>
+<pre><code>integer i;
+
+initial begin
+    for (i = 0; i < 16; i = i + 1) begin
+        data = i;
+        #10;
+    end
+end</code></pre>
+</section>
+
+<section class="card" id="blocking">
+  <h2>11. initial / always 與 Blocking / Nonblocking</h2>
+
+  <table>
+    <tr><th>使用情境</th><th>常見寫法</th><th>運算子</th></tr>
+    <tr><td>Testbench stimulus</td><td>initial</td><td>常見 <code>=</code></td></tr>
+    <tr><td>Combinational RTL</td><td>always @(*)</td><td>通常 <code>=</code></td></tr>
+    <tr><td>Sequential RTL</td><td>always @(posedge clk)</td><td>通常 <code>&lt;=</code></td></tr>
+  </table>
+
+  <h3>為什麼 clocked logic 常用 &lt;=？</h3>
+<pre><code>always @(posedge clk) begin
+    q0 <= din;
+    q1 <= q0;
+    q2 <= q1;
+end</code></pre>
+
+  <p>
+    所有 RHS 都取 clock edge 前的舊值，較符合一組 flip-flops 同時更新的 gate-level 行為。
+  </p>
+
+  <div class="note">
+    課程也直接比較 blocking / nonblocking，並指出 clocked blocks 使用 blocking 可能得到
+    和 gate-level 不同的結果；nonblocking 更符合這類 sequential hardware 的同步更新。
+  </div>
+</section>
+
+<section class="card" id="pitfalls">
+  <h2>12. 常見錯誤與考試重點</h2>
+
+  <h3>錯誤 1：沒有 delay / event 的 always</h3>
+<pre><code>always begin
+    a = ~a;
+end</code></pre>
+
+  <div class="warn">
+    這可能形成 zero-time infinite loop，使 simulator 無法正常讓 simulation time 前進。
+  </div>
+
+  <h3>錯誤 2：Combinational sensitivity list 漏訊號</h3>
+<pre><code>always @(a) begin
+    y = a & b;   // b 改變時 block 不會觸發
+end</code></pre>
+
+  <p>較安全的傳統 Verilog 寫法：</p>
+<pre><code>always @(*) begin
+    y = a & b;
+end</code></pre>
+
+  <h3>錯誤 3：Combinational output 沒有完整賦值</h3>
+<pre><code>always @(*) begin
+    if (en)
+        y = a;
+end</code></pre>
+
+  <p>
+    en=0 時 y 必須保留舊值，可能推導出 latch。
+  </p>
+
+  <h3>錯誤 4：兩個 clocked always 使用 blocking 造成 race</h3>
+<pre><code>always @(posedge clk)
+    x = y;
+
+always @(posedge clk)
+    y = x;</code></pre>
+
+  <p>
+    課程投影片把這列為 race condition 的例子；改用 nonblocking：
+  </p>
+
+<pre><code>always @(posedge clk)
+    x <= y;
+
+always @(posedge clk)
+    y <= x;</code></pre>
+
+  <h3>錯誤 5：以為 initial 與 always 會照原始碼上下順序執行</h3>
+  <p>
+    不會。不同 procedural blocks 在模擬中是並行的；每個 block 內部的 procedural statements
+    才有自己的執行順序與事件控制。
+  </p>
+
+  <h3>錯誤 6：把 testbench 的 #delay 直接當 RTL timing</h3>
+  <p>
+    <code>#10</code> 很適合 testbench 模擬，但一般合成設計的真實硬體 timing
+    要透過 clock architecture、register、combinational delay 與 synthesis / STA 處理。
+  </p>
+</section>
+
+<section class="card">
+  <h2>13. initial vs always 一張表比較</h2>
+
+  <table>
+    <tr><th>項目</th><th>initial</th><th>always</th></tr>
+    <tr><td>開始時間</td><td>simulation time 0</td><td>simulation time 0</td></tr>
+    <tr><td>執行次數</td><td>一次</td><td>持續重複</td></tr>
+    <tr><td>常見用途</td><td>初始化、stimulus、simulation control</td><td>clock generation、combinational / sequential behavior</td></tr>
+    <tr><td>是否可含 begin/end</td><td>可以</td><td>可以</td></tr>
+    <tr><td>可否使用 #delay</td><td>可以</td><td>可以</td></tr>
+    <tr><td>可否使用 @event</td><td>可以</td><td>最常見用法之一</td></tr>
+  </table>
+</section>
+
+<section class="card">
+  <h2>14. 自我測驗</h2>
+
+  <details class="quiz">
+    <summary>Q1：initial 會執行幾次？</summary>
+    <p>一次，從 simulation time 0 開始。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q2：always #5 clk = ~clk; 在做什麼？</summary>
+    <p>每 5 time units 將 clk 反相一次，因此形成週期 10 time units 的 clock。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q3：always @(*) 一般用在哪？</summary>
+    <p>常用來描述 combinational procedural logic。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q4：always @(posedge clk) 代表什麼？</summary>
+    <p>只有 clk 從 0 變 1 的 edge 發生時才執行 block。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q5：為什麼多行 statement 要用 begin/end？</summary>
+    <p>因為 begin/end 把多個 procedural statements 組成同一個 compound statement。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q6：不同 initial / always block 是順序執行嗎？</summary>
+    <p>不是，它們在 Verilog 模擬模型中是並行的 procedural processes。</p>
+  </details>
+</section>
+
+<section class="card">
+  <h2>15. 一頁記憶版</h2>
+
+  <div class="grid3">
+    <div class="mini">
+      <h3 style="margin-top:0">initial</h3>
+      <p>time 0 開始，只執行一次。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">always</h3>
+      <p>time 0 開始，持續重複。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">begin / end</h3>
+      <p>把多行 procedural statements 包成一個區塊。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">#delay</h3>
+      <p>常用於 simulation / testbench 時間控制。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">@(*)</h3>
+      <p>常見 combinational sensitivity 寫法。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">posedge / negedge</h3>
+      <p>描述 edge-triggered event。</p>
+    </div>
+  </div>
+
+  <div class="key">
+    <b>最後一句：</b><br>
+    <code>initial</code> 適合「從某個起點做一次的流程」；
+    <code>always</code> 適合「持續等待事件並重複反應的硬體/模擬流程」。
+  </div>
+</section>
+
+<div class="footer">InitialAlways_Blocks.html — Verilog initial / always 詳細教學</div>
+
+</main>
+
+<script>
+function copyCode(btn){
+  const code = btn.parentElement.querySelector("code").innerText;
+  navigator.clipboard.writeText(code).then(()=>{
+    const old = btn.innerText;
+    btn.innerText = "Copied!";
+    setTimeout(()=>btn.innerText = old, 1200);
+  });
+}
+</script>
+
+</body>
+</html>

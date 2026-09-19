@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CellCharacterization.html — Cell Characterization（元件特性化）完整教學</title>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#64748b;
+  --blue:#2563eb;--teal:#0f766e;--green:#059669;--orange:#d97706;
+  --red:#dc2626;--purple:#7c3aed;--line:#dbe3ec;--code:#0f172a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;
+  line-height:1.82
+}
+header{
+  background:linear-gradient(135deg,#1e3a8a,#0f766e 60%,#115e59);
+  color:#fff;padding:52px 24px 44px
+}
+header .inner,nav .bar,.wrap{max-width:1180px;margin:auto}
+header h1{margin:0 0 10px;font-size:2.16rem}
+header p{margin:5px 0;max-width:1040px;opacity:.96}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tag{
+  padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.26);font-size:.88rem
+}
+nav{
+  position:sticky;top:0;z-index:20;background:rgba(245,247,251,.95);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px)
+}
+nav .bar{padding:8px 20px;display:flex;gap:10px;overflow:auto;white-space:nowrap}
+nav a{color:#0f766e;text-decoration:none;padding:5px 9px;border-radius:8px;font-size:.9rem}
+nav a:hover{background:#e2e8f0}
+.wrap{padding:28px 20px 80px}
+.card{
+  background:var(--card);border-radius:18px;padding:26px;margin:22px 0;
+  box-shadow:0 8px 28px rgba(15,23,42,.07)
+}
+h2{margin:0 0 16px;color:#134e4a;border-left:6px solid #14b8a6;padding-left:12px}
+h3{color:#1d4ed8;margin-top:26px}
+h4{color:#7c3aed;margin:18px 0 8px}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{
+  background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;
+  overflow:auto;line-height:1.55
+}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}
+th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{
+  padding:14px 16px;border-radius:10px;margin:16px 0
+}
+.note{background:#fff7ed;border-left:5px solid #f59e0b}
+.tip{background:#eff6ff;border-left:5px solid #3b82f6}
+.warn{background:#fef2f2;border-left:5px solid #ef4444}
+.key{background:#ecfdf5;border-left:5px solid #10b981}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mini{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px}
+.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:24px 0}
+.box{
+  min-width:155px;text-align:center;padding:14px 16px;border:2px solid #67e8f9;
+  background:#ecfeff;border-radius:13px;font-weight:700
+}
+.box small{display:block;color:#475569;font-weight:500;margin-top:5px}
+.arrow{font-size:1.5rem;color:#64748b}
+.toc ol{columns:2;column-gap:34px}
+.toc li{margin:7px 0;break-inside:avoid}
+.toc a{color:#0f766e;text-decoration:none}
+.quiz{
+  border:1px dashed #94a3b8;border-radius:14px;padding:14px 16px;
+  margin:12px 0;background:#fff
+}
+.quiz summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+@media(max-width:800px){header h1{font-size:1.68rem}.toc ol{columns:1}}
+</style>
+</head>
+<body>
+
+<header><div class="inner">
+<h1>Cell Characterization（元件特性化）完整教學</h1>
+<p>詳細說明 Standard Cell 為什麼需要 Characterization、如何透過 transistor-level SPICE simulations 跨 PVT corners 量測 delay、slew rate、power，以及這些量測結果如何形成 NLDM 2D lookup table 並寫入 timing/power library。</p>
+<p>本頁以課程「Timing Delay for an Inverter Cell」與「Non-Linear Delay Model」內容為主軸，並加入大量 INV、NAND、AND、MUX、DFF、不同 load / slew / PVT 的例子。</p>
+<div class="tags">
+<span class="tag">Cell Characterization</span><span class="tag">SPICE</span><span class="tag">PVT</span>
+<span class="tag">Delay</span><span class="tag">Slew</span><span class="tag">Power</span>
+<span class="tag">NLDM</span><span class="tag">Input Slew × Output Load</span>
+</div>
+</div></header>
+
+<nav><div class="bar">
+<a href="#overview">總覽</a><a href="#why">為什麼需要</a><a href="#flow">流程</a>
+<a href="#pvt">PVT</a><a href="#delay">Delay</a><a href="#slew">Slew</a>
+<a href="#load">Load</a><a href="#power">Power</a><a href="#nldm">NLDM</a>
+<a href="#examples">大量例子</a><a href="#library">Library</a><a href="#pitfalls">常見誤解</a>
+</div></nav>
+
+<main class="wrap">
+
+<section class="card toc">
+<h2>目錄</h2>
+<ol>
+<li><a href="#overview">Cell Characterization 是什麼？</a></li>
+<li><a href="#why">為什麼不能只知道 Boolean Function？</a></li>
+<li><a href="#flow">Characterization 基本流程</a></li>
+<li><a href="#pvt">PVT Corners</a></li>
+<li><a href="#delay">Propagation Delay</a></li>
+<li><a href="#slew">Slew / Transition Time</a></li>
+<li><a href="#load">Output Load Capacitance</a></li>
+<li><a href="#power">Power Characterization</a></li>
+<li><a href="#nldm">NLDM 2D Lookup Table</a></li>
+<li><a href="#interp">Lookup / Interpolation 概念</a></li>
+<li><a href="#examples">大量元件例子</a></li>
+<li><a href="#library">結果如何進入 .lib/.db</a></li>
+<li><a href="#design">Synthesis / STA 如何使用</a></li>
+<li><a href="#pitfalls">常見誤解與考試重點</a></li>
+</ol>
+</section>
+
+<section class="card" id="overview">
+<h2>1. Cell Characterization 是什麼？</h2>
+
+<p>
+課程對 Cell Characterization 的核心定義是：
+<b>在不同 PVT（Process、Voltage、Temperature）corners 下，執行大量 transistor-level SPICE simulations，
+量測 standard cell 的 delay、slew rate 與 power。</b>
+</p>
+
+<div class="flow">
+<div class="box">Transistor-Level Cell<small>例如 INV / NAND / DFF</small></div>
+<div class="arrow">→</div>
+<div class="box">SPICE Simulation</div>
+<div class="arrow">→</div>
+<div class="box">Sweep Conditions<small>PVT / Slew / Load</small></div>
+<div class="arrow">→</div>
+<div class="box">Measure<small>Delay / Slew / Power</small></div>
+<div class="arrow">→</div>
+<div class="box">Library Model<small>.lib / .db</small></div>
+</div>
+
+<div class="key">
+<b>一句話：</b>Characterization 就是在真正使用 cell 之前，先把它在很多 operating conditions 下的「速度、輸出轉換品質、耗電」量清楚。
+</div>
+</section>
+
+<section class="card" id="why">
+<h2>2. 為什麼不能只知道 Boolean Function？</h2>
+
+<p>
+假設一顆 inverter：
+</p>
+
+<pre><code>Y = ~A</code></pre>
+
+<p>
+這只告訴你功能，但不知道：
+</p>
+
+<div class="grid3">
+<div class="mini"><h3 style="margin-top:0">有多快？</h3><p>Input 改變後，Output 多久才跟著改變？</p></div>
+<div class="mini"><h3 style="margin-top:0">邊緣有多陡？</h3><p>Output transition 是快還是慢？</p></div>
+<div class="mini"><h3 style="margin-top:0">耗多少電？</h3><p>Switching / internal / leakage power 是多少？</p></div>
+</div>
+
+<p>
+因此 Standard Cell 不只需要 function，也要事先 characterize area、timing、power、functionality。
+課程把這些稱為 standard cell 的 pre-characterized attributes。
+</p>
+
+<div class="note">
+同樣是 <code>INV_X1</code>，在不同 PVT、不同 input slew、不同 output load 下，delay 不會是同一個固定數字。
+</div>
+</section>
+
+<section class="card" id="flow">
+<h2>3. Characterization 基本流程</h2>
+
+<h3>Step 1：準備 transistor-level cell</h3>
+<pre><code>.SUBCKT INV_X1 A Y VDD VSS
+MP1 Y A VDD VDD PMOS ...
+MN1 Y A VSS VSS NMOS ...
+.ENDS INV_X1</code></pre>
+
+<h3>Step 2：設定 operating condition</h3>
+<p>選擇 process corner、supply voltage、temperature。</p>
+
+<h3>Step 3：設定 input waveform</h3>
+<p>改變 input transition time，例如 fast / medium / slow slew。</p>
+
+<h3>Step 4：設定 output load</h3>
+<p>在 output 接不同大小的 capacitance。</p>
+
+<h3>Step 5：執行 SPICE</h3>
+<p>量 input/output waveform。</p>
+
+<h3>Step 6：萃取量測結果</h3>
+<p>取得 propagation delay、output slew、power。</p>
+
+<h3>Step 7：整理成 tables/models</h3>
+<p>將結果寫成 library timing/power model，提供 synthesis / STA 使用。</p>
+
+<div class="key">
+課程使用「thousands of transistor-level SPICE simulations」描述這個流程，重點就是<b>大量掃描條件</b>，不是只模擬一次。
+</div>
+</section>
+
+<section class="card" id="pvt">
+<h2>4. PVT Corners</h2>
+
+<table>
+<tr><th>PVT</th><th>意思</th><th>為什麼重要</th></tr>
+<tr><td><b>P = Process</b></td><td>製程變異造成 transistor 快慢不同</td><td>影響 drive current、delay、leakage</td></tr>
+<tr><td><b>V = Voltage</b></td><td>Supply voltage 不同</td><td>影響速度與功耗</td></tr>
+<tr><td><b>T = Temperature</b></td><td>Operating temperature 不同</td><td>影響 transistor 行為、delay、leakage</td></tr>
+</table>
+
+<h3>概念例子</h3>
+<pre><code>Corner A:
+Process = Slow
+Voltage = Low
+Temperature = High
+
+Corner B:
+Process = Typical
+Voltage = Nominal
+Temperature = Room
+
+Corner C:
+Process = Fast
+Voltage = High
+Temperature = Low</code></pre>
+
+<div class="note">
+上面的 corner 命名是概念示意；課程明確支持的是 Characterization 需要跨 Process、Voltage、Temperature corners 執行。
+</div>
+</section>
+
+<section class="card" id="delay">
+<h2>5. Propagation Delay</h2>
+
+<p>
+Propagation delay 描述 input transition 發生後，output response 到達定義觀測點所需的時間。
+課程以 inverter cell 的 timing delay 為例。
+</p>
+
+<h3>5.1 Input 0→1，Inverter Output 1→0</h3>
+<pre><code>A : ____/‾‾‾‾
+Y : ‾‾‾‾\____
+        ← delay →</code></pre>
+
+<h3>5.2 Input 1→0，Inverter Output 0→1</h3>
+<pre><code>A : ‾‾‾‾\____
+Y : ____/‾‾‾‾
+        ← delay →</code></pre>
+
+<p>
+實務 timing library 通常會區分 output rise / output fall，
+因為 PMOS 與 NMOS network 的驅動能力不一定完全相同。
+</p>
+
+<div class="note">
+「rise/fall 分開」是常見 library 實務補充；課程頁面本身明確說的是 characterization 量測 cell delay、slew、power。
+</div>
+</section>
+
+<section class="card" id="slew">
+<h2>6. Slew Rate / Transition Time</h2>
+
+<p>
+課程 NLDM 頁面使用 <b>Input Slew (Transition Time)</b> 作為 delay table 的一個 index。
+Slew 可以理解為訊號從 low 到 high 或 high 到 low 的轉換快慢。
+</p>
+
+<div class="grid2">
+<div class="mini">
+<h3 style="margin-top:0">Fast Slew</h3>
+<pre><code>____/‾‾‾‾</code></pre>
+<p>transition 很快，邊緣較陡。</p>
+</div>
+<div class="mini">
+<h3 style="margin-top:0">Slow Slew</h3>
+<pre><code>______/‾‾‾</code></pre>
+<p>transition 較慢，邊緣較緩。</p>
+</div>
+</div>
+
+<h3>為什麼 Input Slew 會影響 Delay？</h3>
+<p>
+因為 transistor 不會在 input 還沒轉換完成時瞬間到達完整驅動狀態。
+所以不同 input transition time 會造成不同 cell response。
+</p>
+</section>
+
+<section class="card" id="load">
+<h2>7. Output Load Capacitance</h2>
+
+<p>
+NLDM 的第二個重要 index 是 <b>Output Load Capacitance</b>。
+Output load 可以來自後級 cell input capacitance、wire capacitance 等。
+</p>
+
+<h3>例子：一顆 INV 驅動一顆 INV</h3>
+<pre><code>INV1 ───→ INV2
+          ↑
+       input cap</code></pre>
+
+<h3>例子：一顆 INV 驅動四顆 gates</h3>
+<pre><code>            → Gate1
+INV1 ───────→ Gate2
+            → Gate3
+            → Gate4</code></pre>
+
+<p>
+第二種情況 output load 通常更大，因此驅動更困難，output transition 可能變慢，cell delay 也可能增加。
+</p>
+
+<div class="tip">
+這也解釋了為什麼 library 需要 X1、X2、X4 等不同 drive-strength cells：大 load 時可以選更強的 cell。
+</div>
+</section>
+
+<section class="card" id="power">
+<h2>8. Power Characterization</h2>
+
+<p>
+課程明確指出 characterization 會量 power，而且 `.lib/.db` 包含 dynamic 與 leakage power 資訊。
+</p>
+
+<div class="grid2">
+<div class="mini">
+<h3 style="margin-top:0">Dynamic Power</h3>
+<p>與 switching activity、capacitance、voltage、frequency 等因素有關。</p>
+</div>
+<div class="mini">
+<h3 style="margin-top:0">Leakage Power</h3>
+<p>即使沒有切換，transistor 仍可能有 leakage current。</p>
+</div>
+</div>
+
+<h3>概念例子：X1 vs X4</h3>
+<pre><code>INV_X1 : smaller transistor / weaker drive
+INV_X4 : larger effective drive / often larger cap and power</code></pre>
+
+<p>
+功能相同，但 timing / power / area 特性不同，因此 characterization 必須分別建立模型。
+</p>
+</section>
+
+<section class="card" id="nldm">
+<h2>9. NLDM：Non-Linear Delay Model</h2>
+
+<p>
+課程明確指出：
+<b>NLDM 的 delay 存在 2D lookup table 中，索引為 Input Slew 與 Output Load Capacitance。</b>
+</p>
+
+<table>
+<tr><th>Input Slew ↓ / Output Load →</th><th>0.001</th><th>0.010</th><th>0.050</th></tr>
+<tr><td>0.010</td><td>0.020</td><td>0.030</td><td>0.050</td></tr>
+<tr><td>0.050</td><td>0.030</td><td>0.045</td><td>0.070</td></tr>
+<tr><td>0.100</td><td>0.050</td><td>0.070</td><td>0.110</td></tr>
+</table>
+
+<div class="note">
+上表數字是教學用假設值，不是課程的實際 cell data；課程提供的是 2D table 結構與兩個 index 的概念。
+</div>
+
+<h3>示意 Liberty table</h3>
+<pre><code>cell_rise(delay_template) {
+    index_1("0.01, 0.05, 0.10");   // Input Slew
+    index_2("0.001, 0.01, 0.05");  // Output Load
+
+    values(
+      "0.020, 0.030, 0.050",
+      "0.030, 0.045, 0.070",
+      "0.050, 0.070, 0.110"
+    );
+}</code></pre>
+
+<div class="key">
+<b>記憶：</b>Input 越慢、Load 越大，cell 通常越難快速切換，因此 delay table 會反映這種 dependence。
+</div>
+</section>
+
+<section class="card" id="interp">
+<h2>10. 如果 Slew / Load 不剛好落在 Table Index 呢？</h2>
+
+<p class="note">
+這一節是為幫助理解 NLDM 的延伸說明；課程片段本身只明確說 delay 儲存在以 input slew 與 output load 為 index 的 2D lookup tables。
+</p>
+
+<p>
+實際使用時，STA tool 會根據目前 net 的 slew/load，在 table 中查找附近的資料點，並用 library model 的方法得到對應 delay。
+可以把概念想成：
+</p>
+
+<pre><code>Input Slew = 0.035
+Output Load = 0.020
+
+不是表格中的精確格點
+→ 使用附近 table entries
+→ 得到估計 delay</code></pre>
+</section>
+
+<section class="card" id="examples">
+<h2>11. 大量 Characterization 例子</h2>
+
+<h3>例 1：INV_X1 — 小 Load</h3>
+<pre><code>Input Slew : Fast
+Output Load: Small
+
+→ output 容易充放電
+→ 量測 delay / output slew / power</code></pre>
+
+<h3>例 2：INV_X1 — 大 Load</h3>
+<pre><code>Input Slew : Fast
+Output Load: Large
+
+→ 驅動負載更困難
+→ 重新執行 SPICE
+→ 記錄另一組 delay/slew/power</code></pre>
+
+<h3>例 3：INV_X1 — Slow Input Slew</h3>
+<pre><code>Input Slew : Slow
+Output Load: Medium
+
+→ transistor turn-on / turn-off 過程不同
+→ cell delay 與 output transition 重新量測</code></pre>
+
+<h3>例 4：INV_X1 — 多個 Slew × 多個 Load</h3>
+<pre><code>Slew = [S1, S2, S3, S4]
+Load = [C1, C2, C3, C4]
+
+總共至少形成：
+S1×C1, S1×C2, ...
+S4×C4
+
+每一點都需要 characterization data</code></pre>
+
+<h3>例 5：INV_X1 vs INV_X4</h3>
+<pre><code>INV_X1 → characterize
+INV_X4 → characterize separately</code></pre>
+<p>
+兩者功能都是 inverter，但 transistor sizing 不同，因此 timing / slew / power table 不可直接共用。
+</p>
+
+<h3>例 6：NAND2_X1</h3>
+<pre><code>Y = ~(A & B)</code></pre>
+<p>
+Characterization 不只要知道 Boolean function，還要量 input transition 經過 transistor network 後造成的 output delay / slew / power。
+</p>
+
+<h3>例 7：NAND2 不同輸入 Pin</h3>
+<pre><code>A changes, B = 1
+B changes, A = 1</code></pre>
+<p>
+不同 input pin 到 output 的 timing path 可以視為不同 timing arc；實務 library 會分別描述相關 timing behavior。
+</p>
+
+<div class="note">
+「timing arc」的說明是實務延伸；課程這一頁沒有逐項列 timing arc syntax。
+</div>
+
+<h3>例 8：AND2_X1 / AND2_X2 / AND2_X4</h3>
+<pre><code>AND2_X1
+AND2_X2
+AND2_X4</code></pre>
+<p>
+課程 Standard Cell Library 頁面直接列出這些 cell。每一種 strength 都有自己的 area / timing / power characteristics。
+</p>
+
+<h3>例 9：MUX2</h3>
+<pre><code>Y = S ? B : A</code></pre>
+<p>
+MUX 的不同 input-to-output path 也需要 timing characterization，讓 STA 知道不同選擇路徑的 timing behavior。
+</p>
+
+<h3>例 10：DFF — Clock-to-Q</h3>
+<pre><code>posedge CLK
+    ↓
+Q changes after some delay</code></pre>
+<p>
+Sequential cell 的 characterization 不只需要 combinational propagation delay，還常會建立 clock-related timing constraints / response models。
+</p>
+
+<h3>例 11：DFF — Setup / Hold</h3>
+<pre><code>          ↑ clock edge
+---- D ----|----
+       ←setup→
+          ←hold→</code></pre>
+
+<p>
+課程的 `.lib/.db` 說明明確指出 timing/power view 包含 setup/hold times。
+</p>
+
+<h3>例 12：Different PVT</h3>
+<pre><code>Corner 1 → SPICE sweep
+Corner 2 → SPICE sweep
+Corner 3 → SPICE sweep
+
+每個 corner 建立自己的 timing/power model</code></pre>
+
+<h3>例 13：High Output Fanout</h3>
+<pre><code>BUF_X1 → 1 load
+BUF_X1 → 8 loads</code></pre>
+<p>
+8 loads 對應更大的 effective load，因此 characterization table 可讓工具估計 delay 與 slew 的變化。
+</p>
+
+<h3>例 14：Cell Upsizing</h3>
+<pre><code>Current cell : INV_X1
+Timing too slow
+→ Synthesis / optimization may choose INV_X2 or INV_X4</code></pre>
+<p>
+這個選擇之所以可行，就是因為不同 size 的 cell 已經先 characterize 完成。
+</p>
+
+<h3>例 15：Critical Path</h3>
+<pre><code>FF → NAND2 → AOI → INV → FF</code></pre>
+<p>
+STA 可以依每一顆 cell 的 characterized timing table，配合實際 slew / load，估計整條 path delay。
+</p>
+</section>
+
+<section class="card" id="library">
+<h2>12. Characterization 結果如何進入 .lib / .db？</h2>
+
+<p>
+課程指出 `.lib/.db` 是 Timing &amp; Power View，內容包含：
+propagation delay、setup/hold times、dynamic / leakage power，以及 NLDM / CCS models。
+</p>
+
+<h3>Conceptual Flow</h3>
+<div class="flow">
+<div class="box">SPICE Waveforms</div>
+<div class="arrow">→</div>
+<div class="box">Extract Delay/Slew/Power</div>
+<div class="arrow">→</div>
+<div class="box">Build Lookup Tables</div>
+<div class="arrow">→</div>
+<div class="box">.lib</div>
+<div class="arrow">→</div>
+<div class="box">EDA Tools</div>
+</div>
+
+<h3>示意 cell model</h3>
+<pre><code>cell (INV_X1) {
+    area : 1.20;
+
+    pin(A) {
+        direction : input;
+        capacitance : ...;
+    }
+
+    pin(ZN) {
+        direction : output;
+        function : "!A";
+
+        timing() {
+            related_pin : "A";
+            cell_rise(...);
+            cell_fall(...);
+            rise_transition(...);
+            fall_transition(...);
+        }
+    }
+}</code></pre>
+
+<div class="note">
+這段 Liberty syntax 是教學化示意，用來說明 characterization data 最後會以 timing/power model 形式存在 library；課程沒有提供這段完整文字。
+</div>
+</section>
+
+<section class="card" id="design">
+<h2>13. Synthesis / STA 怎麼使用 Characterized Data？</h2>
+
+<h3>13.1 Synthesis</h3>
+<p>
+比較不同 cells 的 area、timing、power，決定要用哪一顆 standard cell。
+</p>
+
+<pre><code>AND2_X1
+AND2_X2
+AND2_X4
+
+功能一樣
+→ 但 timing / area / power 不一樣
+→ tool 根據目標選擇</code></pre>
+
+<h3>13.2 Static Timing Analysis</h3>
+<p>
+STA 根據每一級實際 input slew 與 output load 去查 timing model，累積 path delay。
+</p>
+
+<h3>13.3 Timing Optimization</h3>
+<pre><code>Path too slow
+→ stronger drive cell
+→ buffer insertion
+→ logic restructuring
+→ re-evaluate timing</code></pre>
+
+<p>
+這些操作都依賴 characterization data，而不是只依賴 Boolean logic。
+</p>
+</section>
+
+<section class="card" id="pitfalls">
+<h2>14. 常見誤解與考試重點</h2>
+
+<h3>誤解 1：Cell delay 是固定值</h3>
+<p>錯。課程的 NLDM 明確指出 delay 依 Input Slew 與 Output Load Capacitance 查 2D table。</p>
+
+<h3>誤解 2：Characterization 只模擬一個 corner</h3>
+<p>錯。課程明確說是在 PVT corners 下執行大量 SPICE simulations。</p>
+
+<h3>誤解 3：只量 delay 就夠了</h3>
+<p>錯。課程明確列出 delay、slew rate、power。</p>
+
+<h3>誤解 4：X1 / X4 可以共用同一 timing table</h3>
+<p>不應這樣理解。它們 drive strength 不同，cell characteristics 不同，因此需要各自的模型。</p>
+
+<h3>誤解 5：Verilog functional model 可以取代 transistor-level characterization</h3>
+<p>錯。Verilog model 可描述 logic behavior，但 characterization 需要 transistor-level SPICE behavior。</p>
+
+<h3>誤解 6：Output load 與 timing 無關</h3>
+<p>錯。課程明確把 Output Load Capacitance 列為 NLDM delay table 的 index。</p>
+</section>
+
+<section class="card">
+<h2>15. 自我測驗</h2>
+
+<details class="quiz"><summary>Q1：Cell Characterization 的核心工作是什麼？</summary>
+<p>跨 PVT corners 執行大量 transistor-level SPICE simulations，量測 cell delay、slew rate、power。</p></details>
+
+<details class="quiz"><summary>Q2：PVT 三個字母代表什麼？</summary>
+<p>Process、Voltage、Temperature。</p></details>
+
+<details class="quiz"><summary>Q3：NLDM 的兩個主要 index 是什麼？</summary>
+<p>Input Slew（Transition Time）與 Output Load Capacitance。</p></details>
+
+<details class="quiz"><summary>Q4：為什麼 INV_X1 和 INV_X4 都需要 characterization？</summary>
+<p>因為 drive strength 與 transistor sizing 不同，所以 timing、slew、power 特性不同。</p></details>
+
+<details class="quiz"><summary>Q5：Characterization 結果主要寫入哪類 library view？</summary>
+<p>Timing &amp; Power View，也就是課程列出的 `.lib/.db`。</p></details>
+
+<details class="quiz"><summary>Q6：Characterization 只是為 simulation 用嗎？</summary>
+<p>不是。其 timing/power model 會被 synthesis、STA 與 optimization 使用。</p></details>
+</section>
+
+<section class="card">
+<h2>16. 一頁記憶版</h2>
+
+<table>
+<tr><th>關鍵字</th><th>一句話</th></tr>
+<tr><td>Characterization</td><td>大量 SPICE 掃描 cell 行為</td></tr>
+<tr><td>PVT</td><td>Process / Voltage / Temperature</td></tr>
+<tr><td>Delay</td><td>Input event 到 Output response 的時間</td></tr>
+<tr><td>Slew</td><td>訊號 transition 的快慢</td></tr>
+<tr><td>Load</td><td>Output 所驅動的 capacitance</td></tr>
+<tr><td>Power</td><td>Dynamic / Leakage 等功耗模型</td></tr>
+<tr><td>NLDM</td><td>Input Slew × Output Load → Delay table</td></tr>
+<tr><td>.lib/.db</td><td>Characterization 結果的 Timing &amp; Power View</td></tr>
+</table>
+
+<div class="key">
+<b>最後一句：</b><br>
+Cell Characterization 的真正目的，是把「transistor-level 的複雜類比行為」濃縮成 EDA tool 可以快速查詢的 timing / slew / power models，
+讓整顆數位晶片不需要每次都用 SPICE 逐顆 transistor 模擬。
+</div>
+</section>
+
+<div class="footer">CellCharacterization.html — VLSI System Design 詳細教學</div>
+</main>
+</body>
+</html>

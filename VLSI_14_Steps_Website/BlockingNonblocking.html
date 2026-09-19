@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlockingNonblocking.html — Verilog Blocking 與 Nonblocking Assignment 完整教學</title>
+<style>
+:root{
+  --bg:#f5f7fb; --card:#ffffff; --text:#1f2937; --muted:#64748b;
+  --blue:#2563eb; --teal:#0f766e; --green:#059669; --orange:#d97706;
+  --red:#dc2626; --purple:#7c3aed; --line:#dbe3ec; --code:#0f172a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;
+  line-height:1.82;
+}
+header{
+  background:linear-gradient(135deg,#1e3a8a,#0f766e 62%,#115e59);
+  color:#fff;padding:52px 24px 44px;
+}
+header .inner{max-width:1180px;margin:auto}
+header h1{margin:0 0 10px;font-size:2.25rem}
+header p{margin:5px 0;max-width:1000px;opacity:.96}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tag{
+  padding:5px 10px;border-radius:999px;
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);
+  font-size:.88rem
+}
+nav{
+  position:sticky;top:0;z-index:20;background:rgba(245,247,251,.95);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px)
+}
+nav .bar{
+  max-width:1180px;margin:auto;padding:8px 20px;display:flex;gap:10px;
+  overflow:auto;white-space:nowrap
+}
+nav a{
+  color:#0f766e;text-decoration:none;padding:5px 9px;border-radius:8px;font-size:.9rem
+}
+nav a:hover{background:#e2e8f0}
+.wrap{max-width:1180px;margin:auto;padding:28px 20px 80px}
+.card{
+  background:var(--card);border-radius:18px;padding:26px;margin:22px 0;
+  box-shadow:0 8px 28px rgba(15,23,42,.07)
+}
+h2{margin:0 0 16px;color:#134e4a;border-left:6px solid #14b8a6;padding-left:12px}
+h3{color:#1d4ed8;margin-top:26px}
+h4{color:#7c3aed;margin:18px 0 8px}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{
+  background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;
+  overflow:auto;line-height:1.55;position:relative
+}
+.inline{
+  background:#e2e8f0;padding:2px 6px;border-radius:6px;
+  font-family:Consolas,"Courier New",monospace
+}
+.copy-btn{
+  float:right;border:0;border-radius:8px;padding:6px 10px;
+  background:#334155;color:#fff;cursor:pointer;font-size:.8rem
+}
+.copy-btn:hover{background:#475569}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}
+th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{
+  padding:14px 16px;border-radius:10px;margin:16px 0
+}
+.note{background:#fff7ed;border-left:5px solid #f59e0b}
+.tip{background:#eff6ff;border-left:5px solid #3b82f6}
+.warn{background:#fef2f2;border-left:5px solid #ef4444}
+.key{background:#ecfdf5;border-left:5px solid #10b981}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mini{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px}
+.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:22px 0}
+.box{
+  min-width:155px;text-align:center;padding:14px 16px;
+  border:2px solid #67e8f9;background:#ecfeff;border-radius:13px;font-weight:700
+}
+.box small{display:block;color:#475569;font-weight:500;margin-top:5px}
+.arrow{font-size:1.6rem;color:#64748b}
+.toc ol{columns:2;column-gap:34px}
+.toc li{margin:7px 0;break-inside:avoid}
+.toc a{color:#0f766e;text-decoration:none}
+.timeline{
+  border-left:4px solid #60a5fa;margin:18px 0 18px 14px;padding-left:22px
+}
+.timeline div{margin:12px 0}
+.timeline b{color:#1d4ed8}
+.quiz{
+  border:1px dashed #94a3b8;border-radius:14px;padding:14px 16px;
+  margin:12px 0;background:#fff
+}
+.quiz summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+@media(max-width:800px){
+  header h1{font-size:1.75rem}
+  .toc ol{columns:1}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <h1>Verilog Blocking 與 Nonblocking Assignment 完整教學</h1>
+    <p>
+      詳細說明 <code>=</code> 與 <code>&lt;=</code> 的差別、simulation event ordering、
+      combinational / sequential coding style、shift register、race condition，以及為什麼 clocked logic 通常要用 nonblocking。
+    </p>
+    <p>本頁加入大量正確／錯誤對照範例與逐步執行分析。</p>
+    <div class="tags">
+      <span class="tag">blocking =</span>
+      <span class="tag">nonblocking &lt;=</span>
+      <span class="tag">combinational logic</span>
+      <span class="tag">sequential logic</span>
+      <span class="tag">shift register</span>
+      <span class="tag">race condition</span>
+      <span class="tag">RTL coding style</span>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="bar">
+    <a href="#overview">總覽</a>
+    <a href="#blocking">Blocking</a>
+    <a href="#nonblocking">Nonblocking</a>
+    <a href="#compare">比較</a>
+    <a href="#shift">Shift Register</a>
+    <a href="#race">Race Condition</a>
+    <a href="#comb">Combinational</a>
+    <a href="#seq">Sequential</a>
+    <a href="#examples">大量例子</a>
+    <a href="#pitfalls">常見錯誤</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section class="card toc">
+  <h2>目錄</h2>
+  <ol>
+    <li><a href="#overview">Blocking / Nonblocking 是什麼？</a></li>
+    <li><a href="#blocking">Blocking Assignment：=</a></li>
+    <li><a href="#nonblocking">Nonblocking Assignment：&lt;=</a></li>
+    <li><a href="#compare">兩者差異一張表</a></li>
+    <li><a href="#shift">Shift Register 經典比較</a></li>
+    <li><a href="#race">Race Condition</a></li>
+    <li><a href="#comb">Combinational Logic Coding Style</a></li>
+    <li><a href="#seq">Sequential Logic Coding Style</a></li>
+    <li><a href="#examples">大量 Verilog 範例</a></li>
+    <li><a href="#mixed">混用 = 與 &lt;= 的問題</a></li>
+    <li><a href="#synthesis">Synthesis 觀點</a></li>
+    <li><a href="#pitfalls">常見錯誤與考試重點</a></li>
+  </ol>
+</section>
+
+<section class="card" id="overview">
+  <h2>1. Blocking 與 Nonblocking Assignment 到底差在哪？</h2>
+
+  <div class="grid2">
+    <div class="mini">
+      <h3 style="margin-top:0;color:#d97706">Blocking Assignment</h3>
+      <p><code>=</code></p>
+      <p>目前這一行執行完成後，才繼續下一行。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0;color:#059669">Nonblocking Assignment</h3>
+      <p><code>&lt;=</code></p>
+      <p>先計算 RHS，LHS 的更新排程到稍後，block 可以繼續執行後面 statements。</p>
+    </div>
+  </div>
+
+  <div class="key">
+    <b>最常用的設計規則：</b><br>
+    Combinational procedural logic 通常用 <code>=</code>。<br>
+    Clocked sequential logic 通常用 <code>&lt;=</code>。
+  </div>
+</section>
+
+<section class="card" id="blocking">
+  <h2>2. Blocking Assignment：<code>=</code></h2>
+
+  <p>
+    Blocking assignment 的概念是：
+    <b>當前 assignment 完成後，才往下一個 statement 執行。</b>
+  </p>
+
+  <h3>2.1 最簡單例子</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>begin
+    a = b;
+    c = a;
+end</code></pre>
+
+  <p>
+    第二行看到的是第一行已經更新後的 <code>a</code>。
+  </p>
+
+  <div class="timeline">
+    <div><b>Step 1</b>：a 立即取得 b</div>
+    <div><b>Step 2</b>：c 取得新的 a</div>
+  </div>
+
+  <h3>2.2 Combinational logic 很適合 blocking</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(*) begin
+    temp = a & b;
+    y    = temp | c;
+end</code></pre>
+
+  <p>
+    這種逐步計算中，第二行需要使用第一行剛算出的 temp，所以 blocking 非常直觀。
+  </p>
+</section>
+
+<section class="card" id="nonblocking">
+  <h2>3. Nonblocking Assignment：<code>&lt;=</code></h2>
+
+  <p>
+    Nonblocking assignment 的核心是：
+    <b>RHS 先取值，但 LHS 的實際更新被排程到目前 time step 的後段。</b>
+  </p>
+
+  <h3>3.1 最簡單例子</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>begin
+    a <= b;
+    c <= a;
+end</code></pre>
+
+  <p>
+    兩行 RHS 都使用「進入 block 時的舊值」來計算。
+  </p>
+
+  <div class="timeline">
+    <div><b>Step 1</b>：先記住 b 的舊值，準備更新 a</div>
+    <div><b>Step 2</b>：再記住 a 的舊值，準備更新 c</div>
+    <div><b>最後</b>：a、c 在排程點一起更新</div>
+  </div>
+
+  <h3>3.2 這正符合 Flip-Flop 同步更新的直覺</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk) begin
+    q0 <= din;
+    q1 <= q0;
+    q2 <= q1;
+end</code></pre>
+
+  <p>
+    在同一個 clock edge，q0、q1、q2 都取 edge 前的舊值，因此形成真正的 pipeline / shift register。
+  </p>
+</section>
+
+<section class="card" id="compare">
+  <h2>4. Blocking 與 Nonblocking 比較表</h2>
+
+  <table>
+    <tr><th>項目</th><th>Blocking <code>=</code></th><th>Nonblocking <code>&lt;=</code></th></tr>
+    <tr><td>更新時機</td><td>statement 執行時立即更新</td><td>RHS 先取值，LHS 延後更新</td></tr>
+    <tr><td>後續 statement 看到的值</td><td>通常看到已更新的新值</td><td>通常仍看到舊值</td></tr>
+    <tr><td>常見用途</td><td>Combinational procedural logic</td><td>Clocked sequential logic</td></tr>
+    <tr><td>典型硬體</td><td>邏輯運算 / mux / decoder</td><td>FF / register / pipeline / counter</td></tr>
+    <tr><td>Race risk</td><td>在多個 clocked blocks 中較容易出問題</td><td>適合描述同步更新，較能避免 race</td></tr>
+  </table>
+</section>
+
+<section class="card" id="shift">
+  <h2>5. 經典例子：4-bit Shift Register</h2>
+
+  <h3>5.1 用 Blocking Assignment</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk) begin
+    qout[0] = sin;
+    qout[1] = qout[0];
+    qout[2] = qout[1];
+    qout[3] = qout[2];
+end</code></pre>
+
+  <p>
+    因為每一行都立即更新，後一行可能直接看到前一行的新值。
+    這樣在 simulation 中可能造成資料在一個 clock edge 就「一路穿過去」。
+  </p>
+
+  <h3>5.2 用 Nonblocking Assignment</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk) begin
+    qout[0] <= sin;
+    qout[1] <= qout[0];
+    qout[2] <= qout[1];
+    qout[3] <= qout[2];
+end</code></pre>
+
+  <p>
+    每一級都取前一個 clock cycle 的值，這才符合真正 4-stage shift register 的行為。
+  </p>
+
+  <div class="key">
+    這正是課程投影片用來比較 blocking 與 nonblocking 的核心例子。
+  </div>
+</section>
+
+<section class="card" id="race">
+  <h2>6. Race Condition 為什麼會發生？</h2>
+
+  <h3>6.1 Blocking 版本</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk)
+    x = y;
+
+always @(posedge clk)
+    y = x;</code></pre>
+
+  <p>
+    兩個 always block 在同一個 clock edge 都被觸發。
+    如果 simulator 執行 block 的先後順序不同，結果可能不同。
+  </p>
+
+  <h3>6.2 Nonblocking 版本</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk)
+    x <= y;
+
+always @(posedge clk)
+    y <= x;</code></pre>
+
+  <p>
+    兩邊都先取舊值，再一起更新，因此更符合兩個 FF 同時 sample 的硬體語意。
+  </p>
+
+  <div class="warn">
+    在多個 clocked always blocks 中使用 blocking assignment 是常見 race-condition 來源。
+  </div>
+</section>
+
+<section class="card" id="comb">
+  <h2>7. Combinational Logic：為什麼通常用 Blocking？</h2>
+
+  <h3>7.1 2-to-1 MUX</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(*) begin
+    if (sel)
+        y = b;
+    else
+        y = a;
+end</code></pre>
+
+  <h3>7.2 ALU</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(*) begin
+    case (op)
+        3'b000: y = a + b;
+        3'b001: y = a - b;
+        3'b010: y = a & b;
+        3'b011: y = a | b;
+        default: y = 0;
+    endcase
+end</code></pre>
+
+  <h3>7.3 多步驟 combinational 計算</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(*) begin
+    sum   = a + b;
+    carry = (sum > 8'hFF);
+    y     = sum[7:0];
+end</code></pre>
+
+  <div class="tip">
+    Combinational block 中 blocking assignment 很直觀，因為你通常希望後面的 statement 能使用前面剛算出的中間結果。
+  </div>
+</section>
+
+<section class="card" id="seq">
+  <h2>8. Sequential Logic：為什麼通常用 Nonblocking？</h2>
+
+  <h3>8.1 D Flip-Flop</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk)
+    q <= d;</code></pre>
+
+  <h3>8.2 Counter</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        count <= 8'd0;
+    else
+        count <= count + 1'b1;
+end</code></pre>
+
+  <h3>8.3 Pipeline Registers</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk) begin
+    stage1 <= din;
+    stage2 <= stage1;
+    stage3 <= stage2;
+end</code></pre>
+
+  <p>
+    每一級 register 都應該在同一個 clock edge 同時 sample 舊值，所以 nonblocking 更貼近真實硬體。
+  </p>
+</section>
+
+<section class="card" id="examples">
+  <h2>9. 大量 Blocking / Nonblocking 範例</h2>
+
+  <h3>例 1：Combinational AND</h3>
+<pre><code>always @(*) begin
+    y = a & b;
+end</code></pre>
+
+  <h3>例 2：MUX</h3>
+<pre><code>always @(*) begin
+    y = sel ? b : a;
+end</code></pre>
+
+  <h3>例 3：Priority Encoder</h3>
+<pre><code>always @(*) begin
+    if      (req[3]) code = 2'd3;
+    else if (req[2]) code = 2'd2;
+    else if (req[1]) code = 2'd1;
+    else             code = 2'd0;
+end</code></pre>
+
+  <h3>例 4：Decoder</h3>
+<pre><code>always @(*) begin
+    case(sel)
+        2'd0: y = 4'b0001;
+        2'd1: y = 4'b0010;
+        2'd2: y = 4'b0100;
+        2'd3: y = 4'b1000;
+    endcase
+end</code></pre>
+
+  <h3>例 5：DFF</h3>
+<pre><code>always @(posedge clk)
+    q <= d;</code></pre>
+
+  <h3>例 6：Register Enable</h3>
+<pre><code>always @(posedge clk) begin
+    if (en)
+        q <= d;
+end</code></pre>
+
+  <h3>例 7：Asynchronous Reset</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        q <= 0;
+    else
+        q <= d;
+end</code></pre>
+
+  <h3>例 8：Counter</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        count <= 0;
+    else if (en)
+        count <= count + 1;
+end</code></pre>
+
+  <h3>例 9：Shift Register</h3>
+<pre><code>always @(posedge clk) begin
+    q <= {din, q[3:1]};
+end</code></pre>
+
+  <h3>例 10：Pipeline</h3>
+<pre><code>always @(posedge clk) begin
+    a1 <= a0;
+    a2 <= a1;
+    a3 <= a2;
+end</code></pre>
+
+  <h3>例 11：FSM State Register</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        state <= IDLE;
+    else
+        state <= next_state;
+end</code></pre>
+
+  <h3>例 12：FSM Next-State Logic</h3>
+<pre><code>always @(*) begin
+    next_state = state;
+
+    case(state)
+        IDLE: if (start) next_state = RUN;
+        RUN : if (done)  next_state = IDLE;
+    endcase
+end</code></pre>
+
+  <h3>例 13：Combinational Temporary Variables</h3>
+<pre><code>always @(*) begin
+    temp1 = a ^ b;
+    temp2 = temp1 & c;
+    y     = temp2 | d;
+end</code></pre>
+
+  <h3>例 14：Sequential swap</h3>
+<pre><code>always @(posedge clk) begin
+    a <= b;
+    b <= a;
+end</code></pre>
+
+  <p>這會在一個 clock edge 後交換 a 與 b 的舊值。</p>
+
+  <h3>例 15：Blocking swap 的問題</h3>
+<pre><code>always @(posedge clk) begin
+    a = b;
+    b = a;
+end</code></pre>
+
+  <p>第二行看到的是更新後的 a，所以結果不是一般人直覺中的「交換」。</p>
+
+  <h3>例 16：Count / Finish 經典差異</h3>
+<pre><code>// 假設進入 block 前 count=1, finish=0
+
+always @(posedge clk) begin
+    count = count - 1;
+    if (count == 0)
+        finish = 1;
+end</code></pre>
+
+  <p>
+    Blocking 版本中，if 看到的是已更新後的 count，因此 finish 會被設成 1。
+  </p>
+
+<pre><code>always @(posedge clk) begin
+    count <= count - 1;
+    if (count == 0)
+        finish <= 1;
+end</code></pre>
+
+  <p>
+    Nonblocking 版本中，if 判斷看到的是舊的 count=1，因此這個 cycle finish 不會變成 1。
+  </p>
+</section>
+
+<section class="card" id="mixed">
+  <h2>10. 同一個 always block 混用 = 與 &lt;= 好嗎？</h2>
+
+  <p>
+    一般初學與大多數 RTL coding guideline 中，
+    <b>不建議在同一個 clocked always block 隨意混用 blocking 與 nonblocking</b>，
+    因為容易造成 simulation 語意難懂，也容易引入前後依賴。
+  </p>
+
+  <h3>容易混淆的例子</h3>
+<pre><code>always @(posedge clk) begin
+    temp = a + b;
+    q    <= temp;
+end</code></pre>
+
+  <p>
+    這種寫法有時是刻意使用 blocking temporary variable，再用 nonblocking 更新 register。
+    但若沒有清楚的 coding convention，很容易讓閱讀者誤判資料更新時序。
+  </p>
+
+  <div class="tip">
+    初學者最安全的原則：
+    <b>組合 always 用 =；clocked always 用 &lt;=。</b>
+  </div>
+</section>
+
+<section class="card" id="synthesis">
+  <h2>11. Synthesis 觀點：= 與 &lt;= 不只是「語法風格」</h2>
+
+  <p>
+    Synthesis 主要根據 event control 與 assignment structure 推導硬體。
+    例如 <code>always @(posedge clk)</code> 本身就強烈表示 sequential storage。
+    不過 assignment 類型會影響 simulation semantics，因此 coding style 必須讓 RTL simulation 與實際硬體行為一致。
+  </p>
+
+  <div class="flow">
+    <div class="box">Clocked always</div>
+    <div class="arrow">+</div>
+    <div class="box">Nonblocking</div>
+    <div class="arrow">→</div>
+    <div class="box">清楚同步語意</div>
+  </div>
+
+  <div class="flow">
+    <div class="box">Combinational always</div>
+    <div class="arrow">+</div>
+    <div class="box">Blocking</div>
+    <div class="arrow">→</div>
+    <div class="box">清楚資料流語意</div>
+  </div>
+</section>
+
+<section class="card" id="pitfalls">
+  <h2>12. 常見錯誤與考試重點</h2>
+
+  <h3>錯誤 1：把 = 與 &lt;= 當成只是兩種等號</h3>
+  <p>
+    它們的 simulation scheduling 不同，因此在 sequential code 中可能造成完全不同結果。
+  </p>
+
+  <h3>錯誤 2：Clocked shift register 用 blocking</h3>
+<pre><code>always @(posedge clk) begin
+    q0 = din;
+    q1 = q0;
+    q2 = q1;
+end</code></pre>
+
+  <p>
+    可能造成資料在同一 event 中連續傳遞，而不像真正三級 FF。
+  </p>
+
+  <h3>錯誤 3：多個 clocked blocks 用 blocking</h3>
+<pre><code>always @(posedge clk) x = y;
+always @(posedge clk) y = x;</code></pre>
+
+  <p>容易產生 race condition。</p>
+
+  <h3>錯誤 4：Combinational logic 一律用 &lt;=</h3>
+  <p>
+    雖然某些情況可能仍可模擬/合成，但會使逐步資料相依不直觀，也不符合常見 RTL coding convention。
+  </p>
+
+  <h3>錯誤 5：以為 Nonblocking 是「真的平行硬體」</h3>
+  <p>
+    它是一種 simulator scheduling semantics，用來更好地模擬同步硬體的同時更新。
+  </p>
+</section>
+
+<section class="card">
+  <h2>13. 自我測驗</h2>
+
+  <details class="quiz">
+    <summary>Q1：Combinational always block 一般建議使用哪種 assignment？</summary>
+    <p>Blocking assignment <code>=</code>。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q2：Clocked always block 一般建議使用哪種 assignment？</summary>
+    <p>Nonblocking assignment <code>&lt;=</code>。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q3：a=b; c=a; 中 c 看到的是新 a 還是舊 a？</summary>
+    <p>新 a，因為 blocking assignment 立即更新。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q4：a&lt;=b; c&lt;=a; 中 c 看到的是新 a 還是舊 a？</summary>
+    <p>舊 a，因為 nonblocking 先取 RHS 舊值，再延後更新 LHS。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q5：為什麼 shift register 應使用 nonblocking？</summary>
+    <p>因為每一級 FF 應在同一個 clock edge 同時 sample 前一級的舊值。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q6：兩個 clocked always blocks 使用 blocking assignment 最大風險是什麼？</summary>
+    <p>Race condition，結果可能受 simulator 執行順序影響。</p>
+  </details>
+</section>
+
+<section class="card">
+  <h2>14. 一頁記憶版</h2>
+
+  <div class="grid3">
+    <div class="mini">
+      <h3 style="margin-top:0">Blocking</h3>
+      <p><code>=</code></p>
+      <p>立即更新。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">Nonblocking</h3>
+      <p><code>&lt;=</code></p>
+      <p>RHS 先取值，LHS 延後更新。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">Combinational</h3>
+      <p>通常使用 <code>=</code>。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">Sequential</h3>
+      <p>通常使用 <code>&lt;=</code>。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">Shift Register</h3>
+      <p>必須特別理解舊值 / 新值。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">Race</h3>
+      <p>多個 clocked blocks 避免 blocking。</p>
+    </div>
+  </div>
+
+  <div class="key">
+    <b>最後一句：</b><br>
+    Blocking 與 Nonblocking 的真正差異，在於
+    <b>RHS 何時取值、LHS 何時更新、後續 statements 看到的是新值還是舊值。</b>
+  </div>
+</section>
+
+<div class="footer">BlockingNonblocking.html — Verilog Blocking / Nonblocking Assignment 詳細教學</div>
+
+</main>
+
+<script>
+function copyCode(btn){
+  const code = btn.parentElement.querySelector("code").innerText;
+  navigator.clipboard.writeText(code).then(()=>{
+    const old = btn.innerText;
+    btn.innerText = "Copied!";
+    setTimeout(()=>btn.innerText = old, 1200);
+  });
+}
+</script>
+
+</body>
+</html>

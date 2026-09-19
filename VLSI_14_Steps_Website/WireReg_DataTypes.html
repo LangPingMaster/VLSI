@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WireReg_DataTypes.html — Verilog 基本資料型別：wire 與 reg</title>
+<style>
+:root{
+  --bg:#f5f7fb; --card:#ffffff; --text:#1f2937; --muted:#64748b;
+  --blue:#2563eb; --cyan:#0891b2; --green:#059669; --orange:#d97706;
+  --red:#dc2626; --purple:#7c3aed; --line:#dbe3ec; --code:#0f172a;
+  --teal:#0f766e; --soft:#f8fafc;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;
+  line-height:1.82;
+}
+header{
+  background:linear-gradient(135deg,#1d4ed8,#0f766e 60%,#115e59);
+  color:#fff;padding:52px 24px 44px;
+}
+header .inner{max-width:1180px;margin:auto}
+header h1{margin:0 0 10px;font-size:2.25rem}
+header p{margin:5px 0;max-width:980px;opacity:.96}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tag{
+  padding:5px 10px;border-radius:999px;
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);
+  font-size:.88rem
+}
+nav{
+  position:sticky;top:0;z-index:20;background:rgba(245,247,251,.95);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px)
+}
+nav .bar{
+  max-width:1180px;margin:auto;padding:8px 20px;
+  display:flex;gap:10px;overflow:auto;white-space:nowrap
+}
+nav a{
+  text-decoration:none;color:#0f766e;padding:5px 9px;border-radius:8px;font-size:.9rem
+}
+nav a:hover{background:#e2e8f0}
+.wrap{max-width:1180px;margin:auto;padding:28px 20px 80px}
+.card{
+  background:var(--card);border-radius:18px;padding:26px;margin:22px 0;
+  box-shadow:0 8px 28px rgba(15,23,42,.07);
+}
+h2{
+  margin:0 0 16px;color:#134e4a;
+  border-left:6px solid #14b8a6;padding-left:12px
+}
+h3{color:#1d4ed8;margin-top:26px}
+h4{color:#7c3aed;margin:18px 0 8px}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{
+  background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;
+  overflow:auto;line-height:1.55;position:relative
+}
+.inline{
+  background:#e2e8f0;padding:2px 6px;border-radius:6px;
+  font-family:Consolas,"Courier New",monospace
+}
+.copy-btn{
+  float:right;border:0;border-radius:8px;padding:6px 10px;
+  background:#334155;color:#fff;cursor:pointer;font-size:.8rem
+}
+.copy-btn:hover{background:#475569}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}
+th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{
+  padding:14px 16px;border-radius:10px;margin:16px 0
+}
+.note{background:#fff7ed;border-left:5px solid #f59e0b}
+.tip{background:#eff6ff;border-left:5px solid #3b82f6}
+.warn{background:#fef2f2;border-left:5px solid #ef4444}
+.key{background:#ecfdf5;border-left:5px solid #10b981}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mini{
+  background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px
+}
+.flow{
+  display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:22px 0
+}
+.box{
+  min-width:150px;text-align:center;padding:14px 16px;
+  border:2px solid #67e8f9;background:#ecfeff;border-radius:13px;font-weight:700
+}
+.box small{display:block;color:#475569;font-weight:500;margin-top:5px}
+.arrow{font-size:1.6rem;color:#64748b}
+.toc ol{columns:2;column-gap:34px}
+.toc li{margin:7px 0;break-inside:avoid}
+.toc a{color:#0f766e;text-decoration:none}
+.compare{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px
+}
+.wire-card{border-top:5px solid #3b82f6}
+.reg-card{border-top:5px solid #10b981}
+.truth{font-family:Consolas,monospace}
+.quiz{border:1px dashed #94a3b8;border-radius:14px;padding:14px 16px;margin:12px 0;background:#fff}
+.quiz summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+@media(max-width:800px){
+  header h1{font-size:1.75rem}
+  .toc ol{columns:1}
+  .compare{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <h1>Verilog 基本資料型別：wire 與 reg</h1>
+    <p>
+      從「它代表什麼」開始，進一步理解誰可以驅動它、什麼時候要用 wire、什麼時候要用 reg，
+      以及它們和 assign、always、組合邏輯、時序邏輯、synthesis 的關係。
+    </p>
+    <p>本頁特別加入大量正確／錯誤對照範例，以及常見考試陷阱。</p>
+    <div class="tags">
+      <span class="tag">wire = net</span>
+      <span class="tag">reg = procedural variable</span>
+      <span class="tag">continuous assignment</span>
+      <span class="tag">always block</span>
+      <span class="tag">combinational</span>
+      <span class="tag">sequential</span>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="bar">
+    <a href="#overview">總覽</a>
+    <a href="#wire">wire</a>
+    <a href="#reg">reg</a>
+    <a href="#compare">比較</a>
+    <a href="#drivers">driver</a>
+    <a href="#examples">大量例子</a>
+    <a href="#comb-seq">組合/時序</a>
+    <a href="#mistakes">常見錯誤</a>
+    <a href="#quiz">自我測驗</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section class="card toc">
+  <h2>目錄</h2>
+  <ol>
+    <li><a href="#overview">基本觀念：Net 與 Register</a></li>
+    <li><a href="#wire">wire 詳細說明</a></li>
+    <li><a href="#reg">reg 詳細說明</a></li>
+    <li><a href="#compare">wire / reg 一張表比較</a></li>
+    <li><a href="#drivers">什麼叫 driver？</a></li>
+    <li><a href="#examples">大量 Verilog 例子</a></li>
+    <li><a href="#comb-seq">組合邏輯與時序邏輯</a></li>
+    <li><a href="#ports">input / output 與 wire / reg</a></li>
+    <li><a href="#vectors">向量 wire / reg</a></li>
+    <li><a href="#mistakes">常見錯誤與考試陷阱</a></li>
+    <li><a href="#sv">補充：SystemVerilog logic</a></li>
+    <li><a href="#quiz">自我測驗</a></li>
+  </ol>
+</section>
+
+<section class="card" id="overview">
+  <h2>1. 基本觀念：Verilog 為什麼同時有 wire 與 reg？</h2>
+
+  <p>
+    Verilog 不只是程式語言，它是在描述「硬體」。因此需要區分兩種完全不同的概念：
+  </p>
+
+  <div class="compare">
+    <div class="mini wire-card">
+      <h3 style="margin-top:0">wire：Net</h3>
+      <p><b>像實體電路中的導線。</b></p>
+      <p>它本身不主動產生資料，而是把某個 driver 的值傳送到別處。</p>
+    </div>
+    <div class="mini reg-card">
+      <h3 style="margin-top:0">reg：Procedural Variable</h3>
+      <p><b>像 procedural block 裡可被指定值的變數。</b></p>
+      <p>它在 <code>always</code> / <code>initial</code> 等程序區塊中被更新並保留目前值，直到下一次再被賦值。</p>
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="box">driver<small>gate / assign / module output</small></div>
+    <div class="arrow">→</div>
+    <div class="box">wire<small>傳遞訊號</small></div>
+    <div class="arrow">→</div>
+    <div class="box">其他電路<small>load</small></div>
+  </div>
+
+  <div class="key">
+    <b>先背這一句：</b><br>
+    <code>wire</code> 主要用來表示「連接」；<code>reg</code> 主要用來表示「在 procedural block 中被賦值的變數」。
+  </div>
+</section>
+
+<section class="card" id="wire">
+  <h2>2. wire：Net Type 詳細說明</h2>
+
+  <p>
+    課程教材把 <code>wire</code> 歸類為 <b>Net</b>，並強調它像實體電路中的 wire，
+    用來連接 design objects，而且必須有 driver。預設寬度是 1 bit。
+  </p>
+
+  <h3>2.1 最簡單宣告</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire a;
+wire b;
+wire y;</code></pre>
+
+  <p>三者都是 1-bit net。</p>
+
+  <h3>2.2 多位元 wire</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] data;
+wire [15:0] addr;
+wire [31:0] bus;</code></pre>
+
+  <p>
+    <code>wire [7:0] data;</code> 代表 8 條平行的 wire：
+    <code>data[7]</code> 到 <code>data[0]</code>。
+  </p>
+
+  <h3>2.3 wire 最常搭配 continuous assignment</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire y;
+
+assign y = a & b;</code></pre>
+
+  <p>
+    這代表：只要 <code>a</code> 或 <code>b</code> 改變，<code>y</code> 就重新計算。
+    它描述的是持續存在的硬體關係。
+  </p>
+
+  <h3>2.4 wire 可由 gate primitive 驅動</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire y;
+
+and (y, a, b);</code></pre>
+
+  <p>這裡 AND gate 的 output 就是 <code>y</code> 的 driver。</p>
+
+  <h3>2.5 wire 可由 module output 驅動</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire sum;
+wire carry;
+
+half_adder U0 (
+    .a(a),
+    .b(b),
+    .sum(sum),
+    .carry(carry)
+);</code></pre>
+
+  <p>
+    <code>half_adder</code> 模組的輸出驅動 <code>sum</code> 和 <code>carry</code>。
+  </p>
+
+  <div class="tip">
+    <b>直覺：</b>如果你的訊號是「某個元件輸出接到另一個元件輸入」，
+    最容易先想到 <code>wire</code>。
+  </div>
+</section>
+
+<section class="card" id="reg">
+  <h2>3. reg：Procedural Variable 詳細說明</h2>
+
+  <p>
+    課程教材把 <code>reg</code> 與 <code>integer</code> 放在 Register 類別，
+    說明它們像一般 procedural language 的變數，可以在程式執行期間保留資訊。
+    <code>reg</code> 的預設寬度是 1 bit。
+  </p>
+
+  <h3>3.1 最簡單宣告</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>reg y;
+reg flag;</code></pre>
+
+  <h3>3.2 多位元 reg</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>reg [7:0] data;
+reg [15:0] counter;
+reg [31:0] result;</code></pre>
+
+  <h3>3.3 reg 常用在 always block 內被指定</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>reg y;
+
+always @(*) begin
+    y = a & b;
+end</code></pre>
+
+  <p>
+    因為 <code>y</code> 是在 procedural block 內被賦值，所以傳統 Verilog 要宣告成 <code>reg</code>。
+  </p>
+
+  <h3>3.4 reg 也可以表示真正的 register</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>reg q;
+
+always @(posedge clk) begin
+    q <= d;
+end</code></pre>
+
+  <p>
+    這段通常會合成為 D flip-flop，所以此時 <code>q</code> 確實對應到硬體 register。
+  </p>
+
+  <div class="warn">
+    <b>最重要的陷阱：</b><code>reg</code> 這個關鍵字本身不代表一定會合成出 flip-flop。<br>
+    例如 <code>always @(*) y = a & b;</code> 中的 <code>y</code> 雖然宣告成 reg，
+    但它仍然是組合邏輯輸出。
+  </div>
+</section>
+
+<section class="card" id="compare">
+  <h2>4. wire 與 reg 一張表完整比較</h2>
+
+  <table>
+    <tr>
+      <th>項目</th>
+      <th>wire</th>
+      <th>reg</th>
+    </tr>
+    <tr>
+      <td>概念</td>
+      <td>Net，像實體導線</td>
+      <td>Procedural variable</td>
+    </tr>
+    <tr>
+      <td>主要用途</td>
+      <td>連接元件、傳遞 driver 的值</td>
+      <td>在 always / initial 中接收 procedural assignment</td>
+    </tr>
+    <tr>
+      <td>是否需要 driver</td>
+      <td>需要</td>
+      <td>由 procedural statement 更新</td>
+    </tr>
+    <tr>
+      <td>常見賦值方式</td>
+      <td><code>assign</code>、gate output、module output</td>
+      <td><code>always</code>、<code>initial</code></td>
+    </tr>
+    <tr>
+      <td>常見賦值運算子</td>
+      <td><code>assign y = ...</code></td>
+      <td><code>=</code> 或 <code>&lt;=</code></td>
+    </tr>
+    <tr>
+      <td>預設寬度</td>
+      <td>1 bit</td>
+      <td>1 bit</td>
+    </tr>
+    <tr>
+      <td>一定是實體 register？</td>
+      <td>不是</td>
+      <td><b>也不是</b></td>
+    </tr>
+  </table>
+</section>
+
+<section class="card" id="drivers">
+  <h2>5. 什麼叫做 driver？</h2>
+
+  <p>
+    Driver 可以想成「誰負責決定這條訊號目前是 0 還是 1」。
+  </p>
+
+  <div class="grid3">
+    <div class="mini">
+      <h3 style="margin-top:0">Continuous Assignment</h3>
+      <pre><code>assign y = a & b;</code></pre>
+      <p><code>assign</code> 是 y 的 driver。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">Gate Output</h3>
+      <pre><code>and (y, a, b);</code></pre>
+      <p>AND gate 是 y 的 driver。</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0">Module Output</h3>
+      <pre><code>adder U0(...,.sum(y));</code></pre>
+      <p>U0 的 output port 是 y 的 driver。</p>
+    </div>
+  </div>
+
+  <h3>5.1 沒有 driver 的 wire</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire y;
+
+// 沒有任何 assign / gate / module output 驅動 y</code></pre>
+
+  <p>模擬時這類 net 通常不會有你期待的有效邏輯值。</p>
+
+  <h3>5.2 多重 driver</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire y;
+
+assign y = a;
+assign y = b;</code></pre>
+
+  <div class="warn">
+    一般 RTL 設計應避免不必要的 multiple drivers。
+    若不同 driver 同時驅動相反邏輯值，模擬可能解析成未知值。
+  </div>
+</section>
+
+<section class="card" id="examples">
+  <h2>6. 大量 Verilog 例子</h2>
+
+  <h3>例 1：最基本 AND gate</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module ex1(
+    input  a, b,
+    output y
+);
+    wire y;
+    assign y = a & b;
+endmodule</code></pre>
+
+  <h3>例 2：用 reg 寫同一個組合邏輯</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module ex2(
+    input  a, b,
+    output reg y
+);
+    always @(*) begin
+        y = a & b;
+    end
+endmodule</code></pre>
+
+  <div class="key">
+    ex1 和 ex2 都是組合邏輯。<br>
+    ex2 使用 reg，只是因為 y 在 always block 裡被指定，並不表示它變成 flip-flop。
+  </div>
+
+  <h3>例 3：2-to-1 MUX — wire 寫法</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module mux2_wire(
+    input  a, b, sel,
+    output y
+);
+    wire y;
+    assign y = sel ? b : a;
+endmodule</code></pre>
+
+  <h3>例 4：2-to-1 MUX — reg 寫法</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module mux2_reg(
+    input  a, b, sel,
+    output reg y
+);
+    always @(*) begin
+        if (sel)
+            y = b;
+        else
+            y = a;
+    end
+endmodule</code></pre>
+
+  <h3>例 5：4-to-1 MUX</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module mux4(
+    input  [3:0] d,
+    input  [1:0] sel,
+    output reg   y
+);
+    always @(*) begin
+        case (sel)
+            2'b00: y = d[0];
+            2'b01: y = d[1];
+            2'b10: y = d[2];
+            2'b11: y = d[3];
+        endcase
+    end
+endmodule</code></pre>
+
+  <h3>例 6：1-bit Full Adder — wire</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module fa_wire(
+    input  a, b, cin,
+    output sum, cout
+);
+    wire sum, cout;
+
+    assign sum  = a ^ b ^ cin;
+    assign cout = (a & b) | (a & cin) | (b & cin);
+endmodule</code></pre>
+
+  <h3>例 7：1-bit Full Adder — reg</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module fa_reg(
+    input  a, b, cin,
+    output reg sum, cout
+);
+    always @(*) begin
+        {cout, sum} = a + b + cin;
+    end
+endmodule</code></pre>
+
+  <h3>例 8：Comparator</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module compare8(
+    input [7:0] a, b,
+    output gt, eq, lt
+);
+    wire gt, eq, lt;
+
+    assign gt = (a > b);
+    assign eq = (a == b);
+    assign lt = (a < b);
+endmodule</code></pre>
+
+  <h3>例 9：ALU output 用 reg</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module alu8(
+    input  [7:0] a, b,
+    input  [2:0] op,
+    output reg [7:0] y
+);
+    always @(*) begin
+        case (op)
+            3'b000: y = a + b;
+            3'b001: y = a - b;
+            3'b010: y = a & b;
+            3'b011: y = a | b;
+            3'b100: y = a ^ b;
+            default: y = 8'h00;
+        endcase
+    end
+endmodule</code></pre>
+
+  <h3>例 10：真正會合成成 Flip-Flop 的 reg</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module dff(
+    input  clk,
+    input  d,
+    output reg q
+);
+    always @(posedge clk) begin
+        q <= d;
+    end
+endmodule</code></pre>
+
+  <h3>例 11：Register with Reset</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module reg8(
+    input        clk,
+    input        rst_n,
+    input  [7:0] d,
+    output reg [7:0] q
+);
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            q <= 8'h00;
+        else
+            q <= d;
+    end
+endmodule</code></pre>
+
+  <h3>例 12：Counter</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module counter8(
+    input        clk,
+    input        rst_n,
+    input        en,
+    output reg [7:0] count
+);
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            count <= 8'd0;
+        else if (en)
+            count <= count + 1'b1;
+    end
+endmodule</code></pre>
+
+  <h3>例 13：中間接線用 wire，state 用 reg</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module datapath(
+    input        clk,
+    input  [7:0] a, b,
+    output reg [7:0] q
+);
+    wire [7:0] sum;
+
+    assign sum = a + b;   // combinational net
+
+    always @(posedge clk) begin
+        q <= sum;         // q is stored in FFs
+    end
+endmodule</code></pre>
+
+  <div class="flow">
+    <div class="box">a,b</div>
+    <div class="arrow">→</div>
+    <div class="box">Adder<small>sum 是 wire</small></div>
+    <div class="arrow">→</div>
+    <div class="box">Register<small>q 是 reg</small></div>
+  </div>
+
+  <h3>例 14：FSM 中 wire / reg 的角色</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>reg state;
+reg next_state;
+wire go;
+
+assign go = start & ready;
+
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        state <= 1'b0;
+    else
+        state <= next_state;
+end
+
+always @(*) begin
+    next_state = state;
+
+    if (go)
+        next_state = ~state;
+end</code></pre>
+
+  <p>
+    <code>go</code> 是組合條件 → wire 很自然；<code>state</code> 和 <code>next_state</code>
+    在 procedural blocks 裡賦值 → reg。
+  </p>
+</section>
+
+<section class="card" id="comb-seq">
+  <h2>7. wire / reg 與組合邏輯、時序邏輯的關係</h2>
+
+  <table>
+    <tr>
+      <th>電路</th>
+      <th>典型寫法</th>
+      <th>常見型別</th>
+    </tr>
+    <tr>
+      <td>組合邏輯（continuous assignment）</td>
+      <td><code>assign y = a & b;</code></td>
+      <td>y → wire</td>
+    </tr>
+    <tr>
+      <td>組合邏輯（procedural）</td>
+      <td><code>always @(*) y = a & b;</code></td>
+      <td>y → reg</td>
+    </tr>
+    <tr>
+      <td>時序邏輯</td>
+      <td><code>always @(posedge clk) q &lt;= d;</code></td>
+      <td>q → reg</td>
+    </tr>
+  </table>
+
+  <div class="key">
+    <b>所以：</b><br>
+    wire 常見於組合邏輯，但「wire = 組合」不是定義。<br>
+    reg 可出現在組合或時序邏輯，因此「reg = flip-flop」也是錯誤的。
+  </div>
+</section>
+
+<section class="card" id="ports">
+  <h2>8. input / output 與 wire / reg</h2>
+
+  <h3>8.1 output 由 assign 驅動</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module ex(
+    input a, b,
+    output y
+);
+    assign y = a & b;
+endmodule</code></pre>
+
+  <p>傳統 Verilog 中，這種 output 本質上是 net 型別，適合用 continuous assignment 驅動。</p>
+
+  <h3>8.2 output 在 always 裡賦值</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module ex(
+    input a, b,
+    output reg y
+);
+    always @(*) begin
+        y = a & b;
+    end
+endmodule</code></pre>
+
+  <div class="tip">
+    判斷 output 要不要寫 <code>reg</code> 的快速方法：<br>
+    <b>如果它在 always / initial procedural block 裡被賦值，傳統 Verilog 通常宣告成 reg。</b>
+  </div>
+</section>
+
+<section class="card" id="vectors">
+  <h2>9. Vector：多位元 wire 與 reg</h2>
+
+  <h3>9.1 wire bus</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [7:0] bus;
+wire [3:0] low_nibble;
+
+assign low_nibble = bus[3:0];</code></pre>
+
+  <h3>9.2 reg vector</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>reg [7:0] counter;
+
+always @(posedge clk) begin
+    counter <= counter + 1'b1;
+end</code></pre>
+
+  <h3>9.3 bit select 與 part select</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [15:0] data;
+
+wire msb;
+wire [7:0] high_byte;
+
+assign msb       = data[15];
+assign high_byte = data[15:8];</code></pre>
+</section>
+
+<section class="card" id="mistakes">
+  <h2>10. 常見錯誤與考試陷阱</h2>
+
+  <h3>錯誤 1：在 always block 內對 wire 賦值</h3>
+<pre><code>// 傳統 Verilog：錯誤示範
+wire y;
+
+always @(*) begin
+    y = a & b;
+end</code></pre>
+
+  <p>procedural assignment 的目標應該是 reg 類型。</p>
+
+  <h3>錯誤 2：把 reg 理解成一定是 register</h3>
+<pre><code>reg y;
+
+always @(*) begin
+    y = a & b;
+end</code></pre>
+
+  <p>
+    這是組合邏輯，通常只合成成 AND gate，不會因為用了 reg 就自動多一顆 FF。
+  </p>
+
+  <h3>錯誤 3：組合 always 未完整賦值</h3>
+<pre><code>reg y;
+
+always @(*) begin
+    if (en)
+        y = a;
+end</code></pre>
+
+  <div class="warn">
+    當 <code>en=0</code> 時，y 沒有新值，工具可能推導出 latch。
+  </div>
+
+  <h3>正確：給所有條件完整賦值</h3>
+<pre><code>always @(*) begin
+    if (en)
+        y = a;
+    else
+        y = b;
+end</code></pre>
+
+  <h3>錯誤 4：clocked logic 使用 blocking assignment</h3>
+<pre><code>// 不推薦的 RTL coding style
+always @(posedge clk) begin
+    q = d;
+end</code></pre>
+
+  <h3>一般建議</h3>
+<pre><code>// sequential
+always @(posedge clk)
+    q <= d;
+
+// combinational
+always @(*)
+    y = a & b;</code></pre>
+
+  <div class="key">
+    常見 coding guideline：<br>
+    <b>Combinational procedural logic → blocking <code>=</code></b><br>
+    <b>Sequential clocked logic → nonblocking <code>&lt;=</code></b>
+  </div>
+</section>
+
+<section class="card" id="sv">
+  <h2>11. 補充：SystemVerilog 的 logic</h2>
+
+  <p>
+    這一節是延伸補充，不是課程投影片中 wire / reg 基本定義本身。
+    SystemVerilog 引入 <code>logic</code>，可以讓許多 RTL 宣告更直觀。
+  </p>
+
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>logic y;
+
+always_comb begin
+    y = a & b;
+end</code></pre>
+
+  <p>
+    不過在學習傳統 Verilog 時，先把 <b>wire = net</b>、<b>reg = procedural variable</b>
+    的差異理解清楚非常重要，因為這能幫助你理解 driver、continuous assignment 與 procedural assignment。
+  </p>
+</section>
+
+<section class="card" id="quiz">
+  <h2>12. 自我測驗</h2>
+
+  <details class="quiz">
+    <summary>Q1：assign y = a & b; 中，y 應該宣告成 wire 還是 reg？</summary>
+    <p>傳統 Verilog：wire。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q2：always @(*) y = a & b; 中，y 應該宣告成什麼？</summary>
+    <p>傳統 Verilog：reg，因為 y 在 procedural block 中被賦值。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q3：reg y; 是否代表一定有 flip-flop？</summary>
+    <p>不是。是否合成成 flip-flop 取決於描述方式，例如是否在 clock edge 上更新。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q4：wire 的值從哪裡來？</summary>
+    <p>從 driver，例如 assign、gate output 或 module output。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q5：output reg y; 一定是時序電路嗎？</summary>
+    <p>不是。若 y 在 always @(*) 中完整賦值，仍可合成成純組合邏輯。</p>
+  </details>
+
+  <details class="quiz">
+    <summary>Q6：為什麼 counter 常宣告成 reg？</summary>
+    <p>因為它通常在 clocked always block 裡被 procedural assignment 更新，而且要跨 clock 保存狀態。</p>
+  </details>
+</section>
+
+<section class="card">
+  <h2>13. 最後一頁記憶版</h2>
+
+  <div class="grid2">
+    <div class="mini wire-card">
+      <h3 style="margin-top:0">wire</h3>
+      <p>像導線。</p>
+      <p>需要 driver。</p>
+      <p>常搭配 <code>assign</code>、gate、module instance。</p>
+      <p>預設 1 bit。</p>
+    </div>
+    <div class="mini reg-card">
+      <h3 style="margin-top:0">reg</h3>
+      <p>像 procedural variable。</p>
+      <p>在 <code>always</code> / <code>initial</code> 中被賦值。</p>
+      <p>可以描述組合邏輯，也可以描述時序邏輯。</p>
+      <p>預設 1 bit。</p>
+    </div>
+  </div>
+
+  <div class="key">
+    <b>最重要的一句：</b><br>
+    <code>wire</code> 與 <code>reg</code> 的差異首先是「訊號如何被驅動與賦值」，
+    而不是簡單地把它們等同於「組合邏輯」與「暫存器」。
+  </div>
+</section>
+
+<div class="footer">WireReg_DataTypes.html — Verilog wire / reg 詳細教學</div>
+
+</main>
+
+<script>
+function copyCode(btn){
+  const code = btn.parentElement.querySelector("code").innerText;
+  navigator.clipboard.writeText(code).then(()=>{
+    const old = btn.innerText;
+    btn.innerText = "Copied!";
+    setTimeout(()=>btn.innerText = old, 1200);
+  });
+}
+</script>
+
+</body>
+</html>
