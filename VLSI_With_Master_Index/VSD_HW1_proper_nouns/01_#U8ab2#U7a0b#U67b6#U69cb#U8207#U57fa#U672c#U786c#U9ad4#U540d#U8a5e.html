@@ -1,0 +1,199 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>01｜課程、架構與基本硬體名詞</title>
+<style>
+:root{--bg:#f4f7f2;--card:#fff;--ink:#172018;--muted:#667166;--green:#4f7b27;--light:#edf5e6;--line:#dce5d7;--warn:#fff7dc}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;background:var(--bg);color:var(--ink);line-height:1.7}
+.hero{background:linear-gradient(135deg,#142219,#507a2b);color:white;padding:48px 20px}.wrap{max-width:1050px;margin:auto}h1{margin:0;font-size:clamp(30px,5vw,46px)}.lead{margin-top:9px;opacity:.9;max-width:900px}
+.toolbar{position:sticky;top:0;z-index:10;background:rgba(244,247,242,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:11px 18px}.tools{max-width:1050px;margin:auto;display:flex;gap:8px;flex-wrap:wrap}input{flex:1;min-width:240px;padding:12px 14px;border:1px solid #cbd8c5;border-radius:12px;font-size:16px}button{background:white;border:1px solid #cbd8c5;border-radius:11px;padding:10px 13px;cursor:pointer}
+main{max-width:1050px;margin:auto;padding:22px 18px 60px}.notice,.diagram{background:white;border:1px solid var(--line);border-radius:16px;padding:17px;margin-bottom:18px}.notice{background:var(--warn)}.diagram svg{width:100%;height:auto}
+.term{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:9px 0;overflow:hidden}.term[open]{border-color:#afc99d}summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:48px minmax(150px,1fr) minmax(150px,1fr) 25px;gap:10px;align-items:center;padding:14px 16px}summary::-webkit-details-marker{display:none}.num{font-size:12px;background:var(--light);border-radius:999px;text-align:center;padding:4px}.termname{font-weight:850;color:#315d15;font-size:18px}.zh{color:#3c493c}.arrow{font-size:20px;transition:.2s;color:#6f8b5b}details[open] .arrow{transform:rotate(180deg)}
+.body{border-top:1px solid var(--line);padding:17px;background:#fbfdf9}.body h3{font-size:15px;color:#496735;margin:15px 0 4px}.body p{margin:3px 0 8px}.meta{display:flex;gap:8px;flex-wrap:wrap}.meta span{background:var(--light);border-radius:999px;padding:4px 10px;font-size:13px}
+.examples{display:grid;grid-template-columns:1fr 1fr;gap:10px}.example{background:white;border:1px solid var(--line);border-radius:12px;padding:12px}.example p{margin:4px 0 0}.hidden{display:none!important}footer{text-align:center;color:var(--muted);padding:25px}
+@media(max-width:700px){summary{grid-template-columns:42px 1fr 22px}summary .zh{grid-column:2}.arrow{grid-column:3;grid-row:1/3}.examples{grid-template-columns:1fr}}
+</style></head><body>
+<div class="hero"><div class="wrap"><h1>01｜課程、架構與基本硬體名詞</h1><div class="lead">VSD HW1 名詞＋專有名詞詳細學習版。每個條目均提供「作業中的依據 → 詳細說明 → 至少 2 個例子」，並使用下拉式互動呈現。</div></div></div>
+<div class="toolbar"><div class="tools"><input id="q" placeholder="搜尋：ALU、FPU、RTL、Datapath、Instruction…"><button onclick="toggleAll(true)">全部展開</button><button onclick="toggleAll(false)">全部收合</button></div></div>
+<main>
+<div class="notice"><b>資料標示原則：</b>直接來自 HW1 的規格會寫在「作業中的依據」。像 RTL、Datapath、Combinational Logic 等若 PDF 沒有正式定義，頁面會明確標示為「背景補充」，避免把一般知識誤當成老師在 PDF 中的原文定義。</div>
+<div class="diagram"><h2>本章名詞在 HW1 中的位置</h2>
+<svg viewBox="0 0 1000 260"><defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#638b2e"/></marker></defs>
+<rect x="390" y="15" width="220" height="55" rx="14" fill="#edf5e6" stroke="#638b2e"/><text x="500" y="49" text-anchor="middle" font-size="23" font-weight="700">VSD / VLSI / HW1</text>
+<line x1="500" y1="70" x2="270" y2="112" stroke="#638b2e" stroke-width="3" marker-end="url(#a)"/><line x1="500" y1="70" x2="730" y2="112" stroke="#638b2e" stroke-width="3" marker-end="url(#a)"/>
+<rect x="90" y="118" width="360" height="110" rx="15" fill="#fff" stroke="#cbd8c5"/><text x="270" y="153" text-anchor="middle" font-size="21" font-weight="700">ALU</text><text x="270" y="184" text-anchor="middle" font-size="17">Instruction → Decode → Operation</text><text x="270" y="211" text-anchor="middle" font-size="16">RV32IM / RV32B / DSP</text>
+<rect x="550" y="118" width="360" height="110" rx="15" fill="#fff" stroke="#cbd8c5"/><text x="730" y="153" text-anchor="middle" font-size="21" font-weight="700">FPU</text><text x="730" y="184" text-anchor="middle" font-size="17">IEEE-754 → Datapath → Result</text><text x="730" y="211" text-anchor="middle" font-size="16">clk / enable / valid</text></svg></div>
+
+<details class="term" data-search="vsd vlsi system design 超大型積體電路系統設計 課程專有名詞 hw1 首頁的課程名稱為「vlsi system design 2026 fall」。作業內容以 alu 與 fpu 兩個硬體設計問題為核心。 vsd 在這份作業中是課程名稱的縮寫。從 hw1 的要求可以看到，課程不是只討論抽象邏輯，而是要求把功能規格轉成可模擬的 systemverilog 硬體模組，並使用 testbench、patterns 與 superlint 檢查。">
+ <summary><span class="num">01</span><span class="termname">VSD</span><span class="zh">超大型積體電路系統設計</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>課程專有名詞</span><span>英文／全名：VLSI System Design</span></div>
+   <h3>作業中的依據</h3><p>HW1 首頁的課程名稱為「VLSI System Design 2026 Fall」。作業內容以 ALU 與 FPU 兩個硬體設計問題為核心。</p>
+   <h3>詳細說明</h3><p>VSD 在這份作業中是課程名稱的縮寫。從 HW1 的要求可以看到，課程不是只討論抽象邏輯，而是要求把功能規格轉成可模擬的 SystemVerilog 硬體模組，並使用 testbench、patterns 與 Superlint 檢查。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜ALU 設計</b><p>Prob. A 要你設計 32-bit ALU，支援 RV32IM、RV32B 與 Custom DSP 指令。這就是 VSD 中「System Design」的具體例子：先理解 instruction specification，再設計 datapath/logic。</p></div><div class='example'><b>例 2｜FPU 設計</b><p>Prob. B 要你設計 IEEE-754 single-precision FPU，處理 MIN、MAX、ADD、SUB、NaN、Inf、Zero、Normalization 與 GRS rounding，代表系統設計需要同時處理正常資料路徑與特殊情況。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="vlsi very large scale integration 超大型積體電路 領域專有名詞 pdf 的課程名稱包含 vlsi；但這份 hw1 沒有另外對 vlsi 這個縮寫下定義。 因此，「very large scale integration」的全名屬於一般領域背景補充，而不是 pdf 內文對它的定義。在本作業脈絡中，你實際接觸的是以 rtl/systemverilog 描述數位硬體功能，再進行 simulation 與 lint 檢查。">
+ <summary><span class="num">02</span><span class="termname">VLSI</span><span class="zh">超大型積體電路</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>領域專有名詞</span><span>英文／全名：Very Large Scale Integration</span></div>
+   <h3>作業中的依據</h3><p>PDF 的課程名稱包含 VLSI；但這份 HW1 沒有另外對 VLSI 這個縮寫下定義。</p>
+   <h3>詳細說明</h3><p>因此，「Very Large Scale Integration」的全名屬於一般領域背景補充，而不是 PDF 內文對它的定義。在本作業脈絡中，你實際接觸的是以 RTL/SystemVerilog 描述數位硬體功能，再進行 simulation 與 lint 檢查。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜RTL 模組</b><p>你撰寫 ALU.sv，把 ADD、SUB、MUL、BSET 等功能描述成硬體邏輯；這是 VLSI 數位設計流程前端常見的 RTL 工作。</p></div><div class='example'><b>例 2｜FPU 資料路徑</b><p>把 floating-point ADD/SUB 拆成 Unpack、Align、Mantissa ADD/SUB、Normalize、Round、Repack，可以把複雜功能切成可實作的硬體步驟。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="hw1 homework 1 作業一 作業名詞 pdf 標題為 hw1；grading policy 指定 prob. a alu 40%、prob. b fpu 40%、report 20%。 hw1 是本課程第一次作業。它同時考察整數/位元/dsp alu 與 ieee-754 fpu。除了功能正確，還要求遵守檔案 hierarchy、通過 simulation patterns、hidden tests，並達成 superlint coverage 要求。">
+ <summary><span class="num">03</span><span class="termname">HW1</span><span class="zh">作業一</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>作業名詞</span><span>英文／全名：Homework 1</span></div>
+   <h3>作業中的依據</h3><p>PDF 標題為 HW1；Grading Policy 指定 Prob. A ALU 40%、Prob. B FPU 40%、Report 20%。</p>
+   <h3>詳細說明</h3><p>HW1 是本課程第一次作業。它同時考察整數/位元/DSP ALU 與 IEEE-754 FPU。除了功能正確，還要求遵守檔案 hierarchy、通過 simulation patterns、hidden tests，並達成 Superlint coverage 要求。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜功能部分</b><p>ALU 必須支援總計 31 條 operations；只完成 ADD/SUB 並不等於完成 HW1。</p></div><div class='example'><b>例 2｜繳交部分</b><p>即使 RTL 功能正確，如果沒有依 StudentID.pdf、Src、Sim、Pattern 的 hierarchy 整理，PDF 規定會有扣分。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="alu arithmetic logic unit 算術邏輯單元 硬體模組 prob. a 要求設計 32-bit alu；i/o 為 instruction_i、src_a_i、src_b_i、result_o。alu operation 由 instruction_i 的欄位解碼。 alu 接收兩個 32-bit operands 與一個 32-bit instruction。核心工作不是單純做加法，而是先 decode instruction，再選擇對應的 arithmetic、logical、shift、multiply、bit-manipulation 或 dsp operation，最後輸出 result_o。">
+ <summary><span class="num">04</span><span class="termname">ALU</span><span class="zh">算術邏輯單元</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>硬體模組</span><span>英文／全名：Arithmetic Logic Unit</span></div>
+   <h3>作業中的依據</h3><p>Prob. A 要求設計 32-bit ALU；I/O 為 instruction_i、src_A_i、src_B_i、result_o。ALU operation 由 instruction_i 的欄位解碼。</p>
+   <h3>詳細說明</h3><p>ALU 接收兩個 32-bit operands 與一個 32-bit instruction。核心工作不是單純做加法，而是先 decode instruction，再選擇對應的 arithmetic、logical、shift、multiply、bit-manipulation 或 DSP operation，最後輸出 result_o。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜ADD</b><p>若 instruction_i 解碼為 ADD，src_A_i=10、src_B_i=7，則 ALU 執行 10+7，result_o=17。</p></div><div class='example'><b>例 2｜BSET</b><p>若解碼為 BSET，rs2[4:0]=3，則依 PDF 定義執行 rs1 | (1 &lt;&lt; 3)，也就是把 rs1 的 bit 3 設為 1。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="fpu floating point unit 浮點運算單元 硬體模組 prob. b 要求 32-bit ieee-754 single-precision fpu，instruction 0=min、1=max、2=add、3=sub，並輸出 co 與 valid。 fpu 處理的不是一般 32-bit integer，而是 ieee-754 floating-point bit pattern。因此 add/sub 需要拆解 sign/exponent/fraction、處理特殊值、對齊 exponent、計算 mantissa、normalize、使用 grs round-to-even，再 repack 成 32 bits。">
+ <summary><span class="num">05</span><span class="termname">FPU</span><span class="zh">浮點運算單元</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>硬體模組</span><span>英文／全名：Floating Point Unit</span></div>
+   <h3>作業中的依據</h3><p>Prob. B 要求 32-bit IEEE-754 single-precision FPU，instruction 0=min、1=max、2=add、3=sub，並輸出 co 與 valid。</p>
+   <h3>詳細說明</h3><p>FPU 處理的不是一般 32-bit integer，而是 IEEE-754 floating-point bit pattern。因此 ADD/SUB 需要拆解 Sign/Exponent/Fraction、處理特殊值、對齊 exponent、計算 mantissa、normalize、使用 GRS round-to-even，再 repack 成 32 bits。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜ADD</b><p>ai、bi 都是 IEEE-754 single precision。FPU 不能直接把兩個 32-bit bit pattern 當整數相加，而要依 PDF 的 ADD/SUB 流程處理。</p></div><div class='example'><b>例 2｜NaN</b><p>若輸入 exponent=255 且 fraction 非零，PDF 將其判定為 NaN；ADD/SUB special-case table 指定 NaN result 為 32&#x27;hFFC00000。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="rv32imb rv32i / m / b related instruction set used in hw1 本作業使用的 32-bit risc-v 指令相關集合 isa 專有名詞 pdf 的 general description 寫「31 instructions from rv32imb + custom dsp extension」，並分別列出 rv32im 14 條、rv32b 12 條與 dsp 5 條。 這個詞在 hw1 中用來概括 alu 要處理的 risc-v 指令來源。pdf 實際把標準部分拆成 rv32im 與 rv32b 表格，再加上自訂 dsp。這裡最重要的是依作業表格的 opcode/funct 欄位與 operation 定義實作，而不是自行擴充其他 risc-v 指令。">
+ <summary><span class="num">06</span><span class="termname">RV32IMB</span><span class="zh">本作業使用的 32-bit RISC-V 指令相關集合</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>ISA 專有名詞</span><span>英文／全名：RV32I / M / B related instruction set used in HW1</span></div>
+   <h3>作業中的依據</h3><p>PDF 的 General Description 寫「31 Instructions from RV32IMB + Custom DSP Extension」，並分別列出 RV32IM 14 條、RV32B 12 條與 DSP 5 條。</p>
+   <h3>詳細說明</h3><p>這個詞在 HW1 中用來概括 ALU 要處理的 RISC-V 指令來源。PDF 實際把標準部分拆成 RV32IM 與 RV32B 表格，再加上自訂 DSP。這裡最重要的是依作業表格的 opcode/funct 欄位與 operation 定義實作，而不是自行擴充其他 RISC-V 指令。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜RV32IM</b><p>MULH 屬於 PDF 的 RV32IM 表：signed(rs1) × signed(rs2)，取 product[63:32]。</p></div><div class='example'><b>例 2｜RV32B</b><p>CLZ 屬於 PDF 的 RV32B 表：result 是 rs1 的 leading zeros 數量。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="dsp digital signal processing 數位訊號處理 領域／指令專有名詞 pdf 定義 custom dsp extension 五個 operations：dotp4、sadd8、ssub8、abs、clip8。 在這份 hw 中，dsp 不是要求你完成完整的訊號處理器，而是用五個 custom operations 練習 packed 8-bit lanes、signed two&#x27;s-complement、dot product、saturation、absolute value 與 clipping。">
+ <summary><span class="num">07</span><span class="termname">DSP</span><span class="zh">數位訊號處理</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>領域／指令專有名詞</span><span>英文／全名：Digital Signal Processing</span></div>
+   <h3>作業中的依據</h3><p>PDF 定義 Custom DSP Extension 五個 operations：DOTP4、SADD8、SSUB8、ABS、CLIP8。</p>
+   <h3>詳細說明</h3><p>在這份 HW 中，DSP 不是要求你完成完整的訊號處理器，而是用五個 custom operations 練習 packed 8-bit lanes、signed two&#x27;s-complement、dot product、saturation、absolute value 與 clipping。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜DOTP4</b><p>兩個 32-bit operands 各拆成四個 signed 8-bit elements；四組相乘後相加，形成 dot product。</p></div><div class='example'><b>例 2｜SADD8</b><p>每個 8-bit lane 獨立做 signed addition 並 saturation。例如 PDF 明示 100+50 會飽和為 127，而不是發生一般 8-bit wraparound。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="rtl register transfer level 暫存器傳輸層 硬體設計專有名詞 pdf 要求提交 alu.sv、fpu.sv 等 systemverilog source，但 pdf 這 28 頁沒有專門定義「rtl」一詞；本項全名與說明屬硬體設計背景補充。 rtl 是以暫存器、組合邏輯與資料在 clock 邊緣間的傳遞來描述數位硬體的抽象層級。對本 hw 而言，重點是讓 systemverilog 描述符合指定 i/o、功能與時序，並可被提供的 testbench 模擬。">
+ <summary><span class="num">08</span><span class="termname">RTL</span><span class="zh">暫存器傳輸層</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>硬體設計專有名詞</span><span>英文／全名：Register Transfer Level</span></div>
+   <h3>作業中的依據</h3><p>PDF 要求提交 ALU.sv、FPU.sv 等 SystemVerilog source，但 PDF 這 28 頁沒有專門定義「RTL」一詞；本項全名與說明屬硬體設計背景補充。</p>
+   <h3>詳細說明</h3><p>RTL 是以暫存器、組合邏輯與資料在 clock 邊緣間的傳遞來描述數位硬體的抽象層級。對本 HW 而言，重點是讓 SystemVerilog 描述符合指定 I/O、功能與時序，並可被提供的 testbench 模擬。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜組合 ALU</b><p>ALU 可以依 instruction decode 後用 combinational logic 計算 result_o；這是 RTL 中描述 datapath/function 的典型情境。</p></div><div class='example'><b>例 2｜FPU valid</b><p>FPU 具有 clk、rst、enable、valid；若你的架構使用 registers 分階段保存結果，就會涉及 clocked RTL 與資料傳遞時序。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="systemverilog systemverilog systemverilog 硬體描述／驗證語言 語言專有名詞 pdf 提交檔案使用 .sv，vcs command 使用 -sverilog；pdf 沒有提供 systemverilog 語言教科書式定義。 在這份 hw 中，systemverilog 是你撰寫 alu、fpu 與 testbench 的語言環境。作業真正檢查的是你的 .sv 是否能在 soc lab environment compile、simulate 並通過測試。">
+ <summary><span class="num">09</span><span class="termname">SystemVerilog</span><span class="zh">SystemVerilog 硬體描述／驗證語言</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>語言專有名詞</span><span>英文／全名：SystemVerilog</span></div>
+   <h3>作業中的依據</h3><p>PDF 提交檔案使用 .sv，VCS command 使用 -sverilog；PDF 沒有提供 SystemVerilog 語言教科書式定義。</p>
+   <h3>詳細說明</h3><p>在這份 HW 中，SystemVerilog 是你撰寫 ALU、FPU 與 testbench 的語言環境。作業真正檢查的是你的 .sv 是否能在 SoC Lab environment compile、simulate 並通過測試。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜ALU.sv</b><p>你會在 ALU.sv 中根據 instruction_i 決定 ADD、SUB、MUL、CLZ、DOTP4 等輸出。</p></div><div class='example'><b>例 2｜FPU_tb.sv</b><p>testbench 會提供 ai、bi、instruction 等刺激，等待 valid 後把 co 與 golden answer 比較。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="i/o port input / output port 輸入／輸出埠 硬體介面名詞 pdf 的 alu 與 fpu 都有 i/o port 表，列出 signal、type、bits、description。 port 是模組和外部交換資料或控制資訊的介面。input 由外部送進模組；output 由模組送出去。位寬必須符合 pdf 規格。">
+ <summary><span class="num">10</span><span class="termname">I/O Port</span><span class="zh">輸入／輸出埠</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>硬體介面名詞</span><span>英文／全名：Input / Output Port</span></div>
+   <h3>作業中的依據</h3><p>PDF 的 ALU 與 FPU 都有 I/O Port 表，列出 Signal、Type、Bits、Description。</p>
+   <h3>詳細說明</h3><p>Port 是模組和外部交換資料或控制資訊的介面。Input 由外部送進模組；Output 由模組送出去。位寬必須符合 PDF 規格。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜ALU ports</b><p>instruction_i、src_A_i、src_B_i 是 Input；result_o 是 Output。四者都是 32 bits。</p></div><div class='example'><b>例 2｜FPU ports</b><p>clk/rst/enable 是控制 input，ai/bi 是 32-bit data input，instruction 是 2-bit operation input，co 與 valid 是 output。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="signal signal 訊號 硬體基本名詞 pdf 的 i/o 表以 signal 欄列出 alu/fpu 各訊號名稱。 signal 是硬體中傳遞資料或控制狀態的名稱。理解一個 module 時，先分清楚每個 signal 的方向、位寬與意義，通常比直接讀內部 code 更重要。">
+ <summary><span class="num">11</span><span class="termname">Signal</span><span class="zh">訊號</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>硬體基本名詞</span><span>英文／全名：Signal</span></div>
+   <h3>作業中的依據</h3><p>PDF 的 I/O 表以 Signal 欄列出 ALU/FPU 各訊號名稱。</p>
+   <h3>詳細說明</h3><p>Signal 是硬體中傳遞資料或控制狀態的名稱。理解一個 module 時，先分清楚每個 signal 的方向、位寬與意義，通常比直接讀內部 code 更重要。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜資料訊號</b><p>src_A_i 是 32-bit data signal，內容代表 rs1 的資料。</p></div><div class='example'><b>例 2｜控制訊號</b><p>valid 是 1-bit output control signal；PDF 要求 valid 拉高後才用 golden 檢查 co。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="bit binary digit 位元 數位基本名詞 pdf 以 bits 欄表示訊號寬度，並大量使用 [31:0]、[63:32]、rs2[4:0] 等 bit ranges。 bit 的值為 0 或 1。多個 bits 組成欄位或資料字。硬體設計中特別重要的是 bit width 與 bit slicing，因為不同 operation 只會使用某些位元。">
+ <summary><span class="num">12</span><span class="termname">Bit</span><span class="zh">位元</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>數位基本名詞</span><span>英文／全名：Binary Digit</span></div>
+   <h3>作業中的依據</h3><p>PDF 以 Bits 欄表示訊號寬度，並大量使用 [31:0]、[63:32]、rs2[4:0] 等 bit ranges。</p>
+   <h3>詳細說明</h3><p>Bit 的值為 0 或 1。多個 bits 組成欄位或資料字。硬體設計中特別重要的是 bit width 與 bit slicing，因為不同 operation 只會使用某些位元。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜32-bit input</b><p>src_A_i 有 32 bits，可標示為 [31:0]。</p></div><div class='example'><b>例 2｜shift amount</b><p>SLL/SRL/SRA 只使用 rs2[4:0]，也就是 5 bits，因此可表示 0～31 的位移量。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="operand operand 運算元 運算基本名詞 pdf 的 alu i/o 描述 src_a_i 為 rs1 data、src_b_i 為 rs2 data；fpu 則以 operand a/b 描述 ai、bi 的特殊情況。 operand 就是被 operation 使用的輸入數值。要注意同一組 32 bits 可以依指令被解讀成 signed、unsigned 或 ieee-754 floating-point，因此「bit pattern」相同不代表數值語意相同。">
+ <summary><span class="num">13</span><span class="termname">Operand</span><span class="zh">運算元</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>運算基本名詞</span><span>英文／全名：Operand</span></div>
+   <h3>作業中的依據</h3><p>PDF 的 ALU I/O 描述 src_A_i 為 rs1 data、src_B_i 為 rs2 data；FPU 則以 operand A/B 描述 ai、bi 的特殊情況。</p>
+   <h3>詳細說明</h3><p>Operand 就是被 operation 使用的輸入數值。要注意同一組 32 bits 可以依指令被解讀成 signed、unsigned 或 IEEE-754 floating-point，因此「bit pattern」相同不代表數值語意相同。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜ALU</b><p>ADD 的兩個 operands 是 src_A_i 與 src_B_i；若分別為 5 和 3，結果為 8。</p></div><div class='example'><b>例 2｜FPU</b><p>ADD/SUB 的 operand A/B 是 ai、bi；FPU 會先把它們 unpack 成 S/E/F，而不是直接做 integer arithmetic。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="instruction instruction 指令 isa 基本名詞 alu 的 instruction_i 是 32-bit risc-v instruction；fpu 另有 2-bit instruction，0=min、1=max、2=add、3=sub。 instruction 告訴硬體要執行哪個 operation。本 hw 有兩種不同語境：alu 的 32-bit risc-v instruction 需要解析 opcode/funct fields；fpu 的 2-bit instruction 則直接選擇四種浮點 operation。">
+ <summary><span class="num">14</span><span class="termname">Instruction</span><span class="zh">指令</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>ISA 基本名詞</span><span>英文／全名：Instruction</span></div>
+   <h3>作業中的依據</h3><p>ALU 的 instruction_i 是 32-bit RISC-V instruction；FPU 另有 2-bit instruction，0=min、1=max、2=add、3=sub。</p>
+   <h3>詳細說明</h3><p>Instruction 告訴硬體要執行哪個 operation。本 HW 有兩種不同語境：ALU 的 32-bit RISC-V instruction 需要解析 opcode/funct fields；FPU 的 2-bit instruction 則直接選擇四種浮點 operation。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜ALU instruction</b><p>當 opcode/funct fields 對應 SUB 時，ALU 執行 rs1-rs2。</p></div><div class='example'><b>例 2｜FPU instruction</b><p>當 FPU instruction=2 時，PDF 定義 operation 為 add；instruction=3 時為 sub。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="decode instruction decoding 指令解碼 硬體控制名詞 pdf 的 alu i/o 說明：「alu operation is decoded from the corresponding fields of instruction_i」。 decode 是從 instruction bit fields 判斷要執行哪一個 operation。對 alu 而言，常需要同時查看 opcode、funct3、funct7 或特定固定欄位，才能唯一辨認指令。">
+ <summary><span class="num">15</span><span class="termname">Decode</span><span class="zh">指令解碼</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>硬體控制名詞</span><span>英文／全名：Instruction Decoding</span></div>
+   <h3>作業中的依據</h3><p>PDF 的 ALU I/O 說明：「ALU operation is decoded from the corresponding fields of instruction_i」。</p>
+   <h3>詳細說明</h3><p>Decode 是從 instruction bit fields 判斷要執行哪一個 operation。對 ALU 而言，常需要同時查看 opcode、funct3、funct7 或特定固定欄位，才能唯一辨認指令。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜ADD vs SUB</b><p>PDF 表中 ADD 與 SUB 的 funct3 都是 000，但 funct7 不同，所以不能只看 funct3。</p></div><div class='example'><b>例 2｜DSP</b><p>Custom DSP 使用 opcode=0001011，再搭配 funct7、funct3 等欄位辨認 DOTP4、SADD8、SSUB8、ABS、CLIP8。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="datapath data path 資料路徑 硬體架構專有名詞 pdf 沒有把 datapath 當作獨立詞條定義；此項用來解讀 pdf 的 fpu architecture 與 add/sub 流程圖，屬背景補充。 datapath 指資料在硬體中經過運算、移位、比較、選擇與暫存的路徑。fpu 特別適合用 datapath 思考，因為資料會依序經過多個處理步驟。">
+ <summary><span class="num">16</span><span class="termname">Datapath</span><span class="zh">資料路徑</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>硬體架構專有名詞</span><span>英文／全名：Data Path</span></div>
+   <h3>作業中的依據</h3><p>PDF 沒有把 Datapath 當作獨立詞條定義；此項用來解讀 PDF 的 FPU architecture 與 ADD/SUB 流程圖，屬背景補充。</p>
+   <h3>詳細說明</h3><p>Datapath 指資料在硬體中經過運算、移位、比較、選擇與暫存的路徑。FPU 特別適合用 datapath 思考，因為資料會依序經過多個處理步驟。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜ALU datapath</b><p>src_A_i/src_B_i 進入不同運算邏輯，再依 decode 結果選出 result_o，可視為 ALU datapath。</p></div><div class='example'><b>例 2｜FPU datapath</b><p>ai/bi → Unpack → Align → Mantissa ADD/SUB → Normalize → GRS rounding → Repack → co，是本作業最重要的資料路徑。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="module hardware module 硬體模組 硬體架構名詞 pdf 的提交 hierarchy 指定 alu.sv、fpu.sv，並允許 other user-defined .sv files；pdf 未提供 module 的一般教科書定義。 module 可以把一組功能與 i/o 封裝成可管理的硬體區塊。本作業至少要有 alu 與 fpu；若需要，也可以把複雜功能拆成其他 user-defined .sv files，但仍需符合指定 hierarchy。">
+ <summary><span class="num">17</span><span class="termname">Module</span><span class="zh">硬體模組</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>硬體架構名詞</span><span>英文／全名：Hardware Module</span></div>
+   <h3>作業中的依據</h3><p>PDF 的提交 hierarchy 指定 ALU.sv、FPU.sv，並允許 Other user-defined .sv files；PDF 未提供 module 的一般教科書定義。</p>
+   <h3>詳細說明</h3><p>Module 可以把一組功能與 I/O 封裝成可管理的硬體區塊。本作業至少要有 ALU 與 FPU；若需要，也可以把複雜功能拆成其他 user-defined .sv files，但仍需符合指定 hierarchy。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜ALU module</b><p>ALU module 對外只需依規格接收 instruction_i、src_A_i、src_B_i 並輸出 result_o。</p></div><div class='example'><b>例 2｜FPU 子模組</b><p>你可以概念上把 comparator、adder、normalizer 等拆成子模組；PDF architecture 本身也以 FPU Adder、FPU Comparator、MUX 呈現功能區塊。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="combinational logic combinational logic 組合邏輯 硬體基本專有名詞 pdf 沒有獨立定義此詞；本項是理解 alu operation 的背景補充。 組合邏輯的輸出由目前輸入決定，不依賴過去狀態。許多 alu operations 天然可表示成組合邏輯；實際 rtl 如何安排仍要以你的設計與作業時序要求為準。">
+ <summary><span class="num">18</span><span class="termname">Combinational Logic</span><span class="zh">組合邏輯</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>硬體基本專有名詞</span><span>英文／全名：Combinational Logic</span></div>
+   <h3>作業中的依據</h3><p>PDF 沒有獨立定義此詞；本項是理解 ALU operation 的背景補充。</p>
+   <h3>詳細說明</h3><p>組合邏輯的輸出由目前輸入決定，不依賴過去狀態。許多 ALU operations 天然可表示成組合邏輯；實際 RTL 如何安排仍要以你的設計與作業時序要求為準。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜AND</b><p>result = src_A_i &amp; src_B_i，輸出直接由當前兩個 operands 決定。</p></div><div class='example'><b>例 2｜SLTU</b><p>比較兩個 unsigned operands 後輸出 0 或 1，也可視為一種組合功能。</p></div></div>
+ </div>
+</details>
+<details class="term" data-search="sequential logic sequential logic 循序邏輯／時序邏輯 硬體基本專有名詞 pdf 的 fpu interface 含 clk、rst、enable、valid，data transfer 頁以 cycles 描述資料傳輸；pdf 沒有獨立定義此詞。 循序邏輯會受到 clock 與先前狀態影響。這個背景概念有助於理解為什麼 fpu 不是只看 co，而要依 enable 送入資料、等待 valid，再檢查輸出。">
+ <summary><span class="num">19</span><span class="termname">Sequential Logic</span><span class="zh">循序邏輯／時序邏輯</span><span class="arrow">⌄</span></summary>
+ <div class="body">
+   <div class="meta"><span>硬體基本專有名詞</span><span>英文／全名：Sequential Logic</span></div>
+   <h3>作業中的依據</h3><p>PDF 的 FPU interface 含 clk、rst、enable、valid，Data Transfer 頁以 cycles 描述資料傳輸；PDF 沒有獨立定義此詞。</p>
+   <h3>詳細說明</h3><p>循序邏輯會受到 clock 與先前狀態影響。這個背景概念有助於理解為什麼 FPU 不是只看 co，而要依 enable 送入資料、等待 valid，再檢查輸出。</p>
+   <h3>至少 2 個例子</h3><div class="examples"><div class='example'><b>例 1｜valid timing</b><p>輸入送入 FPU 後，testbench 等待 valid 拉高才認定 co 有效，這是一個明確的時序介面概念。</p></div><div class='example'><b>例 2｜reset</b><p>rst 用於重置 FPU 狀態；Data Transfer 頁先處理 reset，再拉高 enable 餵入資料。</p></div></div>
+ </div>
+</details>
+</main><footer>01 · VSD HW1 課程、架構與基本硬體名詞 · 19 個詳細條目</footer>
+<script>
+const q=document.getElementById('q');q.addEventListener('input',()=>{const s=q.value.trim().toLowerCase();document.querySelectorAll('.term').forEach(e=>e.classList.toggle('hidden',s&&!e.dataset.search.includes(s)))});function toggleAll(v){document.querySelectorAll('.term:not(.hidden)').forEach(e=>e.open=v)}
+</script></body></html>

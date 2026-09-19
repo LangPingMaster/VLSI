@@ -1,0 +1,174 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Part 3｜Synthesis & Gate-Level Verification</title>
+<style>
+:root{--bg:#eef3f8;--ink:#172033;--blue:#2563eb;--teal:#0f766e;--line:#dbe4ef}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 Segoe UI,Noto Sans TC,Microsoft JhengHei,sans-serif}header{padding:48px 24px;color:white;background:linear-gradient(125deg,#172554,#1d4ed8 45%,#0f766e)}header div,main{max-width:1180px;margin:auto}h1{font-size:clamp(1.8rem,4vw,2.8rem);margin:0}main{padding:26px 18px 70px}section{background:white;border:1px solid var(--line);border-radius:20px;padding:26px;margin:20px 0;box-shadow:0 14px 36px #0f172a12}h2{color:#134e4a;border-left:7px solid #14b8a6;padding-left:12px}h3{color:#1d4ed8}.flow{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.b{padding:12px 14px;border-radius:12px;background:#ecfeff;border:1px solid #99f6e4;font-weight:700}.a{font-size:24px;color:#94a3b8}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.shot{border:1px solid var(--line);padding:15px;border-radius:16px;background:#f8fafc}img{max-width:100%;height:auto;border-radius:12px}.poster{width:100%;box-shadow:0 8px 25px #0f172a20}pre{position:relative;background:#0f172a;color:#e5edf7;padding:48px 18px 18px;border-radius:14px;overflow:auto}pre button{position:absolute;right:10px;top:10px;background:#334155;color:white;border:1px solid #64748b;border-radius:8px;padding:7px 11px;cursor:pointer}table{width:100%;border-collapse:collapse}th,td{border:1px solid var(--line);padding:10px;vertical-align:top}th{background:#ecfeff}.key{background:#ecfdf5;border-left:5px solid #10b981;padding:14px;border-radius:10px}.warn{background:#fff7ed;border-left:5px solid #f97316;padding:14px;border-radius:10px}@media(max-width:760px){.grid{grid-template-columns:1fr}}
+</style></head><body>
+<header><div><h1>Part 3｜Synthesis → Gate-Level Netlist → Gate-Level Simulation</h1><p>延續 Part 2 的同一張 256×256 影像 · Threshold = 128 · 65,536 Pixels · Golden Model Verification</p></div></header>
+<main>
+
+<section>
+<h2>Part 3 目標</h2>
+<p>Part 2 已經證明 RTL 功能正確；Part 3 要確認 <strong>RTL 經過 synthesis / gate-level 化之後，功能仍然完全一致</strong>。</p>
+<div class="flow">
+<span class="b">design.sv</span><span class="a">→</span>
+<span class="b">Yosys Synthesis</span><span class="a">→</span>
+<span class="b">Gate-Level Netlist</span><span class="a">→</span>
+<span class="b">65,536 Pixel GLS</span><span class="a">→</span>
+<span class="b">gate_binary.txt</span><span class="a">→</span>
+<span class="b">Golden Compare</span><span class="a">→</span>
+<span class="b">PASS</span>
+</div>
+<p class="key">核心判定：Gate-Level 結果與 Part 2 的 <code>golden_binary.txt</code> 逐 pixel 比較，Mismatch = 0 才算通過。</p>
+</section>
+
+<section>
+<h2>與 Part 2 的關係</h2>
+<table>
+<tr><th>項目</th><th>Part 2</th><th>Part 3</th></tr>
+<tr><td>驗證對象</td><td>RTL：<code>design.sv</code></td><td>Gate / Structural Netlist</td></tr>
+<tr><td>輸入</td><td><code>gray.hex</code></td><td>同一份 <code>gray.hex</code></td></tr>
+<tr><td>Pixel 數</td><td>65,536</td><td>65,536</td></tr>
+<tr><td>Golden Model</td><td><code>golden_binary.txt</code></td><td>完全沿用同一份</td></tr>
+<tr><td>輸出</td><td><code>rtl_binary.txt</code></td><td><code>gate_binary.txt</code></td></tr>
+<tr><td>判定</td><td>RTL vs Golden</td><td>Gate-Level vs Golden</td></tr>
+</table>
+</section>
+
+<section>
+<h2>本 Part 3 套件使用的影像</h2>
+<div class="grid">
+<div class="shot"><h3>Color Input</h3><img src="images/drawBbox_result_p2.png"></div>
+<div class="shot"><h3>Grayscale</h3><img src="images/sample_gray.png"></div>
+<div class="shot"><h3>Golden Binary</h3><img src="images/sample_binary_golden.png"></div>
+<div class="shot"><h3>Gate Binary</h3><p>執行 <code>compare_gate.py</code> 後會產生：</p><code>images/sample_binary_gate.png</code></div>
+</div>
+</section>
+
+<section>
+<h2>完整操作流程</h2>
+<table>
+<tr><th>Step</th><th>動作</th><th>輸入</th><th>輸出</th></tr>
+<tr><td>1</td><td>讀取 RTL</td><td><code>design.sv</code></td><td>Yosys internal RTL</td></tr>
+<tr><td>2</td><td>Yosys synthesis / optimize</td><td>RTL</td><td>Generic gate logic</td></tr>
+<tr><td>3</td><td>輸出 netlist</td><td>Yosys internal netlist</td><td><code>binarization_yosys.v</code></td></tr>
+<tr><td>4</td><td>Gate-Level compile</td><td>gate netlist + testbench + cells</td><td><code>simv_gate</code></td></tr>
+<tr><td>5</td><td>Gate-Level Simulation</td><td><code>gray.hex</code></td><td><code>gate_binary.txt</code></td></tr>
+<tr><td>6</td><td>Python compare</td><td>gate output + Golden</td><td>Mismatch / Accuracy / PASS</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Yosys 指令表</h2>
+<table>
+<tr><th>順序</th><th>Yosys 指令</th><th>作用</th></tr>
+<tr><td>①</td><td><code>read_verilog -sv design.sv</code></td><td>讀入 SystemVerilog RTL。</td></tr>
+<tr><td>②</td><td><code>hierarchy -check -top binarization</code></td><td>指定 top module，並檢查 hierarchy。</td></tr>
+<tr><td>③</td><td><code>proc</code></td><td>把 always/process 轉為內部 mux / register 等表示。</td></tr>
+<tr><td>④</td><td><code>opt</code></td><td>最佳化邏輯，移除冗餘結構。</td></tr>
+<tr><td>⑤</td><td><code>fsm</code></td><td>偵測與處理 FSM；本設計沒有複雜 FSM，但保留標準流程。</td></tr>
+<tr><td>⑥</td><td><code>memory</code></td><td>處理 memory abstraction；本設計核心 RTL 無 memory。</td></tr>
+<tr><td>⑦</td><td><code>techmap</code></td><td>將高階 internal cells 轉成較基本的 logic cells。</td></tr>
+<tr><td>⑧</td><td><code>abc -g AND,OR,XOR,XNOR,NAND,NOR,MUX</code></td><td>用 ABC 將 combinational logic 映射成指定的 generic gates。</td></tr>
+<tr><td>⑨</td><td><code>clean</code></td><td>移除未使用 wire / cell。</td></tr>
+<tr><td>⑩</td><td><code>stat</code></td><td>顯示合成後 cell / wire 統計。</td></tr>
+<tr><td>⑪</td><td><code>write_verilog -noattr binarization_yosys.v</code></td><td>輸出 synthesized Verilog netlist。</td></tr>
+<tr><td>⑫</td><td><code>write_json binarization_yosys.json</code></td><td>輸出 JSON netlist，方便後續視覺化或工具分析。</td></tr>
+</table>
+<pre><button onclick="copy(this)">Copy</button><code>yosys -s synthesis.ys</code></pre>
+</section>
+
+<section>
+<h2>Gate-Level Simulation</h2>
+<p>這個 ZIP 另外附了一份 <code>binarization_gate_reference.v</code>，它是以小型 generic cells 組成的 structural reference netlist，讓你即使還沒有安裝 Yosys，也可以立即完成整個 GLS + Golden Compare 流程。</p>
+<p class="warn"><strong>重要：</strong><code>binarization_gate_reference.v</code> 是教學用 structural reference，不應被誤稱為「Yosys 實際輸出」。真正的 Yosys 輸出由 <code>synthesis.ys</code> 產生為 <code>binarization_yosys.v</code>。</p>
+<pre><button onclick="copy(this)">Copy</button><code>cd code
+cp ../data/gray.hex .
+iverilog -g2012 -o simv_gate generic_cells.v binarization_gate_reference.v testbench_gate.sv
+vvp simv_gate
+python compare_gate.py</code></pre>
+</section>
+
+<section>
+<h2>Gate-Level PASS 驗證流程</h2>
+<pre><code>gray.hex
+   │
+   ▼
+Gate-Level Netlist
+   │
+   ▼
+testbench_gate.sv
+   │
+   ▼
+65,536 Pixel Simulation
+   │
+   ▼
+gate_binary.txt
+   │
+   ├──────────────┐
+   ▼              ▼
+Gate Result   golden_binary.txt
+   │              │
+   └──────┬───────┘
+          ▼
+   compare_gate.py
+          │
+          ▼
+Mismatch = 0
+Accuracy = 100.00%
+PASS</code></pre>
+<p>預期驗證輸出：</p>
+<pre><code>Total pixels: 65536
+Mismatch pixels: 0
+Accuracy: 100.00%
+PASS</code></pre>
+</section>
+
+<section>
+<h2>每個檔案詳細說明</h2>
+<table>
+<tr><th>檔案</th><th>角色</th><th>詳細說明</th></tr>
+<tr><td><code>code/design.sv</code></td><td>原始 RTL</td><td>與 Part 2 相同的 clocked binarization RTL，也是 synthesis 的輸入。</td></tr>
+<tr><td><code>code/synthesis.ys</code></td><td>Yosys Script</td><td>依序執行 read、hierarchy、proc、opt、techmap、ABC mapping、stat，最後輸出 Verilog/JSON netlist。</td></tr>
+<tr><td><code>code/yosys_commands.txt</code></td><td>指令速查</td><td>將 synthesis.ys 的主要命令列出，方便在 Yosys interactive shell 或 EDA Playground 教學時逐步執行。</td></tr>
+<tr><td><code>code/binarization_gate_reference.v</code></td><td>Structural Reference</td><td>用 INV / AND / XNOR / DFFRN 等 generic cells 建出 8-bit greater-or-equal comparator 與輸出 FF，可直接拿來做 GLS。</td></tr>
+<tr><td><code>code/generic_cells.v</code></td><td>Generic Cell Library</td><td>提供 reference structural netlist 所需的小型 cell behavioral models，讓 Icarus 能模擬這些 gate/cell。</td></tr>
+<tr><td><code>code/testbench_gate.sv</code></td><td>Gate-Level Testbench</td><td>讀取 65,536 筆 <code>gray.hex</code>，每個 pixel 經 gate netlist 後寫入 <code>gate_binary.txt</code>。</td></tr>
+<tr><td><code>code/compare_gate.py</code></td><td>Gate vs Golden</td><td>讀取 <code>gate_binary.txt</code> 與 Part 2 的 <code>golden_binary.txt</code>，逐 pixel 比較並產生 gate binary PNG。</td></tr>
+<tr><td><code>code/run_part3.sh</code></td><td>Linux / Git Bash</td><td>一鍵執行：複製 gray.hex、可選 Yosys synthesis、Icarus gate compile、vvp、Python compare。</td></tr>
+<tr><td><code>code/run_part3.ps1</code></td><td>Windows PowerShell</td><td>Windows 專用的一鍵 Part 3 執行腳本。</td></tr>
+<tr><td><code>data/gray.hex</code></td><td>輸入 pixel stream</td><td>與 Part 2 完全相同的 256×256 grayscale pixels。</td></tr>
+<tr><td><code>data/golden_binary.txt</code></td><td>Golden Model</td><td>與 Part 2 完全相同的 Python 標準答案，確保 RTL 與 Gate-Level 使用同一參考基準。</td></tr>
+<tr><td><code>images/sample_binary_gate.png</code></td><td>Gate 結果影像</td><td>執行 compare_gate.py 後才生成，用來視覺化 Gate-Level 65,536 筆輸出。</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Windows PowerShell：完整執行</h2>
+<pre><button onclick="copy(this)">Copy</button><code>cd code
+.\run_part3.ps1</code></pre>
+<p>若沒有安裝 Yosys，腳本會跳過自動 synthesis，但仍可使用內附的 structural reference 完成 Gate-Level Verification。</p>
+</section>
+
+<section>
+<h2>手動逐步指令表</h2>
+<table>
+<tr><th>順序</th><th>指令</th><th>在做什麼</th><th>主要輸出</th></tr>
+<tr><td>①</td><td><code>cd code</code></td><td>進入 Part 3 程式資料夾。</td><td>目前目錄 = code/</td></tr>
+<tr><td>②</td><td><code>cp ../data/gray.hex .</code></td><td>複製 Part 2 同一份 grayscale pixel stream 到 simulator 工作目錄。</td><td><code>gray.hex</code></td></tr>
+<tr><td>③</td><td><code>yosys -s synthesis.ys</code></td><td>執行 RTL synthesis，產生 Yosys netlist 與 report。</td><td><code>binarization_yosys.v</code>、JSON、統計</td></tr>
+<tr><td>④</td><td><code>iverilog -g2012 -o simv_gate generic_cells.v binarization_gate_reference.v testbench_gate.sv</code></td><td>編譯 structural gate reference + cell models + Gate-Level TB。</td><td><code>simv_gate</code></td></tr>
+<tr><td>⑤</td><td><code>vvp simv_gate</code></td><td>執行 65,536 pixel Gate-Level Simulation。</td><td><code>gate_binary.txt</code></td></tr>
+<tr><td>⑥</td><td><code>python compare_gate.py</code></td><td>Gate-Level output 與 Golden Model 逐 pixel 比較。</td><td><code>sample_binary_gate.png</code>、Mismatch、Accuracy、PASS/FAIL</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Part 3 完成後接什麼？</h2>
+<p>完成 Part 3 後，就可以進入 <strong>Part 4：Technology Library / Standard Cell Mapping → STA → P&amp;R → Post-Layout</strong>。這時會開始加入真正的 Liberty standard-cell library、timing constraint、cell delay、面積與時序分析。</p>
+</section>
+
+</main>
+<script>
+async function copy(b){let t=b.parentElement.querySelector('code').innerText;await navigator.clipboard.writeText(t);b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1200)}
+</script>
+</body></html>

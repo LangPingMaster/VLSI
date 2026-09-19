@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VSD HW1 ModelSim 模擬結果詳解</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#18212f;--muted:#667085;--blue:#175cd3;--green:#067647;--border:#d0d5dd;--code:#101828}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;line-height:1.75}
+header{background:linear-gradient(135deg,#102a43,#175cd3);color:white;padding:44px 8%}
+header h1{margin:0 0 8px;font-size:2rem} header p{margin:0;opacity:.9}
+main{max-width:1050px;margin:28px auto;padding:0 20px 60px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin:18px 0;box-shadow:0 4px 16px #10182810}
+h2{color:#123b70;border-bottom:2px solid #e5e7eb;padding-bottom:8px} h3{color:#175cd3}
+.ok{display:inline-block;background:#ecfdf3;color:#067647;border:1px solid #abefc6;border-radius:999px;padding:4px 12px;font-weight:700}
+code{background:#eef2f6;padding:2px 6px;border-radius:5px} pre{background:var(--code);color:#e6edf3;padding:18px;border-radius:10px;overflow:auto;line-height:1.55}
+table{width:100%;border-collapse:collapse;margin:12px 0} th,td{border:1px solid var(--border);padding:10px;text-align:left;vertical-align:top} th{background:#eef4ff}
+.note{border-left:5px solid #175cd3;background:#eff8ff;padding:14px 18px;border-radius:8px}
+.success{border-left:5px solid #12b76a;background:#ecfdf3;padding:14px 18px;border-radius:8px}
+.flow{font-weight:700;text-align:center;padding:16px;background:#f2f4f7;border-radius:10px}
+</style>
+</head>
+<body>
+<header>
+<h1>VSD HW1：ModelSim 模擬結果中文詳解</h1>
+<p>Problem A：ALU　｜　Problem B：FPU　｜　ModelSim Intel FPGA Edition 10.5b</p>
+</header>
+<main>
+
+<section class="card">
+<h2>一、整體結果</h2>
+<p><span class="ok">兩個模組皆模擬成功</span></p>
+<table>
+<tr><th>項目</th><th>結果</th><th>重點</th></tr>
+<tr><td>ALU</td><td>Instruction 0～30 全部 PASS</td><td>共 31 種 instruction 測試全部通過，測試平台顯示分數 62。</td></tr>
+<tr><td>FPU</td><td>TOTAL=2000、PASS=2000、FAIL=0</td><td>2000 筆測試全部正確，通過率 100%。</td></tr>
+<tr><td>編譯</td><td>Errors: 0, Warnings: 0</td><td>ALU 與 FPU 的 SystemVerilog 原始碼皆成功編譯。</td></tr>
+</table>
+<div class="success"><b>結論：</b>從這份 ModelSim transcript 判斷，ALU 與 FPU 的 RTL 功能模擬都已通過指定 testbench。</div>
+</section>
+
+<section class="card">
+<h2>二、ModelSim 指令流程</h2>
+<div class="flow">cd → vlib work → vlog → vsim → run -all → $finish → quit -sim</div>
+<h3>1. cd E:/StudentID_HW1/Sim</h3>
+<p>切換 ModelSim 目前工作目錄到 HW1 的 <code>Sim</code> 資料夾。之後編譯檔案、建立 library 等操作都以此處為基準。</p>
+<h3>2. vlib work</h3>
+<p>建立名為 <code>work</code> 的 ModelSim library。Verilog/SystemVerilog 編譯完成後的設計單元通常會放在這個 library 中。</p>
+<h3>3. vlog -sv 檔名</h3>
+<p><code>vlog</code> 是 ModelSim 的 Verilog compiler；<code>-sv</code> 表示以 SystemVerilog 語法編譯。例如 <code>vlog -sv ALU_tb_iverilog.sv</code>。</p>
+<h3>4. vsim work.tb_ALU / work.tb_fp32</h3>
+<p><code>vsim</code> 載入準備模擬的 top-level testbench。<code>work.tb_ALU</code> 表示從 work library 載入 tb_ALU。</p>
+<h3>5. run -all</h3>
+<p>讓模擬持續執行，直到 testbench 遇到 <code>$finish</code> 或其他停止條件。</p>
+<h3>6. quit -sim</h3>
+<p>結束目前 simulation session，但不一定關閉整個 ModelSim。</p>
+</section>
+
+<section class="card">
+<h2>三、Problem A：ALU 詳解</h2>
+<p>編譯訊息顯示 ModelSim 找到了兩個 module：<code>ALU</code> 與 <code>tb_ALU</code>，並判定 <code>tb_ALU</code> 是 top-level module。</p>
+<pre>-- Compiling module ALU
+-- Compiling module tb_ALU
+Top level modules:
+    tb_ALU
+Errors: 0, Warnings: 0</pre>
+<p>接著執行 <code>vsim work.tb_ALU</code>，ModelSim 會載入 testbench 與被測試的 ALU。執行 <code>run -all</code> 後，Instruction 0 到 Instruction 30 全部出現 <b>ALL PASS</b>。</p>
+<p>因此可解讀為：testbench 對 ALU 所定義的 31 組 instruction/function 測試，其實際輸出都符合 testbench 的 expected result。</p>
+<pre>Instruction  0 ALL PASS !!!
+...
+Instruction 30 ALL PASS !!!
+
+Simulation PASS!!
+====== Your score : 62 ======</pre>
+<p><code>Your score : 62</code> 是 testbench 自己印出的評分結果，不是 ModelSim 的分數。若作業設計為每個 instruction 對應固定配分，這表示 ALU 此部分取得 testbench 所計算出的 62 分。</p>
+<p><code>$finish : ALU_tb_iverilog.sv(110)</code> 也不是錯誤，而是 testbench 在第 110 行主動呼叫 <code>$finish</code>，代表測試正常完成。</p>
+</section>
+
+<section class="card">
+<h2>四、Problem B：FPU 詳解</h2>
+<p>FPU 的編譯階段同樣沒有 error 或 warning。ModelSim 編譯了 <code>FPU</code> 與 <code>tb_fp32</code>，其中 <code>tb_fp32</code> 是 testbench top module。</p>
+<pre>-- Compiling module FPU
+-- Compiling module tb_fp32
+
+Top level modules:
+    tb_fp32
+
+Errors: 0, Warnings: 0</pre>
+<p>載入 <code>work.tb_fp32</code> 後執行所有測試，最重要的結果如下：</p>
+<pre>TOTAL=2000 PASS=2000 FAIL=0
+ALL TEST PASS</pre>
+<table>
+<tr><th>欄位</th><th>意思</th></tr>
+<tr><td>TOTAL=2000</td><td>testbench 總共檢查 2000 筆測試資料。</td></tr>
+<tr><td>PASS=2000</td><td>2000 筆實際結果皆符合預期結果。</td></tr>
+<tr><td>FAIL=0</td><td>沒有任何測試案例失敗。</td></tr>
+<tr><td>通過率</td><td>2000 / 2000 = 100%。</td></tr>
+</table>
+<p><code>Time: 1040015 ns</code> 是模擬世界中的 simulation time，不是電腦實際花費的執行時間。它代表 testbench 的模擬時間軸執行到 1,040,015 ns 時呼叫 <code>$finish</code>。</p>
+</section>
+
+<section class="card">
+<h2>五、為什麼看到 Break in Module 不是錯誤？</h2>
+<p>ALU 與 FPU 最後都有類似：</p>
+<pre>** Note: $finish : FPU_tb_iverilog.sv(480)
+Time: 1040015 ns
+Break in Module tb_fp32 at FPU_tb_iverilog.sv line 480</pre>
+<p>這裡的 <b>Break</b> 是因為 testbench 執行到 <code>$finish</code> 而停止。真正判斷是否發生編譯問題應看 <code>Errors</code>、<code>Warnings</code> 與 testbench 的 PASS/FAIL 統計。本次最後為 <code>Errors: 0, Warnings: 0</code>，而且測試全部 PASS，因此屬正常結束。</p>
+</section>
+
+<section class="card">
+<h2>六、重複執行 vlog / vsim 是否有問題？</h2>
+<p>紀錄中 ALU 的 <code>vlog</code> 執行兩次，FPU 的 <code>vlog</code> 與 <code>vsim</code> 也有重複執行。這本身不代表錯誤；重新編譯會更新 work library 中的設計，而重新 <code>vsim</code> 則重新載入 simulation。</p>
+<div class="note">正式操作時可以簡化成：每個設計修改後重新 <code>vlog</code>，再 <code>vsim</code> 載入 testbench，最後 <code>run -all</code>。若正在 simulation 中需要切換設計，可先使用 <code>quit -sim</code>。</div>
+</section>
+
+<section class="card">
+<h2>七、可放入作業報告的結果說明</h2>
+<p><b>ALU：</b>使用 ModelSim 對 ALU RTL 與 testbench 進行 SystemVerilog functional simulation。程式成功編譯，無 error 與 warning。Instruction 0 至 Instruction 30 均通過測試，testbench 顯示 Simulation PASS，score 為 62。</p>
+<p><b>FPU：</b>使用 ModelSim 執行 FPU functional simulation。FPU 與 tb_fp32 均成功編譯，無 error 與 warning。testbench 共執行 2000 筆測試，其中 PASS=2000、FAIL=0，因此所有測試皆通過，功能模擬結果符合預期。</p>
+</section>
+
+<section class="card">
+<h2>八、原始 Transcript 摘要</h2>
+<pre># Reading C:/intelFPGA/17.1/modelsim_ase/tcl/vsim/pref.tcl
+cd E:/StudentID_HW1/Sim
+vlib work
+vlog -sv ALU_tb_iverilog.sv
+# Model Technology ModelSim - Intel FPGA Edition vlog 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 19:40:26 on Sep 16,2026
+# vlog -reportprogress 300 -sv ALU_tb_iverilog.sv 
+# -- Compiling module ALU
+# -- Compiling module tb_ALU
+# Top level modules:
+#   tb_ALU
+# End time: 19:40:26 on Sep 16,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+...
+# Instruction  0 ALL PASS !!!
+# ...
+# Instruction 30 ALL PASS !!!
+# ====== Your score : 62 ======
+# Errors: 0, Warnings: 0
+...
+# VSD HW1 Problem B - FPU Simulation
+# TOTAL=2000 PASS=2000 FAIL=0
+# ALL TEST PASS
+# Time: 1040015 ns  Iteration: 0  Instance: /tb_fp32
+# Errors: 0, Warnings: 0</pre>
+<p>本頁將原始 ModelSim 訊息整理成「指令用途 → 編譯 → 模擬 → PASS/FAIL → 結論」的閱讀順序，方便直接作為 HW1 模擬紀錄與複習資料。</p>
+</section>
+
+</main>
+</body></html>

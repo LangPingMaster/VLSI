@@ -1,0 +1,28 @@
+# Part 3 - Yosys synthesis
+# Input:  design.sv
+# Output: binarization_yosys.v, binarization_yosys.json
+
+read_verilog -sv design.sv
+hierarchy -check -top binarization
+
+# Generic RTL synthesis
+proc
+opt
+fsm
+opt
+memory
+opt
+techmap
+opt
+
+# Map combinational logic with ABC to generic gates.
+abc -g AND,OR,XOR,XNOR,NAND,NOR,MUX
+
+clean
+
+# Reports
+stat
+
+# Save netlist / JSON for inspection.
+write_verilog -noattr binarization_yosys.v
+write_json binarization_yosys.json

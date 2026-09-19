@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StandardCellLibrary.html — Standard Cell Library（標準元件庫）完整教學</title>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#64748b;
+  --blue:#2563eb;--teal:#0f766e;--green:#059669;--orange:#d97706;
+  --red:#dc2626;--purple:#7c3aed;--line:#dbe3ec;--code:#0f172a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;
+  line-height:1.82
+}
+header{
+  background:linear-gradient(135deg,#1e3a8a,#0f766e 60%,#115e59);
+  color:#fff;padding:52px 24px 44px
+}
+header .inner,nav .bar,.wrap{max-width:1180px;margin:auto}
+header h1{margin:0 0 10px;font-size:2.18rem}
+header p{margin:5px 0;max-width:1020px;opacity:.96}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tag{
+  padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.26);font-size:.88rem
+}
+nav{
+  position:sticky;top:0;z-index:20;background:rgba(245,247,251,.95);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px)
+}
+nav .bar{padding:8px 20px;display:flex;gap:10px;overflow:auto;white-space:nowrap}
+nav a{color:#0f766e;text-decoration:none;padding:5px 9px;border-radius:8px;font-size:.9rem}
+nav a:hover{background:#e2e8f0}
+.wrap{padding:28px 20px 80px}
+.card{
+  background:var(--card);border-radius:18px;padding:26px;margin:22px 0;
+  box-shadow:0 8px 28px rgba(15,23,42,.07)
+}
+h2{margin:0 0 16px;color:#134e4a;border-left:6px solid #14b8a6;padding-left:12px}
+h3{color:#1d4ed8;margin-top:26px}
+h4{color:#7c3aed;margin:18px 0 8px}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{
+  background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;
+  overflow:auto;line-height:1.55
+}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}
+th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{padding:14px 16px;border-radius:10px;margin:16px 0}
+.note{background:#fff7ed;border-left:5px solid #f59e0b}
+.tip{background:#eff6ff;border-left:5px solid #3b82f6}
+.warn{background:#fef2f2;border-left:5px solid #ef4444}
+.key{background:#ecfdf5;border-left:5px solid #10b981}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mini{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px}
+.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:24px 0}
+.box{
+  min-width:155px;text-align:center;padding:14px 16px;border:2px solid #67e8f9;
+  background:#ecfeff;border-radius:13px;font-weight:700
+}
+.box small{display:block;color:#475569;font-weight:500;margin-top:5px}
+.arrow{font-size:1.5rem;color:#64748b}
+.toc ol{columns:2;column-gap:34px}
+.toc li{margin:7px 0;break-inside:avoid}
+.toc a{color:#0f766e;text-decoration:none}
+.quiz{
+  border:1px dashed #94a3b8;border-radius:14px;padding:14px 16px;
+  margin:12px 0;background:#fff
+}
+.quiz summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+@media(max-width:800px){header h1{font-size:1.68rem}.toc ol{columns:1}}
+</style>
+</head>
+<body>
+
+<header>
+<div class="inner">
+<h1>Standard Cell Library（標準元件庫）完整教學</h1>
+<p>從「Standard Cell 是什麼」開始，說明為什麼它像 IC 設計裡的 LEGO，接著介紹 cell 類型、drive strength、library views、timing/power characterization、PVT、NLDM，以及 synthesis / P&amp;R 如何使用標準元件庫。</p>
+<p>內容以課程投影片為主，並加入大量 INV、NAND、MUX、DFF、FA、不同 X1/X2/X4 drive strength 與 gate-level netlist 例子。</p>
+<div class="tags">
+<span class="tag">Standard Cell</span><span class="tag">Library</span><span class="tag">INV / NAND / MUX</span>
+<span class="tag">DFF / FA / HA</span><span class="tag">X1 / X2 / X4</span><span class="tag">.lib / .db</span>
+<span class="tag">LEF / GDS</span><span class="tag">PVT / NLDM</span>
+</div>
+</div>
+</header>
+
+<nav><div class="bar">
+<a href="#overview">總覽</a><a href="#types">Cell 類型</a><a href="#drive">Drive Strength</a>
+<a href="#views">Library Views</a><a href="#char">Characterization</a><a href="#pvt">PVT</a>
+<a href="#timing">Timing</a><a href="#examples">大量例子</a><a href="#flow">Design Flow</a>
+<a href="#pitfalls">常見誤解</a>
+</div></nav>
+
+<main class="wrap">
+
+<section class="card toc">
+<h2>目錄</h2>
+<ol>
+<li><a href="#overview">Standard Cell Library 是什麼？</a></li>
+<li><a href="#lego">為什麼像 LEGO？</a></li>
+<li><a href="#types">常見 Standard Cell 類型</a></li>
+<li><a href="#naming">Cell Naming 怎麼看？</a></li>
+<li><a href="#drive">Drive Strength：X1 / X2 / X4</a></li>
+<li><a href="#physical">標準元件的實體規則</a></li>
+<li><a href="#views">Library View Formats</a></li>
+<li><a href="#char">Cell Characterization</a></li>
+<li><a href="#pvt">PVT Corners</a></li>
+<li><a href="#timing">Timing / Slew / Load</a></li>
+<li><a href="#examples">大量例子</a></li>
+<li><a href="#flow">Synthesis / P&amp;R 如何用 Library</a></li>
+<li><a href="#pitfalls">常見誤解與考試重點</a></li>
+</ol>
+</section>
+
+<section class="card" id="overview">
+<h2>1. Standard Cell Library 是什麼？</h2>
+<p>
+課程把 Standard Cell Library 定義成數位 IC 設計的基本 building block。
+一個 library 就是一整套已經事先設計、驗證、characterize 過的標準元件集合。
+</p>
+
+<div class="flow">
+<div class="box">RTL<small>if / case / + / FF</small></div>
+<div class="arrow">→</div>
+<div class="box">Synthesis</div>
+<div class="arrow">→</div>
+<div class="box">Standard Cell Library<small>INV / NAND / MUX / DFF...</small></div>
+<div class="arrow">→</div>
+<div class="box">Gate-Level Netlist</div>
+</div>
+
+<div class="key">
+<b>一句話：</b>Standard Cell Library 就是 synthesis 與 physical design 用來「蓋晶片」的一盒標準化積木。
+</div>
+</section>
+
+<section class="card" id="lego">
+<h2>2. 為什麼課程說它像 LEGO？</h2>
+
+<p>
+因為每顆 cell 都像預先做好的積木：功能固定、尺寸與 pin 位置已知、timing / power 已量好，
+設計工具不需要每次從 transistor 重新設計。
+</p>
+
+<div class="grid3">
+<div class="mini"><h3 style="margin-top:0">功能已知</h3><p>例如 INV、NAND2、MUX2、DFF。</p></div>
+<div class="mini"><h3 style="margin-top:0">Area 已知</h3><p>工具知道每顆 cell 佔多少面積。</p></div>
+<div class="mini"><h3 style="margin-top:0">Timing 已知</h3><p>delay、slew、setup/hold 等已被 characterize。</p></div>
+<div class="mini"><h3 style="margin-top:0">Power 已知</h3><p>dynamic / leakage power 有模型。</p></div>
+</div>
+
+<div class="note">
+課程以 Nangate OpenCell Library 為例，指出 virtual 45 nm library 有 134 cells、31 個 categories，
+包含 AND、AOI、BUF、CLKBUF、DFF、DFFS、FA、HA、INV、MUX、NAND 等。
+</div>
+</section>
+
+<section class="card" id="types">
+<h2>3. 常見 Standard Cell 類型</h2>
+
+<table>
+<tr><th>類型</th><th>例子</th><th>用途</th></tr>
+<tr><td>基本邏輯</td><td>INV, BUF, AND, OR, NAND, NOR, XOR, XNOR</td><td>Boolean logic</td></tr>
+<tr><td>複合邏輯</td><td>AOI, OAI</td><td>AND-OR-Invert / OR-AND-Invert</td></tr>
+<tr><td>選擇器</td><td>MUX2, MUX4</td><td>資料選擇</td></tr>
+<tr><td>Sequential</td><td>DFF, DFFS, latch</td><td>儲存狀態</td></tr>
+<tr><td>Arithmetic</td><td>FA, HA</td><td>Full Adder / Half Adder</td></tr>
+<tr><td>Clock</td><td>CLKBUF</td><td>Clock tree buffering</td></tr>
+</table>
+
+<p>
+課程 overview 也用 Standard Cell Design Style 說明：常見 pre-designed cells 包含 nand2、NOT、and2、and4、
+nor2、mux2、decoder、latch、flip-flop、fulladder 等。
+</p>
+</section>
+
+<section class="card" id="naming">
+<h2>4. Cell Naming 怎麼看？</h2>
+
+<h3>4.1 AND2_X1</h3>
+<pre><code>AND2_X1</code></pre>
+<p>
+通常可以讀成：<b>2-input AND gate，drive strength = X1</b>。
+</p>
+
+<h3>4.2 AND3_X4</h3>
+<pre><code>AND3_X4</code></pre>
+<p>3-input AND gate，較強 drive strength。</p>
+
+<h3>4.3 課程列出的實際名稱</h3>
+<pre><code>AND2_X1
+AND2_X2
+AND2_X4
+
+AND3_X1
+AND3_X2
+AND3_X4
+
+AND4_X1
+AND4_X2
+AND4_X4</code></pre>
+
+<div class="warn">
+不同 library 的 naming convention 不一定完全相同；上面是課程 Nangate OpenCell Library 的例子。
+</div>
+</section>
+
+<section class="card" id="drive">
+<h2>5. Drive Strength：X1 / X2 / X4 / X8</h2>
+
+<p>
+同一個 Boolean function 往往有不同 drive strength 版本。
+課程指出基本邏輯功能可有 1X、2X、4X、8X 等 variants，
+讓 synthesis tool 在 <b>area、delay、load capacitance</b> 之間做折衷。
+</p>
+
+<table>
+<tr><th>版本</th><th>典型概念</th><th>代價</th></tr>
+<tr><td>X1</td><td>較小、驅動能力較弱</td><td>通常面積/功耗較低</td></tr>
+<tr><td>X2</td><td>較強 drive</td><td>較大 area / power</td></tr>
+<tr><td>X4</td><td>更強 drive</td><td>可驅動較大 load</td></tr>
+<tr><td>X8</td><td>非常強 drive</td><td>通常更大、更耗電</td></tr>
+</table>
+
+<h3>例子：同一條邏輯</h3>
+<pre><code>assign y = a & b;</code></pre>
+
+<p>若 load 很小：</p>
+<pre><code>AND2_X1 U1 (...);</code></pre>
+
+<p>若 load 較大或 timing 很緊：</p>
+<pre><code>AND2_X4 U1 (...);</code></pre>
+
+<div class="key">Cell 不是「越大越好」，而是要剛好滿足 timing / load，同時控制 area 與 power。</div>
+</section>
+
+<section class="card" id="physical">
+<h2>6. Standard Cell 的 Physical Design 特性</h2>
+
+<p>
+Standard-cell design style 的重要特性是：
+<b>同一個 library 的 cells 通常有固定高度、不同寬度。</b>
+這樣才能像積木一樣排成 rows。
+</p>
+
+<div class="grid3">
+<div class="mini"><h3 style="margin-top:0">Fixed Height</h3><p>同一 library cell 高度統一。</p></div>
+<div class="mini"><h3 style="margin-top:0">Variable Width</h3><p>不同 cell 複雜度 / strength 寬度不同。</p></div>
+<div class="mini"><h3 style="margin-top:0">Power Rails</h3><p>VDD / VSS 沿 cell row 對齊。</p></div>
+</div>
+
+<p>
+課程也指出 pin placement、obstruction layer 等 abstract physical 資訊會放在 LEF 中，供 P&amp;R 使用。
+</p>
+</section>
+
+<section class="card" id="views">
+<h2>7. 一顆 Standard Cell 為什麼要有很多種 Library View？</h2>
+
+<p>
+因為 synthesis、simulation、place-and-route、LVS、fabrication 各自需要不同資訊。
+同一顆 cell 不能只靠一個檔案完成整個流程。
+</p>
+
+<table>
+<tr><th>格式</th><th>View</th><th>主要內容</th><th>使用階段</th></tr>
+<tr><td><code>.lib / .db</code></td><td>Timing &amp; Power</td><td>Propagation delay、setup/hold、dynamic/leakage power</td><td>Synthesis / STA</td></tr>
+<tr><td><code>.lef</code></td><td>Abstract Physical</td><td>Cell boundary、obstruction、pin locations</td><td>P&amp;R</td></tr>
+<tr><td><code>.v / .slib</code></td><td>Functional</td><td>Gate-level Verilog / behavioral model</td><td>Functional simulation</td></tr>
+<tr><td><code>.gds / .gdsii</code></td><td>Full Physical</td><td>完整 mask layout</td><td>Final layout / fabrication</td></tr>
+<tr><td><code>.cdl / .spi</code></td><td>Circuit</td><td>SPICE transistor-level netlist</td><td>LVS / SPICE simulation</td></tr>
+</table>
+
+<div class="key">
+<b>記憶法：</b>.lib 給「時間與功耗」、LEF 給「抽象幾何」、GDS 給「完整版圖」、CDL/SPICE 給「電晶體電路」。
+</div>
+</section>
+
+<section class="card" id="char">
+<h2>8. Cell Characterization 是什麼？</h2>
+
+<p>
+課程說明，Characterization 是對標準元件做大量 transistor-level SPICE simulation，
+在不同條件下量測 cell 的 delay、slew rate、power 等特性。
+</p>
+
+<div class="flow">
+<div class="box">Transistor-level Cell</div>
+<div class="arrow">→</div>
+<div class="box">SPICE Simulations<small>大量條件掃描</small></div>
+<div class="arrow">→</div>
+<div class="box">Timing / Power Tables</div>
+<div class="arrow">→</div>
+<div class="box">.lib / .db</div>
+</div>
+
+<h3>為什麼不能只存一個 delay 數字？</h3>
+<p>
+因為 cell delay 會受到 input slew、output load、PVT 等因素影響，
+所以通常需要 table/model，而不是一個固定常數。
+</p>
+</section>
+
+<section class="card" id="pvt">
+<h2>9. PVT Corners</h2>
+
+<p>
+課程把 PVT 展開為：
+</p>
+
+<table>
+<tr><th>PVT</th><th>意思</th><th>會影響什麼</th></tr>
+<tr><td>P = Process</td><td>製程快慢差異</td><td>transistor speed / leakage</td></tr>
+<tr><td>V = Voltage</td><td>供應電壓</td><td>delay / power</td></tr>
+<tr><td>T = Temperature</td><td>溫度</td><td>mobility / delay / leakage</td></tr>
+</table>
+
+<p>
+Characterization 會跨不同 PVT corners 執行大量 SPICE simulations，
+讓 STA / synthesis 可以在不同 operating conditions 下評估 timing 與 power。
+</p>
+</section>
+
+<section class="card" id="timing">
+<h2>10. Timing、Slew、Load 為什麼重要？</h2>
+
+<p>
+課程介紹 inverter cell timing，並指出 cell characterization 會量測
+<b>delay、slew rate、power</b>。
+此外，NLDM 將 delay 儲存在 2D lookup table 中，
+常以 <b>input slew</b> 與 <b>output load capacitance</b> 為索引。
+</p>
+
+<div class="flow">
+<div class="box">Input Slew</div>
+<div class="arrow">+</div>
+<div class="box">Output Load</div>
+<div class="arrow">→</div>
+<div class="box">Lookup Table</div>
+<div class="arrow">→</div>
+<div class="box">Cell Delay</div>
+</div>
+
+<h3>直覺例子</h3>
+<p>
+如果一顆小 INV_X1 要驅動很多後級 gates，output capacitance 變大，
+delay 通常也會變大；工具可能因此換成更強的 INV_X2 / INV_X4。
+</p>
+</section>
+
+<section class="card" id="examples">
+<h2>11. 大量 Standard Cell 例子</h2>
+
+<h3>例 1：Inverter</h3>
+<pre><code>// RTL
+assign y = ~a;
+
+// mapped concept
+INV_X1 U1 (.A(a), .ZN(y));</code></pre>
+
+<h3>例 2：2-input NAND</h3>
+<pre><code>assign y = ~(a & b);
+
+// mapped concept
+NAND2_X1 U1 (...);</code></pre>
+
+<h3>例 3：2-input AND</h3>
+<pre><code>assign y = a & b;
+
+// possible cell
+AND2_X1 U1 (...);</code></pre>
+
+<h3>例 4：3-input AND</h3>
+<pre><code>assign y = a & b & c;
+
+// possible cell
+AND3_X1 U1 (...);</code></pre>
+
+<h3>例 5：4-input AND</h3>
+<pre><code>assign y = a & b & c & d;
+
+// possible cell
+AND4_X1 U1 (...);</code></pre>
+
+<h3>例 6：MUX2</h3>
+<pre><code>assign y = sel ? b : a;
+
+// possible mapped cell
+MUX2_X1 U1 (...);</code></pre>
+
+<h3>例 7：D Flip-Flop</h3>
+<pre><code>always @(posedge clk)
+    q <= d;
+
+// possible mapped cell
+DFF_X1 U_REG (...);</code></pre>
+
+<h3>例 8：DFF with Set/Reset</h3>
+<pre><code>always @(posedge clk or negedge rst_n)
+    if (!rst_n)
+        q <= 1'b0;
+    else
+        q <= d;</code></pre>
+<p>若 library 有對應 async-reset DFF，synthesis 可能直接選用該 cell。</p>
+
+<h3>例 9：Half Adder</h3>
+<pre><code>assign sum   = a ^ b;
+assign carry = a & b;</code></pre>
+<p>若 library 提供 HA cell，tool 可考慮使用；也可由 XOR + AND 組成。</p>
+
+<h3>例 10：Full Adder</h3>
+<pre><code>assign sum  = a ^ b ^ cin;
+assign cout = (a & b) | (a & cin) | (b & cin);</code></pre>
+<p>若 library 有 FA cell，mapping 可能選擇 FA；也可能拆成其他邏輯 cells，取決於 cost。</p>
+
+<h3>例 11：AOI 複合邏輯</h3>
+<pre><code>assign y = ~((a & b) | (c & d));</code></pre>
+<p>若 library 提供 AOI cell，可能比多顆 AND + OR + INV 更有效率。</p>
+
+<h3>例 12：Buffer</h3>
+<pre><code>assign y = a;</code></pre>
+<p>Logical function 雖然只是直通，但 physical flow 中可能插入 BUF 來改善 drive / fanout / timing。</p>
+
+<h3>例 13：Clock Buffer</h3>
+<p>
+Clock tree synthesis 常使用專用 CLKBUF，而不是隨便用一般 BUF，
+因為 clock cells 通常針對 clock 特性設計與 characterize。
+</p>
+
+<h3>例 14：同一 cell 不同 strength</h3>
+<pre><code>AND2_X1
+AND2_X2
+AND2_X4</code></pre>
+<p>功能完全一樣，但 drive、area、delay、power 特性不同。</p>
+
+<h3>例 15：同功能不同 implementation</h3>
+<pre><code>assign y = ~(a & b);</code></pre>
+<p>可以直接用 NAND2，也可以 AND + INV；synthesis 會依 library 與目標選擇較合適的實作。</p>
+</section>
+
+<section class="card" id="flow">
+<h2>12. Synthesis / P&amp;R 如何使用 Standard Cell Library？</h2>
+
+<h3>12.1 Synthesis</h3>
+<div class="flow">
+<div class="box">RTL</div><div class="arrow">→</div>
+<div class="box">Generic Logic</div><div class="arrow">→</div>
+<div class="box">讀 .lib/.db</div><div class="arrow">→</div>
+<div class="box">Technology Mapping</div><div class="arrow">→</div>
+<div class="box">Gate Netlist</div>
+</div>
+
+<h3>12.2 Place & Route</h3>
+<div class="flow">
+<div class="box">Gate Netlist</div><div class="arrow">+</div>
+<div class="box">LEF</div><div class="arrow">→</div>
+<div class="box">Placement / Routing</div><div class="arrow">→</div>
+<div class="box">Physical Layout</div>
+</div>
+
+<h3>12.3 Sign-off / Final Data</h3>
+<p>
+Timing analysis 會使用 timing models；LVS 需要 circuit view；最終 fabrication 使用 GDS/GDSII。
+因此一個 cell library 不是「一堆 gate symbol」，而是一整套跨邏輯、timing、power、physical、circuit 的資料。
+</p>
+</section>
+
+<section class="card" id="pitfalls">
+<h2>13. 常見誤解與考試重點</h2>
+
+<h3>誤解 1：Standard Cell 只是 Verilog module</h3>
+<p>錯。它同時有 functional、timing/power、abstract physical、full layout、SPICE circuit 等多個 views。</p>
+
+<h3>誤解 2：X4 比 X1 功能更多</h3>
+<p>錯。通常 function 相同，只是 drive strength 不同。</p>
+
+<h3>誤解 3：Synthesis 只看 Boolean Function</h3>
+<p>錯。工具還會利用 library timing / area / power 資訊做 mapping 與 optimization。</p>
+
+<h3>誤解 4：.lef 就是完整 layout</h3>
+<p>錯。.lef 是 abstract geometry；完整 mask layout 是 GDS/GDSII。</p>
+
+<h3>誤解 5：Cell delay 是固定常數</h3>
+<p>錯。delay 會受 input slew、output load、PVT 等因素影響，課程也介紹 NLDM lookup table。</p>
+
+<h3>誤解 6：Standard Cell 越大越好</h3>
+<p>錯。更強 drive 通常伴隨更大的 area / power，需要折衷。</p>
+</section>
+
+<section class="card">
+<h2>14. 自我測驗</h2>
+<details class="quiz"><summary>Q1：Standard Cell Library 為什麼像 LEGO？</summary><p>因為它由大量預先設計、驗證、characterize 的標準化 cells 組成，可以直接被 synthesis / physical design 重複使用。</p></details>
+<details class="quiz"><summary>Q2：AND2_X1 與 AND2_X4 有什麼差別？</summary><p>功能相同，但 drive strength、area、timing、power 特性不同。</p></details>
+<details class="quiz"><summary>Q3：.lib / .db 主要提供什麼？</summary><p>Timing 與 power model，例如 propagation delay、setup/hold、dynamic/leakage power。</p></details>
+<details class="quiz"><summary>Q4：.lef 與 .gds 差在哪？</summary><p>LEF 是 P&amp;R 用的 abstract geometry；GDS/GDSII 是完整 mask layout。</p></details>
+<details class="quiz"><summary>Q5：PVT 是什麼？</summary><p>Process、Voltage、Temperature。</p></details>
+<details class="quiz"><summary>Q6：為什麼同一個 gate 要有 X1、X2、X4？</summary><p>讓工具依 load 與 timing 需求選不同 drive strength，在 area/delay/power 間折衷。</p></details>
+</section>
+
+<section class="card">
+<h2>15. 一頁記憶版</h2>
+<table>
+<tr><th>關鍵字</th><th>一句話</th></tr>
+<tr><td>Standard Cell</td><td>預先設計與 characterize 的數位積木</td></tr>
+<tr><td>Library</td><td>很多 standard cells 的集合</td></tr>
+<tr><td>X1/X2/X4</td><td>同功能，不同 drive strength</td></tr>
+<tr><td>.lib/.db</td><td>Timing + Power</td></tr>
+<tr><td>.lef</td><td>Abstract physical view</td></tr>
+<tr><td>.v/.slib</td><td>Functional view</td></tr>
+<tr><td>.gds/.gdsii</td><td>完整 physical layout</td></tr>
+<tr><td>.cdl/.spi</td><td>Transistor-level circuit view</td></tr>
+<tr><td>Characterization</td><td>大量 SPICE simulation 建立 timing/power model</td></tr>
+<tr><td>PVT</td><td>Process / Voltage / Temperature</td></tr>
+</table>
+
+<div class="key">
+<b>最後一句：</b>Standard Cell Library 把 transistor-level 細節封裝成可重複使用的 cells，
+讓 RTL synthesis、STA、P&amp;R、LVS、fabrication 可以用同一套元件資料一路完成 ASIC design flow。
+</div>
+</section>
+
+<div class="footer">StandardCellLibrary.html — VLSI System Design 詳細教學</div>
+</main>
+</body>
+</html>

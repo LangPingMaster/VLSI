@@ -1,0 +1,560 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ALU.sv + ALU_tb.sv 逐行完整解析</title>
+<style>
+body{margin:0;background:#f5f7fb;color:#172033;font:15px/1.65 system-ui,"Microsoft JhengHei",sans-serif}header{padding:36px 5vw;background:linear-gradient(135deg,#172554,#3157d5);color:#fff}main{max-width:1500px;margin:auto;padding:20px}nav{position:sticky;top:0;background:#ffffffee;padding:10px 4vw;border-bottom:1px solid #dbe3ef;z-index:5}nav a{margin-right:14px;color:#3157d5;font-weight:700;text-decoration:none}
+.card,details{background:white;border:1px solid #dbe3ef;border-radius:13px;padding:18px;margin:16px 0;box-shadow:0 4px 15px #1725540c}summary{cursor:pointer;font-size:18px;font-weight:800;color:#20366f}h2{border-left:6px solid #3157d5;padding-left:10px}h3{color:#263d77}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{border:1px solid #dbe3ef;padding:7px;vertical-align:top}th{position:sticky;top:48px;background:#edf2ff;z-index:2}td:first-child{text-align:center;font-weight:800;width:45px}td:nth-child(2){width:33%}code,pre{font-family:Consolas,monospace}pre{margin:0;overflow:auto;background:#0f172a;color:#e6edf7;padding:14px}.codebox{border-radius:10px;overflow:hidden;border:1px solid #cad4e6}.head{display:flex;justify-content:space-between;background:#e9eef8;padding:8px 12px}button{background:#3157d5;color:white;border:0;border-radius:7px;padding:6px 10px;cursor:pointer}.flow{text-align:center;font-weight:700;line-height:2.2}.arrow{color:#3157d5;font-size:22px}.note{background:#fff8e8;border-left:5px solid #f0a020;padding:12px}.hw{background:#e8f7f0;border-left:5px solid #087f5b;padding:12px}.small{color:#5c667a}
+</style><script>
+function copyCode(b){navigator.clipboard.writeText(b.closest('.codebox').querySelector('code').innerText);b.textContent='已複製 ✓';setTimeout(()=>b.textContent='複製全部',1200)}function allD(v){document.querySelectorAll('details').forEach(x=>x.open=v)}
+</script></head><body>
+<header><h1>ALU.sv + ALU_tb.sv：逐行 Code、來源與硬體／物理意義完整解析</h1>
+<p>完全依據本次上傳的兩個檔案製作｜ALU.sv：138 行｜ALU_tb.sv：117 行</p></header>
+<nav><a href="#overview">總覽</a><a href="#alu">ALU.sv</a><a href="#tb">ALU_tb.sv</a><a href="#relation">兩檔關係</a><button onclick="allD(true)">全部展開</button> <button onclick="allD(false)">全部收合</button></nav>
+<main>
+<section id="overview"><h2>1. 先理解：兩個檔案到底在做什麼？</h2>
+<div class="card flow">pattern_alu.csv <span class="arrow">→</span> ALU_tb.sv 讀取測試向量 <span class="arrow">→</span> instruction/A/B<br>
+<span class="arrow">↓</span><br>ALU.sv（真正 DUT 硬體）<br><span class="arrow">↓</span><br>result_o <span class="arrow">→</span> ALU_tb.sv 與 exp_hex 比較 <span class="arrow">→</span> PASS / FAIL / Score</div>
+<div class="hw"><b>最重要的區別：</b><code>ALU.sv</code> 描述的是「要被合成成邏輯閘、比較器、shifter、multiplier、mux 的硬體」；<code>ALU_tb.sv</code> 是「模擬用測試平台」，包含讀 CSV、等待 #10、$display、$fopen 等，不是最後晶片裡的電路。</div>
+<div class="note"><b>「來源」欄的意思：</b>每一行的直接來源都標成你本次上傳的實際檔案。至於 instruction encoding/功能概念，程式本身可看出它依 opcode/funct3/funct7 做 RISC-V-style 解碼，並加入作業的 DSP operations；本頁不把程式沒有註明的外部規格來源硬說成某一份文件。</div></section>
+
+<section id="alu"><h2>2. ALU.sv — 真正硬體 RTL</h2>
+<details open><summary>2.1 整體硬體結構與資料流</summary><div class="card">
+<p><b>instruction_i</b> 不是拿來做數值運算，而是拿來「選功能」。程式把它拆成 <code>opcode / funct3 / funct7</code>，形成 decoder；A/B 則進入加法器、比較器、shifter、乘法器、bit logic、DSP lane 等候選資料路徑，最後由條件/case 所代表的 mux 選到 <code>result_o</code>。</p>
+<div class="flow">instruction_i → opcode/funct3/funct7 → Decoder<br>A,B → ADD/SUB｜Shift｜Compare｜Multiply｜Bitmanip｜DSP<br>Decoder → Result MUX → result_o</div></div></details>
+<details><summary>2.2 為什麼 always @* 代表組合邏輯？</summary><p><code>always @*</code> 沒有 <code>posedge clk</code>，所以它不是暫存器狀態機。輸入一變，模擬器重新計算；綜合時目標是 combinational datapath。程式先給 <code>result_o</code> 與中間量預設值，再在各分支覆寫，目的是讓每條路徑都有定義。</p></details>
+<details><summary>2.3 完整 ALU.sv 原始碼（可複製）</summary><div class="codebox"><div class="head"><b>ALU.sv</b><button onclick="copyCode(this)">複製全部</button></div><pre><code>module ALU (
+    input  logic [31:0] instruction_i,
+    input  logic [31:0] src_A_i,
+    input  logic [31:0] src_B_i,
+    output logic [31:0] result_o
+);
+    logic [6:0] opcode, funct7;
+    logic [2:0] funct3;
+    integer i;
+    integer cnt;
+    integer shamt;
+    logic signed [63:0] prod_ss;
+    logic signed [63:0] prod_su;
+    logic [63:0] prod_uu;
+    logic signed [31:0] dot_sum;
+    logic signed [8:0] lane_tmp;
+
+    always @* begin
+        opcode = instruction_i[6:0];
+        funct3 = instruction_i[14:12];
+        funct7 = instruction_i[31:25];
+        shamt  = src_B_i[4:0];
+        result_o = 32&#x27;b0;
+        prod_ss = $signed(src_A_i) * $signed(src_B_i);
+        prod_su = $signed(src_A_i) * $signed({1&#x27;b0,src_B_i});
+        prod_uu = src_A_i * src_B_i;
+        dot_sum = 0;
+        lane_tmp = 0;
+
+        if (opcode == 7&#x27;b0110011) begin
+            case (funct7)
+                7&#x27;b0000000: begin
+                    case (funct3)
+                        3&#x27;b000: result_o = src_A_i + src_B_i;                         // ADD
+                        3&#x27;b001: result_o = src_A_i &lt;&lt; shamt;                          // SLL
+                        3&#x27;b010: result_o = ($signed(src_A_i) &lt; $signed(src_B_i));      // SLT
+                        3&#x27;b011: result_o = (src_A_i &lt; src_B_i);                        // SLTU
+                        3&#x27;b100: result_o = src_A_i ^ src_B_i;                          // XOR
+                        3&#x27;b101: result_o = src_A_i &gt;&gt; shamt;                           // SRL
+                        3&#x27;b110: result_o = src_A_i | src_B_i;                          // OR
+                        3&#x27;b111: result_o = src_A_i &amp; src_B_i;                          // AND
+                        default: result_o = 0;
+                    endcase
+                end
+                7&#x27;b0100000: begin
+                    case (funct3)
+                        3&#x27;b000: result_o = src_A_i - src_B_i;                          // SUB
+                        3&#x27;b101: result_o = $signed(src_A_i) &gt;&gt;&gt; shamt;                 // SRA
+                        default: result_o = 0;
+                    endcase
+                end
+                7&#x27;b0000001: begin
+                    case (funct3)
+                        3&#x27;b000: result_o = prod_uu[31:0];                              // MUL
+                        3&#x27;b001: result_o = prod_ss[63:32];                             // MULH
+                        3&#x27;b010: result_o = prod_su[63:32];                             // MULHSU
+                        3&#x27;b011: result_o = prod_uu[63:32];                             // MULHU
+                        default: result_o = 0;
+                    endcase
+                end
+                7&#x27;b0110000: begin
+                    case (funct3)
+                        3&#x27;b001: result_o = (src_A_i &lt;&lt; shamt) | (src_A_i &gt;&gt; ((32-shamt)&amp;31)); // ROL
+                        3&#x27;b101: result_o = (src_A_i &gt;&gt; shamt) | (src_A_i &lt;&lt; ((32-shamt)&amp;31)); // ROR
+                        default: result_o = 0;
+                    endcase
+                end
+                7&#x27;b0000101: begin
+                    case (funct3)
+                        3&#x27;b100: result_o = ($signed(src_A_i) &lt; $signed(src_B_i)) ? src_A_i : src_B_i; // MIN
+                        3&#x27;b110: result_o = ($signed(src_A_i) &gt; $signed(src_B_i)) ? src_A_i : src_B_i; // MAX
+                        3&#x27;b101: result_o = (src_A_i &lt; src_B_i) ? src_A_i : src_B_i;                    // MINU
+                        3&#x27;b111: result_o = (src_A_i &gt; src_B_i) ? src_A_i : src_B_i;                    // MAXU
+                        default: result_o = 0;
+                    endcase
+                end
+                7&#x27;b0010100: if (funct3==3&#x27;b001) result_o = src_A_i | (32&#x27;b1 &lt;&lt; shamt); // BSET
+                7&#x27;b0100100: begin
+                    if (funct3==3&#x27;b001) result_o = src_A_i &amp; ~(32&#x27;b1 &lt;&lt; shamt);        // BCLR
+                    else if (funct3==3&#x27;b101) result_o = (src_A_i &gt;&gt; shamt) &amp; 32&#x27;b1;    // BEXT
+                end
+                default: result_o = 0;
+            endcase
+        end else if (opcode == 7&#x27;b0010011 &amp;&amp; funct7 == 7&#x27;b0110000 &amp;&amp; funct3 == 3&#x27;b001) begin
+            cnt = 0;
+            if (instruction_i[24:20] == 5&#x27;b00000) begin                               // CLZ
+                cnt = 32;
+                for (i=31; i&gt;=0; i=i-1) if (src_A_i[i] &amp;&amp; cnt==32) cnt = 31-i;
+                result_o = cnt;
+            end else if (instruction_i[24:20] == 5&#x27;b00001) begin                      // CTZ
+                cnt = 32;
+                for (i=0; i&lt;32; i=i+1) if (src_A_i[i] &amp;&amp; cnt==32) cnt = i;
+                result_o = cnt;
+            end else if (instruction_i[24:20] == 5&#x27;b00010) begin                      // CPOP
+                cnt = 0;
+                for (i=0; i&lt;32; i=i+1) cnt = cnt + src_A_i[i];
+                result_o = cnt;
+            end
+        end else if (opcode == 7&#x27;b0001011 &amp;&amp; funct7 == 7&#x27;b0000000) begin
+            case (funct3)
+                3&#x27;b000: begin                                                         // DOTP4
+                    dot_sum = $signed(src_A_i[7:0])   * $signed(src_B_i[7:0]) +
+                              $signed(src_A_i[15:8])  * $signed(src_B_i[15:8]) +
+                              $signed(src_A_i[23:16]) * $signed(src_B_i[23:16]) +
+                              $signed(src_A_i[31:24]) * $signed(src_B_i[31:24]);
+                    result_o = dot_sum;
+                end
+                3&#x27;b001: begin                                                         // SADD8
+                    for (i=0; i&lt;4; i=i+1) begin
+                        lane_tmp = $signed(src_A_i[i*8 +: 8]) + $signed(src_B_i[i*8 +: 8]);
+                        if (lane_tmp &gt; 127) result_o[i*8 +: 8] = 8&#x27;h7f;
+                        else if (lane_tmp &lt; -128) result_o[i*8 +: 8] = 8&#x27;h80;
+                        else result_o[i*8 +: 8] = lane_tmp[7:0];
+                    end
+                end
+                3&#x27;b010: begin                                                         // SSUB8
+                    for (i=0; i&lt;4; i=i+1) begin
+                        lane_tmp = $signed(src_A_i[i*8 +: 8]) - $signed(src_B_i[i*8 +: 8]);
+                        if (lane_tmp &gt; 127) result_o[i*8 +: 8] = 8&#x27;h7f;
+                        else if (lane_tmp &lt; -128) result_o[i*8 +: 8] = 8&#x27;h80;
+                        else result_o[i*8 +: 8] = lane_tmp[7:0];
+                    end
+                end
+                3&#x27;b011: begin                                                         // ABS
+                    if (src_A_i == 32&#x27;h80000000) result_o = 32&#x27;h7fffffff;
+                    else if (src_A_i[31]) result_o = (~src_A_i) + 1&#x27;b1;
+                    else result_o = src_A_i;
+                end
+                3&#x27;b100: begin                                                         // CLIP8
+                    if ($signed(src_A_i) &gt; 127) result_o = 32&#x27;h0000007f;
+                    else if ($signed(src_A_i) &lt; -128) result_o = 32&#x27;hffffff80;
+                    else result_o = {{24{src_A_i[7]}},src_A_i[7:0]};
+                end
+                default: result_o = 0;
+            endcase
+        end
+    end
+endmodule</code></pre></div></details>
+<details open><summary>2.4 ALU.sv 每一行完整解析</summary>
+<div style="overflow:auto"><table><thead><tr><th>Line</th><th>原始 Code</th><th>這行在做什麼</th><th>來源</th><th>硬體／物理意義</th></tr></thead><tbody><tr><td>1</td><td><code>module ALU (</code></td><td>宣告 ALU 模組；這是可被 testbench 或更上層 CPU 實例化的硬體區塊。</td><td>本次上傳 ALU.sv</td><td>代表一個組合邏輯運算單元的邊界。</td></tr>
+<tr><td>2</td><td><code>    input  logic [31:0] instruction_i,</code></td><td>32-bit RISC-V 指令輸入，用來解碼 opcode/funct 欄位。</td><td>本次上傳 ALU.sv</td><td>硬體上是 32 條輸入線；其中部分 bit 進入 decoder。</td></tr>
+<tr><td>3</td><td><code>    input  logic [31:0] src_A_i,</code></td><td>32-bit 運算元 A。</td><td>本次上傳 ALU.sv</td><td>資料路徑 A 的 32 條導線。</td></tr>
+<tr><td>4</td><td><code>    input  logic [31:0] src_B_i,</code></td><td>32-bit 運算元 B。</td><td>本次上傳 ALU.sv</td><td>資料路徑 B 的 32 條導線。</td></tr>
+<tr><td>5</td><td><code>    output logic [31:0] result_o</code></td><td>32-bit ALU 結果輸出。</td><td>本次上傳 ALU.sv</td><td>經多工器選出的 32-bit 運算結果。</td></tr>
+<tr><td>6</td><td><code>);</code></td><td>結束 module port list。</td><td>本次上傳 ALU.sv</td><td>只是語法結構，不額外生成資料運算。</td></tr>
+<tr><td>7</td><td><code>    logic [6:0] opcode, funct7;</code></td><td>宣告由 instruction 拆出的功能解碼欄位。</td><td>本次上傳 ALU.sv</td><td>形成 decoder 的控制訊號，決定最後選哪個運算結果。</td></tr>
+<tr><td>8</td><td><code>    logic [2:0] funct3;</code></td><td>宣告由 instruction 拆出的功能解碼欄位。</td><td>本次上傳 ALU.sv</td><td>形成 decoder 的控制訊號，決定最後選哪個運算結果。</td></tr>
+<tr><td>9</td><td><code>    integer i;</code></td><td>宣告整數暫存變數，分別用於迴圈、計數與 shift amount。</td><td>本次上傳 ALU.sv</td><td>在綜合時通常對應組合邏輯控制/中間值；不是軟體 CPU 的一般變數。</td></tr>
+<tr><td>10</td><td><code>    integer cnt;</code></td><td>宣告整數暫存變數，分別用於迴圈、計數與 shift amount。</td><td>本次上傳 ALU.sv</td><td>在綜合時通常對應組合邏輯控制/中間值；不是軟體 CPU 的一般變數。</td></tr>
+<tr><td>11</td><td><code>    integer shamt;</code></td><td>宣告整數暫存變數，分別用於迴圈、計數與 shift amount。</td><td>本次上傳 ALU.sv</td><td>在綜合時通常對應組合邏輯控制/中間值；不是軟體 CPU 的一般變數。</td></tr>
+<tr><td>12</td><td><code>    logic signed [63:0] prod_ss;</code></td><td>宣告乘法、dot product 或 8-bit lane 飽和運算所需的中間訊號。</td><td>本次上傳 ALU.sv</td><td>保留較寬位元避免乘法/加減中途溢位，再擷取或飽和到規定寬度。</td></tr>
+<tr><td>13</td><td><code>    logic signed [63:0] prod_su;</code></td><td>宣告乘法、dot product 或 8-bit lane 飽和運算所需的中間訊號。</td><td>本次上傳 ALU.sv</td><td>保留較寬位元避免乘法/加減中途溢位，再擷取或飽和到規定寬度。</td></tr>
+<tr><td>14</td><td><code>    logic [63:0] prod_uu;</code></td><td>宣告乘法、dot product 或 8-bit lane 飽和運算所需的中間訊號。</td><td>本次上傳 ALU.sv</td><td>保留較寬位元避免乘法/加減中途溢位，再擷取或飽和到規定寬度。</td></tr>
+<tr><td>15</td><td><code>    logic signed [31:0] dot_sum;</code></td><td>宣告乘法、dot product 或 8-bit lane 飽和運算所需的中間訊號。</td><td>本次上傳 ALU.sv</td><td>保留較寬位元避免乘法/加減中途溢位，再擷取或飽和到規定寬度。</td></tr>
+<tr><td>16</td><td><code>    logic signed [8:0] lane_tmp;</code></td><td>宣告乘法、dot product 或 8-bit lane 飽和運算所需的中間訊號。</td><td>本次上傳 ALU.sv</td><td>保留較寬位元避免乘法/加減中途溢位，再擷取或飽和到規定寬度。</td></tr>
+<tr><td>17</td><td><code></code></td><td>空白行，用於程式可讀性。</td><td>本次上傳 ALU.sv</td><td>不產生硬體。</td></tr>
+<tr><td>18</td><td><code>    always @* begin</code></td><td>開始 always @* 組合邏輯區塊；任何讀取到的輸入改變都重新計算。</td><td>本次上傳 ALU.sv</td><td>意義是沒有 clock 儲存狀態，輸出由目前輸入經邏輯閘/運算器傳播得到。</td></tr>
+<tr><td>19</td><td><code>        opcode = instruction_i[6:0];</code></td><td>擷取 instruction[6:0] 作 opcode。</td><td>本次上傳 ALU.sv</td><td>這些 bit 直接驅動 instruction decoder 或 barrel shifter 的控制端。</td></tr>
+<tr><td>20</td><td><code>        funct3 = instruction_i[14:12];</code></td><td>擷取 instruction[14:12] 作 funct3。</td><td>本次上傳 ALU.sv</td><td>這些 bit 直接驅動 instruction decoder 或 barrel shifter 的控制端。</td></tr>
+<tr><td>21</td><td><code>        funct7 = instruction_i[31:25];</code></td><td>擷取 instruction[31:25] 作 funct7。</td><td>本次上傳 ALU.sv</td><td>這些 bit 直接驅動 instruction decoder 或 barrel shifter 的控制端。</td></tr>
+<tr><td>22</td><td><code>        shamt  = src_B_i[4:0];</code></td><td>只取 src_B 的低 5 bits 作 0~31 位 shift amount。</td><td>本次上傳 ALU.sv</td><td>這些 bit 直接驅動 instruction decoder 或 barrel shifter 的控制端。</td></tr>
+<tr><td>23</td><td><code>        result_o = 32&#x27;b0;</code></td><td>設定組合區塊預設值/預先計算中間結果，避免未賦值路徑並供後續 case 使用。</td><td>本次上傳 ALU.sv</td><td>預設值有助於形成完整 combinational logic；乘法中間值可視為乘法器輸出。</td></tr>
+<tr><td>24</td><td><code>        prod_ss = $signed(src_A_i) * $signed(src_B_i);</code></td><td>設定組合區塊預設值/預先計算中間結果，避免未賦值路徑並供後續 case 使用。</td><td>本次上傳 ALU.sv</td><td>預設值有助於形成完整 combinational logic；乘法中間值可視為乘法器輸出。</td></tr>
+<tr><td>25</td><td><code>        prod_su = $signed(src_A_i) * $signed({1&#x27;b0,src_B_i});</code></td><td>設定組合區塊預設值/預先計算中間結果，避免未賦值路徑並供後續 case 使用。</td><td>本次上傳 ALU.sv</td><td>預設值有助於形成完整 combinational logic；乘法中間值可視為乘法器輸出。</td></tr>
+<tr><td>26</td><td><code>        prod_uu = src_A_i * src_B_i;</code></td><td>設定組合區塊預設值/預先計算中間結果，避免未賦值路徑並供後續 case 使用。</td><td>本次上傳 ALU.sv</td><td>預設值有助於形成完整 combinational logic；乘法中間值可視為乘法器輸出。</td></tr>
+<tr><td>27</td><td><code>        dot_sum = 0;</code></td><td>設定組合區塊預設值/預先計算中間結果，避免未賦值路徑並供後續 case 使用。</td><td>本次上傳 ALU.sv</td><td>預設值有助於形成完整 combinational logic；乘法中間值可視為乘法器輸出。</td></tr>
+<tr><td>28</td><td><code>        lane_tmp = 0;</code></td><td>設定組合區塊預設值/預先計算中間結果，避免未賦值路徑並供後續 case 使用。</td><td>本次上傳 ALU.sv</td><td>預設值有助於形成完整 combinational logic；乘法中間值可視為乘法器輸出。</td></tr>
+<tr><td>29</td><td><code></code></td><td>空白行，用於程式可讀性。</td><td>本次上傳 ALU.sv</td><td>不產生硬體。</td></tr>
+<tr><td>30</td><td><code>        if (opcode == 7&#x27;b0110011) begin</code></td><td>先判斷 opcode=0110011，進入 R-type/RV32IM/RV32B 類運算解碼。</td><td>本次上傳 ALU.sv</td><td>opcode comparator 的輸出控制下一層 multiplexer。</td></tr>
+<tr><td>31</td><td><code>            case (funct7)</code></td><td>依 funct 欄位進一步選擇實際 ALU operation。</td><td>本次上傳 ALU.sv</td><td>對應階層式 decoder/multiplexer。</td></tr>
+<tr><td>32</td><td><code>                7&#x27;b0000000: begin</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>33</td><td><code>                    case (funct3)</code></td><td>依 funct 欄位進一步選擇實際 ALU operation。</td><td>本次上傳 ALU.sv</td><td>對應階層式 decoder/multiplexer。</td></tr>
+<tr><td>34</td><td><code>                        3&#x27;b000: result_o = src_A_i + src_B_i;                         // ADD</code></td><td>ADD：A+B。</td><td>本次上傳 ALU.sv</td><td>32-bit 加法器；超出 bit31 的 carry 不輸出。</td></tr>
+<tr><td>35</td><td><code>                        3&#x27;b001: result_o = src_A_i &lt;&lt; shamt;                          // SLL</code></td><td>SLL：A 邏輯左移 shamt。</td><td>本次上傳 ALU.sv</td><td>barrel shifter，右側補 0。</td></tr>
+<tr><td>36</td><td><code>                        3&#x27;b010: result_o = ($signed(src_A_i) &lt; $signed(src_B_i));      // SLT</code></td><td>SLT：signed A&lt;B。</td><td>本次上傳 ALU.sv</td><td>有號比較器，結果為 0 或 1。</td></tr>
+<tr><td>37</td><td><code>                        3&#x27;b011: result_o = (src_A_i &lt; src_B_i);                        // SLTU</code></td><td>SLTU：unsigned A&lt;B。</td><td>本次上傳 ALU.sv</td><td>無號比較器。</td></tr>
+<tr><td>38</td><td><code>                        3&#x27;b100: result_o = src_A_i ^ src_B_i;                          // XOR</code></td><td>XOR：逐 bit XOR。</td><td>本次上傳 ALU.sv</td><td>32 組 XOR gate。</td></tr>
+<tr><td>39</td><td><code>                        3&#x27;b101: result_o = src_A_i &gt;&gt; shamt;                           // SRL</code></td><td>SRL：邏輯右移。</td><td>本次上傳 ALU.sv</td><td>barrel shifter，左側補 0。</td></tr>
+<tr><td>40</td><td><code>                        3&#x27;b110: result_o = src_A_i | src_B_i;                          // OR</code></td><td>OR：逐 bit OR。</td><td>本次上傳 ALU.sv</td><td>32 組 OR gate。</td></tr>
+<tr><td>41</td><td><code>                        3&#x27;b111: result_o = src_A_i &amp; src_B_i;                          // AND</code></td><td>AND：逐 bit AND。</td><td>本次上傳 ALU.sv</td><td>32 組 AND gate。</td></tr>
+<tr><td>42</td><td><code>                        default: result_o = 0;</code></td><td>未命中合法 funct 組合時輸出 0，提供明確 default。</td><td>本次上傳 ALU.sv</td><td>避免輸出保留舊值而推導 latch。</td></tr>
+<tr><td>43</td><td><code>                    endcase</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>44</td><td><code>                end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>45</td><td><code>                7&#x27;b0100000: begin</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>46</td><td><code>                    case (funct3)</code></td><td>依 funct 欄位進一步選擇實際 ALU operation。</td><td>本次上傳 ALU.sv</td><td>對應階層式 decoder/multiplexer。</td></tr>
+<tr><td>47</td><td><code>                        3&#x27;b000: result_o = src_A_i - src_B_i;                          // SUB</code></td><td>SUB：A-B。</td><td>本次上傳 ALU.sv</td><td>加法器配合二補數形成減法。</td></tr>
+<tr><td>48</td><td><code>                        3&#x27;b101: result_o = $signed(src_A_i) &gt;&gt;&gt; shamt;                 // SRA</code></td><td>SRA：有號算術右移。</td><td>本次上傳 ALU.sv</td><td>保留 sign bit 的 arithmetic shifter。</td></tr>
+<tr><td>49</td><td><code>                        default: result_o = 0;</code></td><td>未命中合法 funct 組合時輸出 0，提供明確 default。</td><td>本次上傳 ALU.sv</td><td>避免輸出保留舊值而推導 latch。</td></tr>
+<tr><td>50</td><td><code>                    endcase</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>51</td><td><code>                end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>52</td><td><code>                7&#x27;b0000001: begin</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>53</td><td><code>                    case (funct3)</code></td><td>依 funct 欄位進一步選擇實際 ALU operation。</td><td>本次上傳 ALU.sv</td><td>對應階層式 decoder/multiplexer。</td></tr>
+<tr><td>54</td><td><code>                        3&#x27;b000: result_o = prod_uu[31:0];                              // MUL</code></td><td>MUL：取 64-bit 乘積低 32 bits。</td><td>本次上傳 ALU.sv</td><td>32×32 multiplier 的低半部。</td></tr>
+<tr><td>55</td><td><code>                        3&#x27;b001: result_o = prod_ss[63:32];                             // MULH</code></td><td>MULH：signed×signed 取高 32 bits。</td><td>本次上傳 ALU.sv</td><td>有號乘法器高半部。</td></tr>
+<tr><td>56</td><td><code>                        3&#x27;b010: result_o = prod_su[63:32];                             // MULHSU</code></td><td>MULHSU：signed×unsigned 取高 32 bits。</td><td>本次上傳 ALU.sv</td><td>混合符號乘法器高半部。</td></tr>
+<tr><td>57</td><td><code>                        3&#x27;b011: result_o = prod_uu[63:32];                             // MULHU</code></td><td>MULHU：unsigned×unsigned 取高 32 bits。</td><td>本次上傳 ALU.sv</td><td>無號乘法器高半部。</td></tr>
+<tr><td>58</td><td><code>                        default: result_o = 0;</code></td><td>未命中合法 funct 組合時輸出 0，提供明確 default。</td><td>本次上傳 ALU.sv</td><td>避免輸出保留舊值而推導 latch。</td></tr>
+<tr><td>59</td><td><code>                    endcase</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>60</td><td><code>                end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>61</td><td><code>                7&#x27;b0110000: begin</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>62</td><td><code>                    case (funct3)</code></td><td>依 funct 欄位進一步選擇實際 ALU operation。</td><td>本次上傳 ALU.sv</td><td>對應階層式 decoder/multiplexer。</td></tr>
+<tr><td>63</td><td><code>                        3&#x27;b001: result_o = (src_A_i &lt;&lt; shamt) | (src_A_i &gt;&gt; ((32-shamt)&amp;31)); // ROL</code></td><td>ROL：32-bit rotate left。</td><td>本次上傳 ALU.sv</td><td>旋轉器把移出的高位繞回低位。</td></tr>
+<tr><td>64</td><td><code>                        3&#x27;b101: result_o = (src_A_i &gt;&gt; shamt) | (src_A_i &lt;&lt; ((32-shamt)&amp;31)); // ROR</code></td><td>ROR：32-bit rotate right。</td><td>本次上傳 ALU.sv</td><td>旋轉器把移出的低位繞回高位。</td></tr>
+<tr><td>65</td><td><code>                        default: result_o = 0;</code></td><td>未命中合法 funct 組合時輸出 0，提供明確 default。</td><td>本次上傳 ALU.sv</td><td>避免輸出保留舊值而推導 latch。</td></tr>
+<tr><td>66</td><td><code>                    endcase</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>67</td><td><code>                end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>68</td><td><code>                7&#x27;b0000101: begin</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>69</td><td><code>                    case (funct3)</code></td><td>依 funct 欄位進一步選擇實際 ALU operation。</td><td>本次上傳 ALU.sv</td><td>對應階層式 decoder/multiplexer。</td></tr>
+<tr><td>70</td><td><code>                        3&#x27;b100: result_o = ($signed(src_A_i) &lt; $signed(src_B_i)) ? src_A_i : src_B_i; // MIN</code></td><td>MIN：signed 取較小者。</td><td>本次上傳 ALU.sv</td><td>signed comparator + 2:1 mux。</td></tr>
+<tr><td>71</td><td><code>                        3&#x27;b110: result_o = ($signed(src_A_i) &gt; $signed(src_B_i)) ? src_A_i : src_B_i; // MAX</code></td><td>MAX：signed 取較大者。</td><td>本次上傳 ALU.sv</td><td>signed comparator + mux。</td></tr>
+<tr><td>72</td><td><code>                        3&#x27;b101: result_o = (src_A_i &lt; src_B_i) ? src_A_i : src_B_i;                    // MINU</code></td><td>MINU：unsigned 取較小者。</td><td>本次上傳 ALU.sv</td><td>unsigned comparator + mux。</td></tr>
+<tr><td>73</td><td><code>                        3&#x27;b111: result_o = (src_A_i &gt; src_B_i) ? src_A_i : src_B_i;                    // MAXU</code></td><td>MAXU：unsigned 取較大者。</td><td>本次上傳 ALU.sv</td><td>unsigned comparator + mux。</td></tr>
+<tr><td>74</td><td><code>                        default: result_o = 0;</code></td><td>未命中合法 funct 組合時輸出 0，提供明確 default。</td><td>本次上傳 ALU.sv</td><td>避免輸出保留舊值而推導 latch。</td></tr>
+<tr><td>75</td><td><code>                    endcase</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>76</td><td><code>                end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>77</td><td><code>                7&#x27;b0010100: if (funct3==3&#x27;b001) result_o = src_A_i | (32&#x27;b1 &lt;&lt; shamt); // BSET</code></td><td>BSET：將指定 bit 設為 1。</td><td>本次上傳 ALU.sv</td><td>one-hot mask + OR。</td></tr>
+<tr><td>78</td><td><code>                7&#x27;b0100100: begin</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>79</td><td><code>                    if (funct3==3&#x27;b001) result_o = src_A_i &amp; ~(32&#x27;b1 &lt;&lt; shamt);        // BCLR</code></td><td>BCLR：將指定 bit 清為 0。</td><td>本次上傳 ALU.sv</td><td>one-hot mask 反相後與 A 做 AND。</td></tr>
+<tr><td>80</td><td><code>                    else if (funct3==3&#x27;b101) result_o = (src_A_i &gt;&gt; shamt) &amp; 32&#x27;b1;    // BEXT</code></td><td>BEXT：擷取指定 bit 到 bit0。</td><td>本次上傳 ALU.sv</td><td>shifter + bit mask。</td></tr>
+<tr><td>81</td><td><code>                end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>82</td><td><code>                default: result_o = 0;</code></td><td>未命中合法 funct 組合時輸出 0，提供明確 default。</td><td>本次上傳 ALU.sv</td><td>避免輸出保留舊值而推導 latch。</td></tr>
+<tr><td>83</td><td><code>            endcase</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>84</td><td><code>        end else if (opcode == 7&#x27;b0010011 &amp;&amp; funct7 == 7&#x27;b0110000 &amp;&amp; funct3 == 3&#x27;b001) begin</code></td><td>進入對應特殊指令/運算分支；條件由 opcode、funct 或 instruction 子欄位決定。</td><td>本次上傳 ALU.sv</td><td>decoder 控制特定功能資料路徑。</td></tr>
+<tr><td>85</td><td><code>            cnt = 0;</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>86</td><td><code>            if (instruction_i[24:20] == 5&#x27;b00000) begin                               // CLZ</code></td><td>進入對應特殊指令/運算分支；條件由 opcode、funct 或 instruction 子欄位決定。</td><td>本次上傳 ALU.sv</td><td>decoder 控制特定功能資料路徑。</td></tr>
+<tr><td>87</td><td><code>                cnt = 32;</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>88</td><td><code>                for (i=31; i&gt;=0; i=i-1) if (src_A_i[i] &amp;&amp; cnt==32) cnt = 31-i;</code></td><td>CLZ：由 MSB 往下找第一個 1，計算 leading zeros。</td><td>本次上傳 ALU.sv</td><td>優先編碼/leading-zero detector；for 是 RTL 描述方式。</td></tr>
+<tr><td>89</td><td><code>                result_o = cnt;</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>90</td><td><code>            end else if (instruction_i[24:20] == 5&#x27;b00001) begin                      // CTZ</code></td><td>進入對應特殊指令/運算分支；條件由 opcode、funct 或 instruction 子欄位決定。</td><td>本次上傳 ALU.sv</td><td>decoder 控制特定功能資料路徑。</td></tr>
+<tr><td>91</td><td><code>                cnt = 32;</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>92</td><td><code>                for (i=0; i&lt;32; i=i+1) if (src_A_i[i] &amp;&amp; cnt==32) cnt = i;</code></td><td>CTZ：由 LSB 往上找第一個 1，計算 trailing zeros。</td><td>本次上傳 ALU.sv</td><td>trailing-zero detector/priority encoder。</td></tr>
+<tr><td>93</td><td><code>                result_o = cnt;</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>94</td><td><code>            end else if (instruction_i[24:20] == 5&#x27;b00010) begin                      // CPOP</code></td><td>進入對應特殊指令/運算分支；條件由 opcode、funct 或 instruction 子欄位決定。</td><td>本次上傳 ALU.sv</td><td>decoder 控制特定功能資料路徑。</td></tr>
+<tr><td>95</td><td><code>                cnt = 0;</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>96</td><td><code>                for (i=0; i&lt;32; i=i+1) cnt = cnt + src_A_i[i];</code></td><td>CPOP：累加 32 個 bit 中 1 的數量。</td><td>本次上傳 ALU.sv</td><td>popcount adder tree 的行為描述。</td></tr>
+<tr><td>97</td><td><code>                result_o = cnt;</code></td><td>此行是目前解碼/資料路徑的控制或結構語句，配合前後行完成該指令。</td><td>本次上傳 ALU.sv</td><td>在硬體上屬於 decoder、mux 或中間組合邏輯的一部分。</td></tr>
+<tr><td>98</td><td><code>            end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>99</td><td><code>        end else if (opcode == 7&#x27;b0001011 &amp;&amp; funct7 == 7&#x27;b0000000) begin</code></td><td>進入對應特殊指令/運算分支；條件由 opcode、funct 或 instruction 子欄位決定。</td><td>本次上傳 ALU.sv</td><td>decoder 控制特定功能資料路徑。</td></tr>
+<tr><td>100</td><td><code>            case (funct3)</code></td><td>依 funct 欄位進一步選擇實際 ALU operation。</td><td>本次上傳 ALU.sv</td><td>對應階層式 decoder/multiplexer。</td></tr>
+<tr><td>101</td><td><code>                3&#x27;b000: begin                                                         // DOTP4</code></td><td>進入對應特殊指令/運算分支；條件由 opcode、funct 或 instruction 子欄位決定。</td><td>本次上傳 ALU.sv</td><td>decoder 控制特定功能資料路徑。</td></tr>
+<tr><td>102</td><td><code>                    dot_sum = $signed(src_A_i[7:0])   * $signed(src_B_i[7:0]) +</code></td><td>DOTP4 第 0 個 signed 8-bit lane 相乘，並開始四項加總。</td><td>本次上傳 ALU.sv</td><td>四個 8×8 signed multiplier + adder tree。</td></tr>
+<tr><td>103</td><td><code>                              $signed(src_A_i[15:8])  * $signed(src_B_i[15:8]) +</code></td><td>DOTP4 第 1 lane 乘積加入總和。</td><td>本次上傳 ALU.sv</td><td>平行乘法/加法資料路徑。</td></tr>
+<tr><td>104</td><td><code>                              $signed(src_A_i[23:16]) * $signed(src_B_i[23:16]) +</code></td><td>DOTP4 第 2 lane 乘積加入總和。</td><td>本次上傳 ALU.sv</td><td>平行乘法/加法資料路徑。</td></tr>
+<tr><td>105</td><td><code>                              $signed(src_A_i[31:24]) * $signed(src_B_i[31:24]);</code></td><td>DOTP4 第 3 lane 乘積加入總和。</td><td>本次上傳 ALU.sv</td><td>形成四 lane dot product。</td></tr>
+<tr><td>106</td><td><code>                    result_o = dot_sum;</code></td><td>將 dot product 寫到 32-bit result。</td><td>本次上傳 ALU.sv</td><td>把加總器輸出接到 result mux。</td></tr>
+<tr><td>107</td><td><code>                end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>108</td><td><code>                3&#x27;b001: begin                                                         // SADD8</code></td><td>進入對應特殊指令/運算分支；條件由 opcode、funct 或 instruction 子欄位決定。</td><td>本次上傳 ALU.sv</td><td>decoder 控制特定功能資料路徑。</td></tr>
+<tr><td>109</td><td><code>                    for (i=0; i&lt;4; i=i+1) begin</code></td><td>展開固定次數迴圈來逐 bit 或逐 lane 處理。</td><td>本次上傳 ALU.sv</td><td>綜合時通常展開成並行/組合硬體，而不是軟體逐次執行。</td></tr>
+<tr><td>110</td><td><code>                        lane_tmp = $signed(src_A_i[i*8 +: 8]) + $signed(src_B_i[i*8 +: 8]);</code></td><td>SADD8：逐 8-bit signed lane 相加，先用 9 bits 保存中間結果。</td><td>本次上傳 ALU.sv</td><td>四條 SIMD lane 的加法器。</td></tr>
+<tr><td>111</td><td><code>                        if (lane_tmp &gt; 127) result_o[i*8 +: 8] = 8&#x27;h7f;</code></td><td>若 &gt;127，正飽和到 0x7F。</td><td>本次上傳 ALU.sv</td><td>飽和比較器與 mux。</td></tr>
+<tr><td>112</td><td><code>                        else if (lane_tmp &lt; -128) result_o[i*8 +: 8] = 8&#x27;h80;</code></td><td>若 &lt;-128，負飽和到 0x80。</td><td>本次上傳 ALU.sv</td><td>飽和比較器與 mux。</td></tr>
+<tr><td>113</td><td><code>                        else result_o[i*8 +: 8] = lane_tmp[7:0];</code></td><td>未溢位則保留低 8 bits。</td><td>本次上傳 ALU.sv</td><td>正常 lane 結果。</td></tr>
+<tr><td>114</td><td><code>                    end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>115</td><td><code>                end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>116</td><td><code>                3&#x27;b010: begin                                                         // SSUB8</code></td><td>進入對應特殊指令/運算分支；條件由 opcode、funct 或 instruction 子欄位決定。</td><td>本次上傳 ALU.sv</td><td>decoder 控制特定功能資料路徑。</td></tr>
+<tr><td>117</td><td><code>                    for (i=0; i&lt;4; i=i+1) begin</code></td><td>展開固定次數迴圈來逐 bit 或逐 lane 處理。</td><td>本次上傳 ALU.sv</td><td>綜合時通常展開成並行/組合硬體，而不是軟體逐次執行。</td></tr>
+<tr><td>118</td><td><code>                        lane_tmp = $signed(src_A_i[i*8 +: 8]) - $signed(src_B_i[i*8 +: 8]);</code></td><td>SSUB8：逐 lane signed 相減。</td><td>本次上傳 ALU.sv</td><td>四條 SIMD lane 減法器。</td></tr>
+<tr><td>119</td><td><code>                        if (lane_tmp &gt; 127) result_o[i*8 +: 8] = 8&#x27;h7f;</code></td><td>正向溢位飽和到 +127。</td><td>本次上傳 ALU.sv</td><td>saturation logic。</td></tr>
+<tr><td>120</td><td><code>                        else if (lane_tmp &lt; -128) result_o[i*8 +: 8] = 8&#x27;h80;</code></td><td>負向溢位飽和到 -128。</td><td>本次上傳 ALU.sv</td><td>saturation logic。</td></tr>
+<tr><td>121</td><td><code>                        else result_o[i*8 +: 8] = lane_tmp[7:0];</code></td><td>未溢位保留結果。</td><td>本次上傳 ALU.sv</td><td>正常 lane result。</td></tr>
+<tr><td>122</td><td><code>                    end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>123</td><td><code>                end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>124</td><td><code>                3&#x27;b011: begin                                                         // ABS</code></td><td>進入對應特殊指令/運算分支；條件由 opcode、funct 或 instruction 子欄位決定。</td><td>本次上傳 ALU.sv</td><td>decoder 控制特定功能資料路徑。</td></tr>
+<tr><td>125</td><td><code>                    if (src_A_i == 32&#x27;h80000000) result_o = 32&#x27;h7fffffff;</code></td><td>ABS 特例：最小負數 0x80000000 無法以 signed32 表示其正值，因此飽和為 0x7FFFFFFF。</td><td>本次上傳 ALU.sv</td><td>處理二補數不對稱範圍。</td></tr>
+<tr><td>126</td><td><code>                    else if (src_A_i[31]) result_o = (~src_A_i) + 1&#x27;b1;</code></td><td>若 A 為負，做二補數 ~A+1 得絕對值。</td><td>本次上傳 ALU.sv</td><td>反相器 + 加一器。</td></tr>
+<tr><td>127</td><td><code>                    else result_o = src_A_i;</code></td><td>若 A 非負，直接輸出 A。</td><td>本次上傳 ALU.sv</td><td>旁路 mux。</td></tr>
+<tr><td>128</td><td><code>                end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>129</td><td><code>                3&#x27;b100: begin                                                         // CLIP8</code></td><td>進入對應特殊指令/運算分支；條件由 opcode、funct 或 instruction 子欄位決定。</td><td>本次上傳 ALU.sv</td><td>decoder 控制特定功能資料路徑。</td></tr>
+<tr><td>130</td><td><code>                    if ($signed(src_A_i) &gt; 127) result_o = 32&#x27;h0000007f;</code></td><td>CLIP8：大於 127 時限制為 +127。</td><td>本次上傳 ALU.sv</td><td>clamp comparator + mux。</td></tr>
+<tr><td>131</td><td><code>                    else if ($signed(src_A_i) &lt; -128) result_o = 32&#x27;hffffff80;</code></td><td>小於 -128 時限制為 -128，32-bit sign-extended 表示為 FFFFFF80。</td><td>本次上傳 ALU.sv</td><td>負飽和。</td></tr>
+<tr><td>132</td><td><code>                    else result_o = {{24{src_A_i[7]}},src_A_i[7:0]};</code></td><td>在範圍內，取低 8 bits 並 sign extend 成 32 bits。</td><td>本次上傳 ALU.sv</td><td>符號延伸線路。</td></tr>
+<tr><td>133</td><td><code>                end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>134</td><td><code>                default: result_o = 0;</code></td><td>未命中合法 funct 組合時輸出 0，提供明確 default。</td><td>本次上傳 ALU.sv</td><td>避免輸出保留舊值而推導 latch。</td></tr>
+<tr><td>135</td><td><code>            endcase</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>136</td><td><code>        end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>137</td><td><code>    end</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr>
+<tr><td>138</td><td><code>endmodule</code></td><td>結束目前 begin/case/module 結構。</td><td>本次上傳 ALU.sv</td><td>語法邊界，本身不代表新的運算元件。</td></tr></tbody></table></div></details>
+</section>
+
+<section id="tb"><h2>3. ALU_tb.sv — 自動化驗證 Testbench</h2>
+<details open><summary>3.1 Testbench 的核心流程</summary><div class="flow">初始化輸入/error → $fopen CSV → $fgets 每一行 → $sscanf 解析 5 欄<br>→ 驅動 instruction/A/B → #10 等待 → 檢查 X → result !== expected<br>→ 累計 error → 31 類 summary → score → $finish</div></details>
+<details><summary>3.2 為什麼 #10 不是 ALU 延遲規格？</summary><p><code>#10</code> 是 testbench 主動等待 10 ns 後再取樣，避免同一 simulation delta cycle 馬上比較。它不表示 ALU 真實晶片一定需要 10 ns，也不是 synthesis 會製造的 delay element；真正 gate delay 要由 synthesis/STA/technology library 評估。</p></details>
+<details><summary>3.3 為什麼 $isunknown / !== 很重要？</summary><p>數位模擬除了 0/1 還有 X/Z。<code>$isunknown(result_o)</code> 先抓 X/Z；<code>!==</code> 是 case inequality，對 X/Z 也敏感。這比一般軟體的整數比較更適合 RTL verification。</p></details>
+<details><summary>3.4 完整 ALU_tb.sv 原始碼（可複製）</summary><div class="codebox"><div class="head"><b>ALU_tb.sv</b><button onclick="copyCode(this)">複製全部</button></div><pre><code>`timescale 1ns/10ps
+`define PatternPATH &quot;./pattern/pattern_alu.csv&quot;
+`include &quot;../Src/ALU.sv&quot;
+
+module tb_ALU;
+
+localparam DATA_WIDTH   = 32;
+localparam INST_WIDTH   = 32; 
+
+reg   [INST_WIDTH-1:0  ]   instruction_i;
+reg   [DATA_WIDTH-1:0  ]   src_A_i;
+reg   [DATA_WIDTH-1:0  ]   src_B_i;
+wire  [DATA_WIDTH-1:0  ]   result_o;
+
+int error[31];
+int score[31] = &#x27;{default:2}; 
+int total_score = 0;
+int fail_count = 0;
+
+int fd, nread;
+string line;
+int inst_id;
+logic [31:0] inst_hex, a_hex, b_hex, exp_hex;
+
+ALU ALU (
+    .instruction_i (instruction_i),
+    .src_A_i       (src_A_i),
+    .src_B_i       (src_B_i),
+    .result_o      (result_o)
+);
+
+initial begin
+  instruction_i = 32&#x27;d0;
+  src_A_i       = 32&#x27;d0;
+  src_B_i       = 32&#x27;d0;
+  
+  for(int i=0; i&lt;31; i++) error[i] = 0;
+
+  fd = $fopen(`PatternPATH, &quot;r&quot;);
+  if (fd == 0) begin
+    $display(&quot;[ERROR] Cannot open %s&quot;, `PatternPATH);
+    $finish;
+  end
+
+  while (!$feof(fd)) begin
+    void&#x27;($fgets(line, fd));
+    if (line.len() == 0) continue;
+
+    nread = $sscanf(line, &quot;%d,%h,%h,%h,%h&quot;, inst_id, inst_hex, a_hex, b_hex, exp_hex);
+    if (nread != 5) continue;
+
+    instruction_i = inst_hex;
+    src_A_i       = a_hex;
+    src_B_i       = b_hex;
+    #10;
+    
+    if($isunknown(result_o))begin
+      $display(&quot; ============ Unknown value occurs at result_o (Inst ID: %0d) ============&quot;, inst_id);
+      $finish;
+    end
+    else begin
+      if(result_o !== exp_hex)begin
+        error[inst_id] += 1;
+        if(error[inst_id] &lt;= 5) 
+          $display(&quot;[FAIL] Inst %0d | A=%h B=%h Inst=%h | GOT=%h EXP=%h&quot;, inst_id, src_A_i, src_B_i, instruction_i, result_o, exp_hex);
+      end
+    end
+  end
+  $fclose(fd);
+
+  $display(&quot;\n========================================&quot;);
+
+  
+  for(int i=0; i&lt;31; i++) begin
+     if(error[i] === 0) begin
+        $display(&quot;Instruction %2d ALL PASS !!!&quot;, i);
+        total_score += score[i];
+     end else begin
+        $display(&quot;Instruction %2d FAILED (%0d errors)&quot;, i, error[i]);
+        fail_count++;
+     end
+  end
+  $display(&quot;========================================&quot;);
+
+  if(fail_count == 0)begin
+    $display(&quot;\n&quot;);
+    $display(&quot; ****************************               &quot;);
+    $display(&quot; **                        **       |\\__||  &quot;);
+    $display(&quot; **  Congratulations !!    **      / O.O  | &quot;);
+    $display(&quot; **                        **    /_____   | &quot;);
+    $display(&quot; **  Simulation PASS!!     **   /^ ^ ^ \\  |&quot;);
+    $display(&quot; **                        **  |^ ^ ^ ^ |w| &quot;);
+    $display(&quot; ****************************   \\m___m__|_|&quot;);
+  end
+  else begin
+    $display(&quot;\n&quot;);
+    $display(&quot; ****************************               &quot;);
+    $display(&quot; **                        **       |\\__||  &quot;);
+    $display(&quot; **  OOPS!!                **      / X,X  | &quot;);
+    $display(&quot; **                        **    /_____   | &quot;);
+    $display(&quot; **  Simulation Failed!!   **   /^ ^ ^ \\  |&quot;);
+    $display(&quot; **                        **  |^ ^ ^ ^ |w| &quot;);
+    $display(&quot; ****************************   \\m___m__|_|&quot;);
+  end
+  
+  $display(&quot;\n====== Your score : %2d ======\n&quot;, total_score);
+  $finish;
+end
+
+initial begin
+    `ifdef FSDB
+        $dumpfile(&quot;ALU.fsdb&quot;);
+        $dumpvars(0, tb_ALU);
+    `endif
+end
+
+endmodule</code></pre></div></details>
+<details open><summary>3.5 ALU_tb.sv 每一行完整解析</summary>
+<div style="overflow:auto"><table><thead><tr><th>Line</th><th>原始 Code</th><th>這行在做什麼</th><th>來源</th><th>驗證／物理意義</th></tr></thead><tbody><tr><td>1</td><td><code>`timescale 1ns/10ps</code></td><td>設定模擬時間單位 1 ns、時間精度 10 ps。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>只影響 simulator 的時間解析度，不會被綜合成晶片硬體。</td></tr>
+<tr><td>2</td><td><code>`define PatternPATH &quot;./pattern/pattern_alu.csv&quot;</code></td><td>定義 CSV pattern 相對路徑巨集。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純驗證環境設定；讓 TB 找到測試向量。</td></tr>
+<tr><td>3</td><td><code>`include &quot;../Src/ALU.sv&quot;</code></td><td>把 ALU.sv 原始碼 include 進 testbench 編譯單元。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>模擬編譯行為；不是實際電路連線。</td></tr>
+<tr><td>4</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>5</td><td><code>module tb_ALU;</code></td><td>宣告 testbench top module tb_ALU。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>testbench 是虛擬測試環境，不會拿去製造晶片。</td></tr>
+<tr><td>6</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>7</td><td><code>localparam DATA_WIDTH   = 32;</code></td><td>定義資料/指令寬度皆為 32 bits。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>方便 TB 宣告訊號寬度；對應 DUT 的 32-bit interface。</td></tr>
+<tr><td>8</td><td><code>localparam INST_WIDTH   = 32; </code></td><td>定義資料/指令寬度皆為 32 bits。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>方便 TB 宣告訊號寬度；對應 DUT 的 32-bit interface。</td></tr>
+<tr><td>9</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>10</td><td><code>reg   [INST_WIDTH-1:0  ]   instruction_i;</code></td><td>宣告連到 DUT 的 instruction、A、B、result 測試訊號。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>前三者由 TB 驅動，result 是 DUT 回傳；像實驗台上的訊號產生器與量測點。</td></tr>
+<tr><td>11</td><td><code>reg   [DATA_WIDTH-1:0  ]   src_A_i;</code></td><td>宣告連到 DUT 的 instruction、A、B、result 測試訊號。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>前三者由 TB 驅動，result 是 DUT 回傳；像實驗台上的訊號產生器與量測點。</td></tr>
+<tr><td>12</td><td><code>reg   [DATA_WIDTH-1:0  ]   src_B_i;</code></td><td>宣告連到 DUT 的 instruction、A、B、result 測試訊號。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>前三者由 TB 驅動，result 是 DUT 回傳；像實驗台上的訊號產生器與量測點。</td></tr>
+<tr><td>13</td><td><code>wire  [DATA_WIDTH-1:0  ]   result_o;</code></td><td>宣告連到 DUT 的 instruction、A、B、result 測試訊號。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>前三者由 TB 驅動，result 是 DUT 回傳；像實驗台上的訊號產生器與量測點。</td></tr>
+<tr><td>14</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>15</td><td><code>int error[31];</code></td><td>建立每類 instruction 的錯誤數、分數、總分與失敗類別計數。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純驗證 bookkeeping，不是 ALU 硬體。</td></tr>
+<tr><td>16</td><td><code>int score[31] = &#x27;{default:2}; </code></td><td>建立每類 instruction 的錯誤數、分數、總分與失敗類別計數。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純驗證 bookkeeping，不是 ALU 硬體。</td></tr>
+<tr><td>17</td><td><code>int total_score = 0;</code></td><td>建立每類 instruction 的錯誤數、分數、總分與失敗類別計數。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純驗證 bookkeeping，不是 ALU 硬體。</td></tr>
+<tr><td>18</td><td><code>int fail_count = 0;</code></td><td>建立每類 instruction 的錯誤數、分數、總分與失敗類別計數。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純驗證 bookkeeping，不是 ALU 硬體。</td></tr>
+<tr><td>19</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>20</td><td><code>int fd, nread;</code></td><td>宣告 CSV 檔案控制、字串、instruction ID 與讀入的十六進位欄位。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>模擬器用來從 pattern 檔讀測試向量。</td></tr>
+<tr><td>21</td><td><code>string line;</code></td><td>宣告 CSV 檔案控制、字串、instruction ID 與讀入的十六進位欄位。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>模擬器用來從 pattern 檔讀測試向量。</td></tr>
+<tr><td>22</td><td><code>int inst_id;</code></td><td>宣告 CSV 檔案控制、字串、instruction ID 與讀入的十六進位欄位。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>模擬器用來從 pattern 檔讀測試向量。</td></tr>
+<tr><td>23</td><td><code>logic [31:0] inst_hex, a_hex, b_hex, exp_hex;</code></td><td>宣告 CSV 檔案控制、字串、instruction ID 與讀入的十六進位欄位。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>模擬器用來從 pattern 檔讀測試向量。</td></tr>
+<tr><td>24</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>25</td><td><code>ALU ALU (</code></td><td>實例化真正被測的 ALU DUT，instance 名也叫 ALU。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>這是 testbench 與 DUT 的核心連接點。</td></tr>
+<tr><td>26</td><td><code>    .instruction_i (instruction_i),</code></td><td>用 named port connection 把 TB 訊號接到 DUT 對應 port。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>等同把訊號源/探棒接到 ALU 的 pin。</td></tr>
+<tr><td>27</td><td><code>    .src_A_i       (src_A_i),</code></td><td>用 named port connection 把 TB 訊號接到 DUT 對應 port。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>等同把訊號源/探棒接到 ALU 的 pin。</td></tr>
+<tr><td>28</td><td><code>    .src_B_i       (src_B_i),</code></td><td>用 named port connection 把 TB 訊號接到 DUT 對應 port。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>等同把訊號源/探棒接到 ALU 的 pin。</td></tr>
+<tr><td>29</td><td><code>    .result_o      (result_o)</code></td><td>用 named port connection 把 TB 訊號接到 DUT 對應 port。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>等同把訊號源/探棒接到 ALU 的 pin。</td></tr>
+<tr><td>30</td><td><code>);</code></td><td>此行屬於 testbench 控制、輸出或語法結構，配合前後行完成自動驗證。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>只存在模擬環境，不會被合成為 ALU 晶片硬體。</td></tr>
+<tr><td>31</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>32</td><td><code>initial begin</code></td><td>開始主要 initial 測試程序；模擬時間 0 自動執行一次。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 simulation process。</td></tr>
+<tr><td>33</td><td><code>  instruction_i = 32&#x27;d0;</code></td><td>將三個 DUT 輸入初始化為 0，避免一開始為 X。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>模擬刺激初始化，不是 reset 電路。</td></tr>
+<tr><td>34</td><td><code>  src_A_i       = 32&#x27;d0;</code></td><td>將三個 DUT 輸入初始化為 0，避免一開始為 X。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>模擬刺激初始化，不是 reset 電路。</td></tr>
+<tr><td>35</td><td><code>  src_B_i       = 32&#x27;d0;</code></td><td>將三個 DUT 輸入初始化為 0，避免一開始為 X。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>模擬刺激初始化，不是 reset 電路。</td></tr>
+<tr><td>36</td><td><code>  </code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>37</td><td><code>  for(int i=0; i&lt;31; i++) error[i] = 0;</code></td><td>把 31 類 instruction 的 error counter 全部清零。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>驗證統計初始化。</td></tr>
+<tr><td>38</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>39</td><td><code>  fd = $fopen(`PatternPATH, &quot;r&quot;);</code></td><td>以唯讀模式開啟 pattern_alu.csv。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>從磁碟取得 golden test vectors。</td></tr>
+<tr><td>40</td><td><code>  if (fd == 0) begin</code></td><td>若檔案開啟失敗，顯示錯誤並停止模擬。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>驗證環境的防呆。</td></tr>
+<tr><td>41</td><td><code>    $display(&quot;[ERROR] Cannot open %s&quot;, `PatternPATH);</code></td><td>若檔案開啟失敗，顯示錯誤並停止模擬。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>驗證環境的防呆。</td></tr>
+<tr><td>42</td><td><code>    $finish;</code></td><td>若檔案開啟失敗，顯示錯誤並停止模擬。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>驗證環境的防呆。</td></tr>
+<tr><td>43</td><td><code>  end</code></td><td>若檔案開啟失敗，顯示錯誤並停止模擬。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>驗證環境的防呆。</td></tr>
+<tr><td>44</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>45</td><td><code>  while (!$feof(fd)) begin</code></td><td>只要尚未到 CSV EOF，就持續讀下一筆 pattern。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>讓 testbench 自動 regression 全部向量。</td></tr>
+<tr><td>46</td><td><code>    void&#x27;($fgets(line, fd));</code></td><td>讀一整行 CSV 到 string line。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>檔案 I/O。</td></tr>
+<tr><td>47</td><td><code>    if (line.len() == 0) continue;</code></td><td>空行直接略過。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>避免無效 pattern。</td></tr>
+<tr><td>48</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>49</td><td><code>    nread = $sscanf(line, &quot;%d,%h,%h,%h,%h&quot;, inst_id, inst_hex, a_hex, b_hex, exp_hex);</code></td><td>依格式 inst_id, instruction, A, B, expected 解析 CSV。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>建立 stimulus 與 golden result。</td></tr>
+<tr><td>50</td><td><code>    if (nread != 5) continue;</code></td><td>不是完整 5 欄的資料列就略過。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>避免格式錯誤資料影響測試。</td></tr>
+<tr><td>51</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>52</td><td><code>    instruction_i = inst_hex;</code></td><td>把 CSV 的 instruction、A、B 驅動到 DUT 輸入。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>相當於測試平台把一組電氣邏輯值施加到 ALU pins。</td></tr>
+<tr><td>53</td><td><code>    src_A_i       = a_hex;</code></td><td>把 CSV 的 instruction、A、B 驅動到 DUT 輸入。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>相當於測試平台把一組電氣邏輯值施加到 ALU pins。</td></tr>
+<tr><td>54</td><td><code>    src_B_i       = b_hex;</code></td><td>把 CSV 的 instruction、A、B 驅動到 DUT 輸入。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>相當於測試平台把一組電氣邏輯值施加到 ALU pins。</td></tr>
+<tr><td>55</td><td><code>    #10;</code></td><td>等待 10 ns，讓組合邏輯輸出穩定後再檢查。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>模擬上的 settling time；ALU RTL 本身沒有 clock。</td></tr>
+<tr><td>56</td><td><code>    </code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>57</td><td><code>    if($isunknown(result_o))begin</code></td><td>檢查 result_o 是否含 X/Z 等 unknown。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>可抓未初始化、漏賦值或衝突驅動。</td></tr>
+<tr><td>58</td><td><code>      $display(&quot; ============ Unknown value occurs at result_o (Inst ID: %0d) ============&quot;, inst_id);</code></td><td>若出現 unknown，印出是哪個 instruction 並立即停止。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>驗證 fail-fast 機制。</td></tr>
+<tr><td>59</td><td><code>      $finish;</code></td><td>若出現 unknown，印出是哪個 instruction 並立即停止。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>驗證 fail-fast 機制。</td></tr>
+<tr><td>60</td><td><code>    end</code></td><td>若出現 unknown，印出是哪個 instruction 並立即停止。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>驗證 fail-fast 機制。</td></tr>
+<tr><td>61</td><td><code>    else begin</code></td><td>此行屬於 testbench 控制、輸出或語法結構，配合前後行完成自動驗證。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>只存在模擬環境，不會被合成為 ALU 晶片硬體。</td></tr>
+<tr><td>62</td><td><code>      if(result_o !== exp_hex)begin</code></td><td>使用 case inequality !== 比較 DUT result 與 golden expected。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>連 X/Z 也能嚴格辨識的模擬比較。</td></tr>
+<tr><td>63</td><td><code>        error[inst_id] += 1;</code></td><td>該 instruction 類別錯誤數加一。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>統計錯誤。</td></tr>
+<tr><td>64</td><td><code>        if(error[inst_id] &lt;= 5) </code></td><td>每類最多印前 5 筆失敗詳細資料，避免 log 爆量。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>debug 訊息控制。</td></tr>
+<tr><td>65</td><td><code>          $display(&quot;[FAIL] Inst %0d | A=%h B=%h Inst=%h | GOT=%h EXP=%h&quot;, inst_id, src_A_i, src_B_i, instruction_i, result_o, exp_hex);</code></td><td>每類最多印前 5 筆失敗詳細資料，避免 log 爆量。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>debug 訊息控制。</td></tr>
+<tr><td>66</td><td><code>      end</code></td><td>結束目前程序或 module。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>語法邊界。</td></tr>
+<tr><td>67</td><td><code>    end</code></td><td>結束目前程序或 module。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>語法邊界。</td></tr>
+<tr><td>68</td><td><code>  end</code></td><td>結束目前程序或 module。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>語法邊界。</td></tr>
+<tr><td>69</td><td><code>  $fclose(fd);</code></td><td>測完後關閉 CSV 檔案。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>釋放 simulator file handle。</td></tr>
+<tr><td>70</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>71</td><td><code>  $display(&quot;\n========================================&quot;);</code></td><td>輸出分隔線，讓 Transcript 結果更易讀。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>只有文字輸出。</td></tr>
+<tr><td>72</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>73</td><td><code>  </code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>74</td><td><code>  for(int i=0; i&lt;31; i++) begin</code></td><td>逐一檢查 31 個 instruction 類別的 error counter。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>產生每類 PASS/FAIL summary。</td></tr>
+<tr><td>75</td><td><code>     if(error[i] === 0) begin</code></td><td>若該 instruction 沒錯，印 ALL PASS 並把該類分數加入 total_score。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>形成你看到的 Instruction 0~30 ALL PASS 與 score=62。</td></tr>
+<tr><td>76</td><td><code>        $display(&quot;Instruction %2d ALL PASS !!!&quot;, i);</code></td><td>若該 instruction 沒錯，印 ALL PASS 並把該類分數加入 total_score。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>形成你看到的 Instruction 0~30 ALL PASS 與 score=62。</td></tr>
+<tr><td>77</td><td><code>        total_score += score[i];</code></td><td>若該 instruction 沒錯，印 ALL PASS 並把該類分數加入 total_score。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>形成你看到的 Instruction 0~30 ALL PASS 與 score=62。</td></tr>
+<tr><td>78</td><td><code>     end else begin</code></td><td>若有錯，印失敗數並增加 fail_count。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>最後決定整體 PASS/FAIL。</td></tr>
+<tr><td>79</td><td><code>        $display(&quot;Instruction %2d FAILED (%0d errors)&quot;, i, error[i]);</code></td><td>若有錯，印失敗數並增加 fail_count。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>最後決定整體 PASS/FAIL。</td></tr>
+<tr><td>80</td><td><code>        fail_count++;</code></td><td>若有錯，印失敗數並增加 fail_count。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>最後決定整體 PASS/FAIL。</td></tr>
+<tr><td>81</td><td><code>     end</code></td><td>若有錯，印失敗數並增加 fail_count。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>最後決定整體 PASS/FAIL。</td></tr>
+<tr><td>82</td><td><code>  end</code></td><td>結束目前程序或 module。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>語法邊界。</td></tr>
+<tr><td>83</td><td><code>  $display(&quot;========================================&quot;);</code></td><td>輸出分隔線，讓 Transcript 結果更易讀。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>只有文字輸出。</td></tr>
+<tr><td>84</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>85</td><td><code>  if(fail_count == 0)begin</code></td><td>若 31 類全部無失敗，進入成功訊息分支。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>整體 regression verdict。</td></tr>
+<tr><td>86</td><td><code>    $display(&quot;\n&quot;);</code></td><td>輸出 Congratulations / Simulation PASS ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>87</td><td><code>    $display(&quot; ****************************               &quot;);</code></td><td>輸出 Congratulations / Simulation PASS ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>88</td><td><code>    $display(&quot; **                        **       |\\__||  &quot;);</code></td><td>輸出 Congratulations / Simulation PASS ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>89</td><td><code>    $display(&quot; **  Congratulations !!    **      / O.O  | &quot;);</code></td><td>輸出 Congratulations / Simulation PASS ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>90</td><td><code>    $display(&quot; **                        **    /_____   | &quot;);</code></td><td>輸出 Congratulations / Simulation PASS ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>91</td><td><code>    $display(&quot; **  Simulation PASS!!     **   /^ ^ ^ \\  |&quot;);</code></td><td>輸出 Congratulations / Simulation PASS ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>92</td><td><code>    $display(&quot; **                        **  |^ ^ ^ ^ |w| &quot;);</code></td><td>輸出 Congratulations / Simulation PASS ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>93</td><td><code>    $display(&quot; ****************************   \\m___m__|_|&quot;);</code></td><td>輸出 Congratulations / Simulation PASS ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>94</td><td><code>  end</code></td><td>輸出 Congratulations / Simulation PASS ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>95</td><td><code>  else begin</code></td><td>若至少一類失敗，輸出 Simulation Failed ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>96</td><td><code>    $display(&quot;\n&quot;);</code></td><td>若至少一類失敗，輸出 Simulation Failed ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>97</td><td><code>    $display(&quot; ****************************               &quot;);</code></td><td>若至少一類失敗，輸出 Simulation Failed ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>98</td><td><code>    $display(&quot; **                        **       |\\__||  &quot;);</code></td><td>若至少一類失敗，輸出 Simulation Failed ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>99</td><td><code>    $display(&quot; **  OOPS!!                **      / X,X  | &quot;);</code></td><td>若至少一類失敗，輸出 Simulation Failed ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>100</td><td><code>    $display(&quot; **                        **    /_____   | &quot;);</code></td><td>若至少一類失敗，輸出 Simulation Failed ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>101</td><td><code>    $display(&quot; **  Simulation Failed!!   **   /^ ^ ^ \\  |&quot;);</code></td><td>若至少一類失敗，輸出 Simulation Failed ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>102</td><td><code>    $display(&quot; **                        **  |^ ^ ^ ^ |w| &quot;);</code></td><td>若至少一類失敗，輸出 Simulation Failed ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>103</td><td><code>    $display(&quot; ****************************   \\m___m__|_|&quot;);</code></td><td>若至少一類失敗，輸出 Simulation Failed ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>104</td><td><code>  end</code></td><td>若至少一類失敗，輸出 Simulation Failed ASCII 圖。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純 Transcript 顯示。</td></tr>
+<tr><td>105</td><td><code>  </code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>106</td><td><code>  $display(&quot;\n====== Your score : %2d ======\n&quot;, total_score);</code></td><td>印出累積分數；31 類 × 預設 2 分 = 全過時 62 分。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>驗證評分輸出。</td></tr>
+<tr><td>107</td><td><code>  $finish;</code></td><td>結束主要 simulation。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>因此 Transcript 顯示 $finish : ALU_tb.sv(107)。</td></tr>
+<tr><td>108</td><td><code>end</code></td><td>結束目前程序或 module。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>語法邊界。</td></tr>
+<tr><td>109</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>110</td><td><code>initial begin</code></td><td>第二個 initial block，專門處理條件式 waveform dump。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>模擬輔助功能。</td></tr>
+<tr><td>111</td><td><code>    `ifdef FSDB</code></td><td>只有編譯時有定義 FSDB 才執行下面 dump。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>讓 VCS/FSDB 流程可選擇啟用波形。</td></tr>
+<tr><td>112</td><td><code>        $dumpfile(&quot;ALU.fsdb&quot;);</code></td><td>指定 FSDB 輸出檔名 ALU.fsdb。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>把模擬波形寫到檔案，供 Verdi 等工具觀看。</td></tr>
+<tr><td>113</td><td><code>        $dumpvars(0, tb_ALU);</code></td><td>從 tb_ALU 層級開始 dump 所有訊號。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>記錄 waveform，不影響 DUT 功能。</td></tr>
+<tr><td>114</td><td><code>    `endif</code></td><td>結束 `ifdef FSDB 條件編譯區塊。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>純前處理器控制。</td></tr>
+<tr><td>115</td><td><code>end</code></td><td>結束目前程序或 module。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>語法邊界。</td></tr>
+<tr><td>116</td><td><code></code></td><td>空白行，用於可讀性。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>沒有模擬或硬體作用。</td></tr>
+<tr><td>117</td><td><code>endmodule</code></td><td>結束目前程序或 module。</td><td>本次上傳 ALU_tb.sv（TA-style testbench）</td><td>語法邊界。</td></tr></tbody></table></div></details>
+</section>
+
+<section id="relation"><h2>4. 兩個檔案逐層對應</h2><div class="card">
+<table><tr><th>Testbench</th><th>DUT</th><th>意義</th></tr>
+<tr><td>instruction_i</td><td>instruction_i</td><td>告訴 ALU 要執行哪種 operation</td></tr>
+<tr><td>src_A_i</td><td>src_A_i</td><td>第一個 32-bit operand</td></tr>
+<tr><td>src_B_i</td><td>src_B_i</td><td>第二個 32-bit operand / shift amount 來源</td></tr>
+<tr><td>result_o</td><td>result_o</td><td>DUT 計算結果，TB 不驅動，只讀取</td></tr>
+<tr><td>exp_hex</td><td>沒有這個 port</td><td>Golden answer，只存在 testbench，用來判斷 DUT 對不對</td></tr>
+<tr><td>inst_id</td><td>沒有這個 port</td><td>測試分類 ID，方便統計 31 類 instruction</td></tr></table>
+<p><b>一筆 pattern 的完整生命週期：</b>CSV 的一行被讀進 <code>inst_hex/a_hex/b_hex/exp_hex</code> → TB 把前三個值送進 ALU → ALU decoder 依 instruction 選資料路徑 → combinational result 出現在 <code>result_o</code> → TB 等 10 ns 後把 result 與 <code>exp_hex</code> 比較。</p></div>
+<details open><summary>4.1 你目前 Waveform 的 ADD 例子如何對應 Code</summary>
+<p>先前 waveform 中 <code>instruction_i=0x002081B3</code>、<code>A=0xE3A41ED6</code>、<code>B=0x519B5C9E</code>。ALU 解碼後走到 ADD 那一行，計算完整加法為 <code>0x1353F7B74</code>；因 <code>result_o</code> 只有 32 bits，留下低 32 bits <code>0x353F7B74</code>，與 waveform 相同。</p>
+<div class="codebox"><div class="head"><b>對應的 ALU 核心行</b><button onclick="copyCode(this)">複製全部</button></div><pre><code>3&#x27;b000: result_o = src_A_i + src_B_i; // ADD</code></pre></div>
+</details>
+<details><summary>4.2 報告可以怎麼寫</summary><p>ALU is implemented as a combinational datapath. The 32-bit instruction is decoded using opcode, funct3, and funct7 fields, while src_A_i and src_B_i are routed to arithmetic, logical, shift, multiply, bit-manipulation, and DSP operation paths. The selected operation drives the 32-bit result_o. The testbench reads instruction and operand vectors from pattern_alu.csv, applies them to the DUT, waits 10 ns for simulation settling, checks unknown states, and compares result_o against the golden expected value. The regression reports each of the 31 instruction classes independently and terminates after printing the total score.</p></details>
+</section>
+</main></body></html>

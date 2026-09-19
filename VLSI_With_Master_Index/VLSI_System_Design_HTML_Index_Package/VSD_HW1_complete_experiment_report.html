@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VSD HW1 — ALU & FPU 完整實驗說明</title>
+<style>
+:root{
+  --bg:#08111f; --panel:#0f1c2e; --panel2:#13243a; --text:#eaf2ff; --muted:#a8bad3;
+  --cyan:#55d6ff; --green:#7ce7a1; --yellow:#ffd166; --red:#ff7b8b; --line:#27415f;
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,"Noto Sans TC","Microsoft JhengHei",sans-serif;background:linear-gradient(135deg,#07101d,#0b1830 55%,#07101d);color:var(--text);line-height:1.75}
+header{padding:70px 7vw 55px;border-bottom:1px solid var(--line);background:radial-gradient(circle at 80% 10%,#173d62 0,transparent 38%)}
+.badge{display:inline-block;padding:5px 12px;border:1px solid #3b638b;border-radius:999px;color:var(--cyan);font-size:.86rem}
+h1{font-size:clamp(2.2rem,5vw,4.5rem);line-height:1.08;margin:.35em 0 .18em}
+.subtitle{font-size:1.12rem;color:var(--muted);max-width:850px}
+.wrap{max-width:1180px;margin:auto;padding:34px 22px 90px}
+nav{position:sticky;top:0;z-index:10;background:#08111fe8;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:10px 5vw;overflow:auto;white-space:nowrap}
+nav a{color:#bdd3ed;text-decoration:none;margin-right:18px;font-size:.92rem} nav a:hover{color:var(--cyan)}
+section{margin:34px 0;padding:30px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,var(--panel),#0b1728)}
+h2{margin-top:0;font-size:1.65rem;color:#fff} h3{color:var(--cyan);margin-top:28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.card{padding:18px;border-radius:14px;background:var(--panel2);border:1px solid #294766}
+.kpi{font-size:2rem;font-weight:800;color:var(--green)} .muted{color:var(--muted)}
+code{font-family:"Cascadia Code",Consolas,monospace}
+pre{background:#050b13;border:1px solid #263b55;border-radius:12px;padding:16px;overflow:auto;color:#d8e8fa}
+.cmd:before{content:"PS> ";color:var(--green)}
+table{width:100%;border-collapse:collapse;margin:14px 0}
+th,td{border-bottom:1px solid #28405b;padding:10px 9px;text-align:left;vertical-align:top}
+th{color:var(--cyan);background:#10233a}
+.ok{color:var(--green);font-weight:700}.warn{color:var(--yellow);font-weight:700}.danger{color:var(--red)}
+.flow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0}
+.flow span{background:#10253d;border:1px solid #315577;border-radius:10px;padding:9px 13px}
+.flow b{color:var(--cyan)}
+.note{border-left:4px solid var(--yellow);padding:12px 16px;background:#201c12;border-radius:6px;margin:15px 0}
+.good{border-left-color:var(--green);background:#102319}
+details{background:#0a1524;border:1px solid #263f5c;border-radius:10px;margin:10px 0;padding:10px 14px}
+summary{cursor:pointer;color:#dcecff;font-weight:700}
+footer{text-align:center;color:var(--muted);padding:35px}
+@media print{nav{display:none}body{background:white;color:#111}section,.card{background:white;color:#111;border-color:#ccc}pre{white-space:pre-wrap;color:#111;background:#f6f6f6}.muted{color:#555}h2,h3{color:#123}}
+</style>
+</head>
+<body>
+<header>
+  <span class="badge">NCKU EE · VLSI System Design 2026 Fall</span>
+  <h1>VSD HW1<br>ALU & FPU 實驗完整說明</h1>
+  <p class="subtitle">從規格理解、RTL 設計、Icarus/Verilator 本地驗證、Yosys synthesis，到 Superlint-like 靜態檢查的完整實驗紀錄。本文以作業講義與目前實際執行結果整理。</p>
+</header>
+<nav>
+<a href="#goal">作業目標</a><a href="#flow">流程</a><a href="#alu">ALU</a><a href="#fpu">FPU</a><a href="#sim">Simulation</a><a href="#synth">Synthesis</a><a href="#lint">Lint</a><a href="#result">結果</a><a href="#submit">繳交</a>
+</nav>
+<div class="wrap">
+
+<section id="goal">
+<h2>1. 作業目標與規格</h2>
+<div class="grid">
+<div class="card"><div class="kpi">31</div><b>ALU operations</b><div class="muted">RV32IM 14 + RV32B 12 + DSP 5</div></div>
+<div class="card"><div class="kpi">32-bit</div><b>IEEE-754 FPU</b><div class="muted">ADD / SUB / MIN / MAX</div></div>
+<div class="card"><div class="kpi">40%</div><b>Problem A — ALU</b></div>
+<div class="card"><div class="kpi">40%</div><b>Problem B — FPU</b></div>
+<div class="card"><div class="kpi">20%</div><b>Report</b></div>
+</div>
+<p>作業分為兩部分。Problem A 要完成 32-bit ALU，除 RV32IM 基本運算外，還加入 RV32B bit-manipulation 與自訂 DSP 指令；Problem B 則要求完成 IEEE-754 single-precision FPU，支援 MIN、MAX、ADD、SUB，以及 NaN、Infinity、Zero 等特殊值處理、Normalization 與 GRS rounding。</p>
+</section>
+
+<section id="flow">
+<h2>2. 本次實驗流程</h2>
+<div class="flow">
+<span>① 讀規格</span><b>→</b><span>② RTL</span><b>→</b><span>③ Testbench</span><b>→</b><span>④ Icarus/VVP</span><b>→</b><span>⑤ Yosys</span><b>→</b><span>⑥ Verilator lint</span><b>→</b><span>⑦ 報告/繳交</span>
+</div>
+<p>課堂正式環境使用 VCS 與 JasperGold Superlint；本機則以 Icarus Verilog、Yosys 與 Verilator 建立「local Superlint-like」流程。這不能完全取代 JasperGold，但可以在進 SoC Lab 前先抓 syntax、width、unused signal、latch 與其他常見 RTL 問題。</p>
+</section>
+
+<section id="alu">
+<h2>3. Problem A — 32-bit ALU</h2>
+<p>ALU 主要輸入為 <code>instruction_i</code>、<code>src_A_i</code>、<code>src_B_i</code>，輸出為 <code>result_o</code>。運算種類由 RISC-V instruction 欄位解碼。</p>
+<h3>RV32IM</h3>
+<p>包含 ADD、SUB、SLL、SLT、SLTU、XOR、SRL、SRA、OR、AND、MUL、MULH、MULHSU、MULHU。</p>
+<h3>RV32B</h3>
+<p>包含 CLZ、CTZ、CPOP、ROL、ROR、MIN、MAX、MINU、MAXU、BSET、BCLR、BEXT。</p>
+<h3>Custom DSP</h3>
+<table><tr><th>Instruction</th><th>核心行為</th></tr>
+<tr><td>DOTP4</td><td>四組 signed 8-bit lane 相乘後累加。</td></tr>
+<tr><td>SADD8</td><td>四組 signed 8-bit lane 分別相加並做 ±128/127 saturation。</td></tr>
+<tr><td>SSUB8</td><td>四組 signed 8-bit lane 分別相減並做 saturation。</td></tr>
+<tr><td>ABS</td><td>signed absolute value；0x80000000 特別飽和成 0x7FFFFFFF。</td></tr>
+<tr><td>CLIP8</td><td>將 signed 32-bit 輸入限制於 −128～127，輸出為 32-bit sign extension。</td></tr>
+</table>
+<div class="note">DSP lane 必須以 signed two's-complement 解讀，例如 8'hFF 是 −1，不是 255；SADD8/SSUB8 的 saturation 是每一個 8-bit lane 各自處理。</div>
+</section>
+
+<section id="fpu">
+<h2>4. Problem B — IEEE-754 Single-Precision FPU</h2>
+<p>32-bit single precision 格式由 <b>1-bit sign + 8-bit exponent + 23-bit fraction</b> 組成。一般 normalized value 可理解為 <code>(-1)^S × (1.F) × 2^(E-127)</code>。</p>
+<h3>I/O</h3>
+<table><tr><th>Signal</th><th>Width</th><th>用途</th></tr>
+<tr><td>clk / rst / enable</td><td>1</td><td>時脈、重置、輸入啟用</td></tr>
+<tr><td>ai / bi</td><td>32</td><td>兩個 IEEE-754 operand</td></tr>
+<tr><td>instruction</td><td>2</td><td>0 MIN、1 MAX、2 ADD、3 SUB</td></tr>
+<tr><td>co</td><td>32</td><td>FPU result</td></tr>
+<tr><td>valid</td><td>1</td><td>結果有效</td></tr>
+</table>
+
+<h3>ADD / SUB 資料路徑</h3>
+<div class="flow"><span>Unpack S/E/F</span><b>→</b><span>Special Case</span><b>→</b><span>Exponent Align</span><b>→</b><span>Mantissa Add/Sub</span><b>→</b><span>Normalize</span><b>→</b><span>GRS Round</span><b>→</b><span>Pack</span></div>
+<p><b>Unpack：</b>先拆 sign、exponent、fraction，並辨認 NaN、Infinity、Zero。接著計算 ΔE = |Ea − Eb|，將 exponent 較小的 mantissa 右移，使兩數 exponent 對齊，再依 operand sign 與 ADD/SUB 指令決定 mantissa 加減。</p>
+<p><b>Normalize：</b>若加法產生 carry，mantissa 右移且 exponent +1；若 subtraction cancellation 產生 leading zero，則左移 mantissa 並降低 exponent。</p>
+<h3>GRS 與 Round-to-even</h3>
+<p>對齊或 normalization 造成右移時保留 Guard、Round、Sticky bits。GRS 用於 round-to-even：大於半個 ULP 時進位；剛好 tie 時依保留結果的 LSB 決定是否進位，使最後結果落在偶數。</p>
+<div class="note">作業規格另指定特殊情況，例如 NaN operand 產生 NaN；Infinity 的符號衝突情況需產生 NaN；Zero 與 Infinity 也需依講義規則處理。</div>
+</section>
+
+<section id="sim">
+<h2>5. Functional Simulation 實驗</h2>
+<p>提供的 testbench 會讀取 pattern，將輸入送入 DUT，等待 <code>valid</code>，再把 <code>co</code> 與 golden answer 比較。講義要求 reset 後拉高 enable 並送入資料；當 valid 拉高時檢查答案，下一 cycle 再送下一筆。</p>
+
+<h3>FPU 本機 Icarus/VVP 實際結果</h3>
+<pre>========================================
+ VSD HW1 Problem B - FPU Simulation
+========================================
+
+========================================
+ FPU Simulation Result
+========================================
+TOTAL=2001 PASS=2001 FAIL=0
+========================================
+
+   ALL TEST PASS</pre>
+<div class="card good"><span class="ok">PASS 2001 / 2001</span><br>目前提供的 FPU simulation patterns 全部通過，FAIL = 0。</div>
+
+<h3>常用本機流程</h3>
+<pre><span class="cmd">iverilog ...</span>
+<span class="cmd">vvp FPU_sim.vvp</span></pre>
+<p class="muted">實際 compile 參數應以你最後使用的 testbench 與 source 檔名為準；此處保留流程重點，不虛構未記錄的 command line。</p>
+</section>
+
+<section id="synth">
+<h2>6. Yosys Synthesis</h2>
+<p>Synthesis 的目的，是把 RTL 描述轉換為較低階的邏輯/netlist 表示，並檢查 RTL 是否能被硬體合成。你目前工作目錄已產生：</p>
+<table><tr><th>File</th><th>目前紀錄大小</th><th>角色</th></tr>
+<tr><td>ALU.sv</td><td>18,979 B</td><td>ALU RTL</td></tr>
+<tr><td>ALU_iverilog.sv</td><td>26,714 B</td><td>本機模擬/相容版本</td></tr>
+<tr><td>ALU_synth.v</td><td>1,179,858 B</td><td>ALU synthesis netlist</td></tr>
+<tr><td>FPU.v</td><td>7,068 B</td><td>FPU RTL</td></tr>
+<tr><td>FPU_iverilog.v</td><td>7,547 B</td><td>Icarus/本機驗證版本</td></tr>
+<tr><td>FPU_yosys.v</td><td>7,547 B</td><td>Yosys 使用版本</td></tr>
+<tr><td>FPU_synth.v</td><td>151,904 B</td><td>FPU synthesis netlist</td></tr>
+</table>
+<p>Netlist 檔案通常明顯大於手寫 RTL，因為高階運算與控制結構已被展開成大量較低階的邏輯連線與 cell 表示。報告中應著重「RTL 如何被轉換」以及 synthesis 是否成功，而不是貼整份 netlist。</p>
+</section>
+
+<section id="lint">
+<h2>7. Local Superlint-like：Verilator Lint</h2>
+<p>本機使用 Verilator 的 <code>--lint-only -Wall</code> 做靜態檢查：</p>
+<pre><span class="cmd">verilator --lint-only -Wall ALU_iverilog.sv</span>
+<span class="cmd">verilator --lint-only -Wall FPU_iverilog.v</span>
+<span class="cmd">verilator --lint-only -Wall FPU.v</span>
+<span class="cmd">verilator --lint-only -Wall FPU_yosys.v</span></pre>
+
+<table><tr><th>Target</th><th>目前確認結果</th><th>說明</th></tr>
+<tr><td>ALU_iverilog.sv</td><td class="warn">14 warnings</td><td>已看到 UNUSED SIGNAL / unused bits 類型；需保留紀錄並判斷是否影響功能。</td></tr>
+<tr><td>FPU_iverilog.v</td><td class="ok">0 warnings</td><td>Verilator -Wall clean。</td></tr>
+<tr><td>FPU.v</td><td class="ok">0 warnings</td><td>Verilator -Wall clean。</td></tr>
+<tr><td>FPU_yosys.v</td><td>待最終確認</td><td>曾因把 PowerShell prompt 一起貼入造成 ParserError；應重新只輸入 Verilator 指令。</td></tr>
+<tr><td>FPU_synth.v</td><td>尚未納入已確認結果</td><td>建議最後再 lint synthesized netlist，且與 RTL warning 分開解讀。</td></tr>
+</table>
+
+<h3>FPU_iverilog.v 行數與 local lint 指標</h3>
+<pre>Total lines   = 233
+Warnings      = 0
+Warning lines = 0
+
+Local lint clean ratio = (1 - 0 / 233) × 100% = 100%</pre>
+<div class="note">這個 100% 是依目前本地 Verilator 檢查得到的「local lint clean ratio」紀錄，不應直接宣稱等同 JasperGold Superlint 的正式 coverage。正式繳交前仍應在課堂環境執行 <code>jg -superlint superlint.tcl</code>。</div>
+
+<h3>PowerShell 常見錯誤</h3>
+<pre>(base) PS E:\StudentID_HW1\Src&gt; (base) PS E:\StudentID_HW1\Src&gt; verilator ...
+                                ^ 不可把 prompt 一起輸入</pre>
+<p>正確方式只輸入：</p>
+<pre><span class="cmd">verilator --lint-only -Wall FPU_yosys.v</span></pre>
+</section>
+
+<section id="result">
+<h2>8. 目前實驗結果總結</h2>
+<div class="grid">
+<div class="card"><div class="kpi">2001/2001</div><b>FPU Simulation</b><div class="ok">ALL TEST PASS</div></div>
+<div class="card"><div class="kpi">0</div><b>FPU_iverilog warnings</b></div>
+<div class="card"><div class="kpi">0</div><b>FPU.v warnings</b></div>
+<div class="card"><div class="kpi">14</div><b>ALU local warnings</b><div class="muted">目前主要為 unused 類型</div></div>
+</div>
+<p>從目前紀錄可得：FPU 的 functional simulation 已通過 2001 筆 pattern，且主要 RTL/本機版本在 Verilator <code>-Wall</code> 下沒有 warning。ALU 已完成 local lint 並得到 14 warnings；這些 warning 應在報告中分類說明，而不是單純隱藏。FPU_yosys 與 synthesis netlist 的最終 lint 狀態則應以重新執行後的終端機結果補上。</p>
+</section>
+
+<section>
+<h2>9. 正式課堂工具對應</h2>
+<table><tr><th>目的</th><th>課堂/SoC Lab</th><th>本機替代流程</th></tr>
+<tr><td>RTL simulation</td><td><code>vcs -R -full64 -sverilog ...</code></td><td>Icarus Verilog + VVP</td></tr>
+<tr><td>Waveform / debug</td><td>VCS / Verdi</td><td>VCD + 本機 waveform viewer（依環境）</td></tr>
+<tr><td>Synthesis</td><td>依課程環境</td><td>Yosys</td></tr>
+<tr><td>Superlint</td><td><code>jg -superlint superlint.tcl</code></td><td>Verilator <code>--lint-only -Wall</code>（預檢）</td></tr>
+</table>
+</section>
+
+<section id="submit">
+<h2>10. 作業繳交前 Checklist</h2>
+<details open><summary>功能</summary><p>ALU 與 FPU provided patterns 全部通過；FPU 已確認 2001/2001。Hidden tests 無法由目前資料確認，因此需確保 corner cases 不是只針對公開 pattern hard-code。</p></details>
+<details><summary>Lint</summary><p>重新確認 ALU、FPU 正式提交 RTL；進 SoC Lab 執行 JasperGold Superlint。講義指出 Superlint coverage ≤ 80% 會扣 10%。</p></details>
+<details><summary>Report</summary><p>報告占 20%。講義明確要求「越完整說明設計，分數越高」，但不要把整份 code 複製進報告；可以截取真正有助於解釋架構的局部程式碼。</p></details>
+<details><summary>目錄</summary><pre>StudentID_HW1/
+├── StudentID.pdf
+├── Src/
+│   ├── ALU.sv
+│   ├── FPU.sv
+│   └── other user-defined .sv
+└── Sim/
+    ├── FPU_tb.sv
+    ├── ALU_tb.sv
+    ├── Superlint.tcl
+    └── Pattern/
+        ├── pattern_alu.csv
+        └── pattern_fpu.csv</pre></details>
+<details><summary>壓縮</summary><pre>tar -cvf StudentID_HW1.tar StudentID_HW1</pre><p>講義要求依指定 hierarchy，以 <code>StudentID_HW1.tar</code> 上傳 Moodle，且程式需能在 SoC Lab 環境 compile/simulate。</p></details>
+</section>
+
+<section>
+<h2>11. 報告撰寫建議架構</h2>
+<p>正式 PDF 可直接沿用本 HTML 的邏輯：<b>Specification → Architecture → RTL implementation decisions → Simulation methodology → Result → Synthesis → Superlint → Discussion → Conclusion</b>。ALU 建議挑 decode、signed/unsigned multiply、DSP saturation 等代表性片段；FPU 則挑 unpack、special-case、alignment、normalization、GRS round-to-even 與 valid handshake。這比整份 code 貼入報告更符合講義要求。</p>
+</section>
+
+</div>
+<footer>VSD HW1 Experiment Notes · Generated from the provided HW1 specification and recorded local experiment results.</footer>
+</body>
+</html>

@@ -1,0 +1,5 @@
+Icarus SDF experiment
+Functional vectors remained correct, but SDF emitted many:
+  Unable to match ModPath ...
+including CLK -> Q and RESET_B -> Q.
+Conclusion: do NOT claim complete SDF timing GLS under Icarus.

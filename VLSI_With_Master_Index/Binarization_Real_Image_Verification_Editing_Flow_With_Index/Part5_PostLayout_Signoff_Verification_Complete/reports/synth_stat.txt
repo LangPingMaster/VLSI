@@ -1,0 +1,34 @@
+
+21. Printing statistics.
+
+=== binarization ===
+
+        +----------------------------Count including submodules.
+        |        +-------------------Area including submodules.
+        |        |        +----------Local count, excluding submodules.
+        |        |        |        +-Local area, excluding submodules.
+        |        |        |        | 
+       41        -       41        - wires
+       55        -       55        - wire bits
+        5        -        5        - public wires
+       19        -       19        - public wire bits
+        5        -        5        - ports
+       19        -       19        - port bits
+        -        -        -        - memories
+        -        -        -        - memory bits
+        -        -        -        - processes
+       28   44.156       28   44.156 cells
+        1    1.064        1    1.064   AND2_X1
+        1    1.862        1    1.862   AND4_X2
+        3    3.192        3    3.192   AOI21_X1
+        1     5.32        1     5.32   DFFR_X1
+        8    21.28        8    21.28   HA_X1
+        9    4.788        9    4.788   INV_X1
+        2    1.596        2    1.596   NAND2_X1
+        1    2.394        1    2.394   NOR4_X2
+        1    1.064        1    1.064   OAI21_X1
+        1    1.596        1    1.596   OAI221_X1
+
+   Chip area for module '\binarization': 44.156000
+     of which used for sequential elements: 5.320000 (12.05%)
+

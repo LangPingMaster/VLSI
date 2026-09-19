@@ -1,0 +1,417 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Part4 OpenROAD Complete</title><style>body{margin:0;background:#07111f;color:#edf6ff;font:16px/1.7 system-ui,"Noto Sans TC"}header{padding:55px 7vw;background:#0b2338}h1{font-size:46px;line-height:1.1}h2{color:#8ee7ff}.w{max-width:1180px;margin:auto;padding:25px}section{background:#0d1b2a;border:1px solid #294963;border-radius:16px;padding:25px;margin:20px 0}.metrics,.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:13px}.m,.call{background:#081522;border:1px solid #294963;border-radius:10px;padding:14px}.m strong{display:block;color:#75e49c;font-size:25px}.call{border-left:4px solid #63d9ff}.warn{border-left-color:#ffd166}.err{border-left-color:#ff7c7c}.code{background:#03080d;border:1px solid #31526e;border-radius:10px;overflow:hidden;margin:12px 0}.ch{background:#142a3e;padding:8px 12px;display:flex;justify-content:space-between}button{background:#168bb8;color:#fff;border:0;border-radius:6px;padding:5px 10px}pre{padding:14px;overflow:auto;margin:0}code{font-family:Consolas,monospace}.node{background:#092033;border:1px solid #377391;border-radius:10px;padding:12px}.node b,.node code,.node small{display:block}.node b{color:#8ee7ff}.node small{color:#abc2d8}.arr{text-align:center;font-size:24px}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #294963;text-align:left;vertical-align:top}th{color:#8ee7ff}figure{margin:0;background:#000;border:1px solid #294963;border-radius:10px;overflow:hidden}figure img{width:100%;aspect-ratio:1;object-fit:contain}figcaption{padding:10px}details{background:#081522;padding:10px;border-radius:10px;margin:10px 0}summary{color:#8ee7ff;font-weight:bold;cursor:pointer}a{color:#65dfff}.badge{border:1px solid #3b7592;border-radius:99px;padding:4px 10px;margin:3px;display:inline-block}</style></head><body><header><span class="badge">Part 4</span><span class="badge">Windows OSS CAD Suite</span><span class="badge">WSL2 + Docker</span><span class="badge">OpenROAD / Nangate45</span><h1>從安裝、編輯、除錯到 GDSII<br>完整實作完成版</h1><p>完整保留本次 binarization 的工具安裝、程式編輯、PDN-0185 修正、流程檔案、reports/results 與 OpenROAD 圖片。</p></header><main class="w">
+<section><h2>0. 實際完成結果</h2><div class="metrics"><div class="m">Synthesis cells<strong>28</strong></div><div class="m">Synthesis area<strong>44.156 µm²</strong></div><div class="m">Final area<strong>77 µm²</strong>3% utilization</div><div class="m">Worst slack<strong>+7.73 ns</strong></div><div class="m">fmax<strong>440.06 MHz</strong></div><div class="m">Total power<strong>4.96 µW</strong></div></div><div class="call">Final：TNS=0、WNS=0；setup/hold/slew/fanout/cap violation count 均為 0。5_route_drc.rpt 為空檔，表示該報告未列出 route DRC violation。</div></section>
+<section><h2>1. 完整流程圖與產生檔案</h2><div class="node"><b>RTL + SDC + Config</b><code>binarization.v · constraint.sdc · config.mk</code><small>功能、clock、I/O delay、platform/floorplan</small></div><div class="arr">↓</div><div class="node"><b>Synthesis</b><code>1_2_yosys.v · 1_synth.odb/.sdc</code><small>RTL → Nangate45 standard cells</small></div><div class="arr">↓</div><div class="node"><b>Floorplan / PDN</b><code>2_1_floorplan.odb → 2_4_floorplan_pdn.odb</code><small>die/core、I/O、tap/endcap、power grid</small></div><div class="arr">↓</div><div class="node"><b>Placement</b><code>3_1... → 3_5_place_dp.odb</code><small>global/detailed placement、resizer</small></div><div class="arr">↓</div><div class="node"><b>CTS</b><code>4_1_cts.odb · 4_cts.sdc</code><small>clock tree synthesis</small></div><div class="arr">↓</div><div class="node"><b>Routing</b><code>5_1_grt.odb · route.guide · 5_2_route.odb</code><small>global/detailed routing</small></div><div class="arr">↓</div><div class="node"><b>Finish</b><code>6_final.gds/.def/.odb/.v/.sdc/.spef</code><small>GDSII、parasitics、STA、power</small></div><table><tr><th>階段</th><th>產生檔案</th><th>說明</th></tr><tr><td><b>RTL + SDC + Config</b></td><td><code>binarization.v · constraint.sdc · config.mk</code></td><td>功能、clock、I/O delay、platform/floorplan</td></tr><tr><td><b>Synthesis</b></td><td><code>1_2_yosys.v · 1_synth.odb/.sdc</code></td><td>RTL → Nangate45 standard cells</td></tr><tr><td><b>Floorplan / PDN</b></td><td><code>2_1_floorplan.odb → 2_4_floorplan_pdn.odb</code></td><td>die/core、I/O、tap/endcap、power grid</td></tr><tr><td><b>Placement</b></td><td><code>3_1... → 3_5_place_dp.odb</code></td><td>global/detailed placement、resizer</td></tr><tr><td><b>CTS</b></td><td><code>4_1_cts.odb · 4_cts.sdc</code></td><td>clock tree synthesis</td></tr><tr><td><b>Routing</b></td><td><code>5_1_grt.odb · route.guide · 5_2_route.odb</code></td><td>global/detailed routing</td></tr><tr><td><b>Finish</b></td><td><code>6_final.gds/.def/.odb/.v/.sdc/.spef</code></td><td>GDSII、parasitics、STA、power</td></tr></table><div class="call">Final deliverables：6_final.gds 是 GDSII；6_final.def 是 physical geometry；6_final.spef 是寄生 R/C；6_final.v 是 final gate netlist；6_final.sdc 是 timing constraint；6_final.odb 是 OpenROAD database。</div></section>
+<section><h2>2. Windows OSS CAD Suite</h2><p>路徑：<code>D:\userdata\Downloads\oss-cad-suite-windows-x64-20260914\oss-cad-suite</code>。Windows 端先完成 Yosys 前段驗證；因套件沒有 openroad.exe，physical design 改在 WSL2。</p><div class="code"><div class="ch"><b>PowerShell</b><button onclick="cp(this)">Copy</button></div><pre><code>cd &quot;D:\userdata\Downloads\oss-cad-suite-windows-x64-20260914\oss-cad-suite&quot;
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+. .\environment.ps1
+yosys -V</code></pre></div><div class="call">前段 mapped GLS 已驗證 65,536 pixels，Mismatch=0，Accuracy=100%。</div></section>
+<section><h2>3. WSL2 + Docker + ORFS 安裝</h2><div class="code"><div class="ch"><b>Windows</b><button onclick="cp(this)">Copy</button></div><pre><code>wsl --status</code></pre></div><div class="code"><div class="ch"><b>WSL：Docker 驗證</b><button onclick="cp(this)">Copy</button></div><pre><code>docker run hello-world</code></pre></div><div class="code"><div class="ch"><b>Clone ORFS</b><button onclick="cp(this)">Copy</button></div><pre><code>cd ~
+git clone --recursive https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts.git
+cd OpenROAD-flow-scripts</code></pre></div><div class="code"><div class="ch"><b>Build</b><button onclick="cp(this)">Copy</button></div><pre><code>./build_openroad.sh --threads 2</code></pre></div><div class="call warn">高平行度 build 曾使 Docker/WSL integration 中斷；改 --threads 2 後成功，builder image：openroad/flow-ubuntu22.04-builder:9ed603。</div><div class="code"><div class="ch"><b>進入 container</b><button onclick="cp(this)">Copy</button></div><pre><code>docker run --rm -it \
+  -u $(id -u):$(id -g) \
+  -v &quot;$HOME/OpenROAD-flow-scripts/flow:/OpenROAD-flow-scripts/flow&quot; \
+  openroad/flow-ubuntu22.04-builder:9ed603 \
+  bash</code></pre></div><div class="code"><div class="ch"><b>PATH</b><button onclick="cp(this)">Copy</button></div><pre><code>export PATH=/OpenROAD-flow-scripts/tools/install/OpenROAD/bin:/OpenROAD-flow-scripts/tools/install/yosys/bin:$PATH
+cd /OpenROAD-flow-scripts/flow</code></pre></div></section>
+<section><h2>4. 官方 GCD Smoke Test</h2><p>先執行 ORFS 預設 Nangate45/gcd，完整跑到 6_final.gds。這證明 Docker、OpenROAD、Yosys、KLayout、platform 正常。</p><div class="code"><div class="ch"><b>Container</b><button onclick="cp(this)">Copy</button></div><pre><code>cd /OpenROAD-flow-scripts/flow
+make</code></pre></div><div class="call">GCD 成功、自訂 design 失敗時，優先查 RTL / SDC / config / floorplan，不要先重裝工具。</div></section>
+<section><h2>5. 編輯 RTL</h2><div class="code"><div class="ch"><b>binarization.v</b><button onclick="cp(this)">Copy</button></div><pre><code>`timescale 1ns/1ps
+module binarization(input wire clk,input wire rst_n,input wire [7:0] pix_in,input wire [7:0] threshold,output reg pix_out);
+always @(posedge clk or negedge rst_n) begin
+ if(!rst_n) pix_out &lt;= 1&#x27;b0;
+ else if(pix_in &gt;= threshold) pix_out &lt;= 1&#x27;b1;
+ else pix_out &lt;= 1&#x27;b0;
+end
+endmodule
+</code></pre></div></section><section><h2>6. 編輯 SDC</h2><p>10 ns clock=100 MHz；I/O delay=20%；async reset false path。</p><div class="code"><div class="ch"><b>constraint.sdc</b><button onclick="cp(this)">Copy</button></div><pre><code>current_design binarization
+set clk_name clk
+set clk_port_name clk
+set clk_period 10.0
+set clk_io_pct 0.20
+set clk_port [get_ports $clk_port_name]
+create_clock -name $clk_name -period $clk_period $clk_port
+set non_clock_inputs [lsearch -inline -all -not -exact [all_inputs] $clk_port]
+set_input_delay [expr $clk_period * $clk_io_pct] -clock $clk_name $non_clock_inputs
+set_output_delay [expr $clk_period * $clk_io_pct] -clock $clk_name [all_outputs]
+set_false_path -from [get_ports rst_n]
+</code></pre></div></section>
+<section><h2>7. 第一次 config 與 PDN-0185</h2><div class="code"><div class="ch"><b>config_initial_failed.mk</b><button onclick="cp(this)">Copy</button></div><pre><code>export PLATFORM = nangate45
+export DESIGN_NAME = binarization
+export DESIGN_NICKNAME = binarization
+export VERILOG_FILES = $(DESIGN_HOME)/src/$(DESIGN_NICKNAME)/binarization.v
+export SDC_FILE = $(DESIGN_HOME)/$(PLATFORM)/$(DESIGN_NICKNAME)/constraint.sdc
+export CORE_UTILIZATION = 30
+export CORE_ASPECT_RATIO = 1
+export CORE_MARGIN = 2
+export PLACE_DENSITY = 0.55
+export TNS_END_PERCENT = 100
+</code></pre></div><div class="call err">Automatic floorplan 產生約 11.97 µm 寬 core，但 Nangate45 M4 PDN 需要 28.5 µm total strap width + 2.0 µm offset，所以失敗。</div><div class="code"><div class="ch"><b>實際錯誤</b><button onclick="cp(this)">Copy</button></div><pre><code>[ERROR PDN-0185] Insufficient width (11.97 um) to add straps on layer metal4
+in grid &quot;grid&quot; with total strap width 28.5 um and offset 2.0 um.</code></pre></div></section>
+<section><h2>8. 編輯過程：Explicit Floorplan 修正</h2><p>nano 貼上不方便，因此用 Windows Notepad 直接編輯 WSL 檔案：</p><div class="code"><div class="ch"><b>WSL</b><button onclick="cp(this)">Copy</button></div><pre><code>notepad.exe &quot;$(wslpath -w ~/OpenROAD-flow-scripts/flow/designs/nangate45/binarization/config.mk)&quot;</code></pre></div><div class="code"><div class="ch"><b>修改後 config.mk</b><button onclick="cp(this)">Copy</button></div><pre><code>export PLATFORM = nangate45
+export DESIGN_NAME = binarization
+export DESIGN_NICKNAME = binarization
+export VERILOG_FILES = $(DESIGN_HOME)/src/$(DESIGN_NICKNAME)/binarization.v
+export SDC_FILE = $(DESIGN_HOME)/$(PLATFORM)/$(DESIGN_NICKNAME)/constraint.sdc
+# Explicit floorplan fixes PDN-0185
+export DIE_AREA = 0 0 60 60
+export CORE_AREA = 5 5 55 55
+export PLACE_DENSITY = 0.55
+export TNS_END_PERCENT = 100
+</code></pre></div><div class="call">DIE_AREA=60×60 µm、CORE_AREA=50×50 µm；core 足夠寬後 PDN 可建立。</div></section>
+<section><h2>9. 安裝自訂 design</h2><div class="code"><div class="ch"><b>WSL</b><button onclick="cp(this)">Copy</button></div><pre><code>cd &quot;/mnt/d/userdata/Downloads/0914/Part4_Windows_OSS_WSL_OpenROAD_Complete/Part4_Windows_OSS_WSL_OpenROAD_Complete/wsl_orfs&quot;
+./bin/install_design_into_orfs.sh ~/OpenROAD-flow-scripts</code></pre></div><div class="code"><div class="ch"><b>檢查</b><button onclick="cp(this)">Copy</button></div><pre><code>find ~/OpenROAD-flow-scripts/flow/designs/src/binarization -maxdepth 1 -type f -print
+find ~/OpenROAD-flow-scripts/flow/designs/nangate45/binarization -maxdepth 1 -type f -print</code></pre></div></section>
+<section><h2>10. 執行完整 OpenROAD Flow</h2><div class="code"><div class="ch"><b>進 container</b><button onclick="cp(this)">Copy</button></div><pre><code>docker run --rm -it \
+  -u $(id -u):$(id -g) \
+  -v &quot;$HOME/OpenROAD-flow-scripts/flow:/OpenROAD-flow-scripts/flow&quot; \
+  openroad/flow-ubuntu22.04-builder:9ed603 \
+  bash</code></pre></div><div class="code"><div class="ch"><b>執行</b><button onclick="cp(this)">Copy</button></div><pre><code>export PATH=/OpenROAD-flow-scripts/tools/install/OpenROAD/bin:/OpenROAD-flow-scripts/tools/install/yosys/bin:$PATH
+cd /OpenROAD-flow-scripts/flow
+make DESIGN_CONFIG=./designs/nangate45/binarization/config.mk</code></pre></div><p>成功完成 Synthesis → Floorplan/PDN → Placement → CTS → Global/Detailed Routing → Fill → Report → KLayout GDS merge。</p></section>
+<section><h2>11. Synthesis 實際內容</h2><p>28 cells / 44.156 µm²；其中 DFFR_X1 1 顆，sequential area 5.320 µm² (12.05%)。</p><details open><summary>synth_stat.txt</summary><pre>
+21. Printing statistics.
+
+=== binarization ===
+
+        +----------------------------Count including submodules.
+        |        +-------------------Area including submodules.
+        |        |        +----------Local count, excluding submodules.
+        |        |        |        +-Local area, excluding submodules.
+        |        |        |        | 
+       41        -       41        - wires
+       55        -       55        - wire bits
+        5        -        5        - public wires
+       19        -       19        - public wire bits
+        5        -        5        - ports
+       19        -       19        - port bits
+        -        -        -        - memories
+        -        -        -        - memory bits
+        -        -        -        - processes
+       28   44.156       28   44.156 cells
+        1    1.064        1    1.064   AND2_X1
+        1    1.862        1    1.862   AND4_X2
+        3    3.192        3    3.192   AOI21_X1
+        1     5.32        1     5.32   DFFR_X1
+        8    21.28        8    21.28   HA_X1
+        9    4.788        9    4.788   INV_X1
+        2    1.596        2    1.596   NAND2_X1
+        1    2.394        1    2.394   NOR4_X2
+        1    1.064        1    1.064   OAI21_X1
+        1    1.596        1    1.596   OAI221_X1
+
+   Chip area for module &#x27;\binarization&#x27;: 44.156000
+     of which used for sequential elements: 5.320000 (12.05%)
+
+</pre></details></section>
+<section><h2>12. OpenROAD 實際圖片</h2><div class="gallery"><figure><a href="images/final_placement.webp"><img src="images/final_placement.webp"></a><figcaption><b>Final Placement</b><br>standard-cell 最終位置</figcaption></figure><figure><a href="images/cts_default_clk.webp"><img src="images/cts_default_clk.webp"></a><figcaption><b>CTS Clock</b><br>clock tree</figcaption></figure><figure><a href="images/cts_default_clk_layout.webp"><img src="images/cts_default_clk_layout.webp"></a><figcaption><b>CTS Layout</b><br>clock tree + layout</figcaption></figure><figure><a href="images/final_resizer.webp"><img src="images/final_resizer.webp"></a><figcaption><b>Resizer</b><br>resizer 後 cells</figcaption></figure><figure><a href="images/final_routing.webp"><img src="images/final_routing.webp"></a><figcaption><b>Final Routing</b><br>多層金屬 routing</figcaption></figure><figure><a href="images/final_all.webp"><img src="images/final_all.webp"></a><figcaption><b>Final All</b><br>PDN + cells + routing + I/O</figcaption></figure><figure><a href="images/final_congestion.webp"><img src="images/final_congestion.webp"></a><figcaption><b>Congestion</b><br>routing congestion heatmap</figcaption></figure><figure><a href="images/final_ir_drop.webp"><img src="images/final_ir_drop.webp"></a><figcaption><b>IR Drop</b><br>IR-drop heatmap，圖例最大約 82.699 µV</figcaption></figure><figure><a href="images/final_clocks.webp"><img src="images/final_clocks.webp"></a><figcaption><b>Final Clocks</b><br>final clock network</figcaption></figure><figure><a href="images/final_worst_path.webp"><img src="images/final_worst_path.webp"></a><figcaption><b>Worst Path</b><br>STA worst path</figcaption></figure></div></section>
+<section><h2>13. Final STA / Power</h2><table><tr><th>項目</th><th>結果</th><th>解讀</th></tr><tr><td>Clock</td><td>10 ns</td><td>100 MHz target</td></tr><tr><td>TNS/WNS</td><td>0 / 0</td><td>無 negative timing violation</td></tr><tr><td>Worst slack</td><td>+7.73 ns</td><td>timing pass</td></tr><tr><td>Critical path</td><td>2.2325 ns</td><td>final critical path delay</td></tr><tr><td>Min period / fmax</td><td>2.27 ns / 440.06 MHz</td><td>report_clock_min_period</td></tr><tr><td>Setup/Hold</td><td>0 / 0</td><td>violations</td></tr><tr><td>Slew/Fanout/Cap</td><td>0 / 0 / 0</td><td>violations</td></tr><tr><td>Power</td><td>4.96 µW</td><td>final estimate</td></tr></table><details><summary>6_finish.rpt 全文</summary><pre>
+==========================================================================
+finish report_tns
+--------------------------------------------------------------------------
+tns max 0.00
+
+==========================================================================
+finish report_wns
+--------------------------------------------------------------------------
+wns max 0.00
+
+==========================================================================
+finish report_worst_slack
+--------------------------------------------------------------------------
+worst slack max 7.73
+
+==========================================================================
+finish report_clock_min_period
+--------------------------------------------------------------------------
+clk period_min = 2.27 fmax = 440.06
+
+==========================================================================
+finish report_clock_skew
+--------------------------------------------------------------------------
+Clock clk
+No launch/capture paths found.
+
+
+==========================================================================
+finish report_checks -path_delay min
+--------------------------------------------------------------------------
+Startpoint: pix_in[6] (input port clocked by clk)
+Endpoint: pix_out$_DFF_PN0_ (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                          0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (propagated)
+                          2.00    2.00 ^ input external delay
+     1    2.73    0.00    0.00    2.00 ^ pix_in[6] (in)
+                                         pix_in[6] (net)
+                  0.00    0.00    2.00 ^ input7/A (BUF_X1)
+     1    3.28    0.01    0.02    2.02 ^ input7/Z (BUF_X1)
+                                         net7 (net)
+                  0.01    0.00    2.02 ^ _57_/A (HA_X1)
+     2    3.70    0.01    0.02    2.04 v _57_/S (HA_X1)
+                                         _09_ (net)
+                  0.01    0.00    2.04 v _52_/A2 (NAND2_X1)
+     1    1.71    0.01    0.02    2.06 ^ _52_/ZN (NAND2_X1)
+                                         _33_ (net)
+                  0.01    0.00    2.06 ^ _54_/C1 (OAI221_X1)
+     1    1.50    0.01    0.02    2.07 v _54_/ZN (OAI221_X1)
+                                         _00_ (net)
+                  0.01    0.00    2.07 v pix_out$_DFF_PN0_/D (DFFR_X1)
+                                  2.07   data arrival time
+
+                          0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock source latency
+     1    3.94    0.00    0.00    0.00 ^ clk (in)
+                                         clk (net)
+                  0.00    0.00    0.00 ^ pix_out$_DFF_PN0_/CK (DFFR_X1)
+                          0.00    0.00   clock reconvergence pessimism
+                          0.00    0.00   library hold time
+                                  0.00   data required time
+-----------------------------------------------------------------------------
+                                  0.00   data required time
+                                 -2.07   data arrival time
+-----------------------------------------------------------------------------
+                                  2.07   slack (MET)
+
+
+
+==========================================================================
+finish report_checks -path_delay max
+--------------------------------------------------------------------------
+Startpoint: threshold[7] (input port clocked by clk)
+Endpoint: pix_out$_DFF_PN0_ (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                          0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (propagated)
+                          2.00    2.00 v input external delay
+     1    2.18    0.00    0.00    2.00 v threshold[7] (in)
+                                         threshold[7] (net)
+                  0.00    0.00    2.00 v input17/A (BUF_X1)
+     1    1.73    0.01    0.02    2.02 v input17/Z (BUF_X1)
+                                         net17 (net)
+                  0.01    0.00    2.02 v _38_/A (INV_X1)
+     1    3.52    0.01    0.02    2.04 ^ _38_/ZN (INV_X1)
+                                         _13_ (net)
+                  0.01    0.00    2.04 ^ _59_/B (HA_X1)
+     3    5.96    0.04    0.07    2.10 ^ _59_/S (HA_X1)
+                                         _15_ (net)
+                  0.04    0.00    2.11 ^ _50_/A1 (AND4_X2)
+     1    2.21    0.01    0.06    2.16 ^ _50_/ZN (AND4_X2)
+                                         _31_ (net)
+                  0.01    0.00    2.16 ^ _51_/A (OAI21_X1)
+     1    2.23    0.01    0.02    2.18 v _51_/ZN (OAI21_X1)
+                                         _32_ (net)
+                  0.01    0.00    2.18 v _54_/B2 (OAI221_X1)
+     1    1.57    0.03    0.05    2.23 ^ _54_/ZN (OAI221_X1)
+                                         _00_ (net)
+                  0.03    0.00    2.23 ^ pix_out$_DFF_PN0_/D (DFFR_X1)
+                                  2.23   data arrival time
+
+                         10.00   10.00   clock clk (rise edge)
+                          0.00   10.00   clock source latency
+     1    3.94    0.00    0.00   10.00 ^ clk (in)
+                                         clk (net)
+                  0.00    0.00   10.00 ^ pix_out$_DFF_PN0_/CK (DFFR_X1)
+                          0.00   10.00   clock reconvergence pessimism
+                         -0.04    9.96   library setup time
+                                  9.96   data required time
+-----------------------------------------------------------------------------
+                                  9.96   data required time
+                                 -2.23   data arrival time
+-----------------------------------------------------------------------------
+                                  7.73   slack (MET)
+
+
+
+==========================================================================
+finish report_checks -unconstrained
+--------------------------------------------------------------------------
+Startpoint: threshold[7] (input port clocked by clk)
+Endpoint: pix_out$_DFF_PN0_ (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                          0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (propagated)
+                          2.00    2.00 v input external delay
+     1    2.18    0.00    0.00    2.00 v threshold[7] (in)
+                                         threshold[7] (net)
+                  0.00    0.00    2.00 v input17/A (BUF_X1)
+     1    1.73    0.01    0.02    2.02 v input17/Z (BUF_X1)
+                                         net17 (net)
+                  0.01    0.00    2.02 v _38_/A (INV_X1)
+     1    3.52    0.01    0.02    2.04 ^ _38_/ZN (INV_X1)
+                                         _13_ (net)
+                  0.01    0.00    2.04 ^ _59_/B (HA_X1)
+     3    5.96    0.04    0.07    2.10 ^ _59_/S (HA_X1)
+                                         _15_ (net)
+                  0.04    0.00    2.11 ^ _50_/A1 (AND4_X2)
+     1    2.21    0.01    0.06    2.16 ^ _50_/ZN (AND4_X2)
+                                         _31_ (net)
+                  0.01    0.00    2.16 ^ _51_/A (OAI21_X1)
+     1    2.23    0.01    0.02    2.18 v _51_/ZN (OAI21_X1)
+                                         _32_ (net)
+                  0.01    0.00    2.18 v _54_/B2 (OAI221_X1)
+     1    1.57    0.03    0.05    2.23 ^ _54_/ZN (OAI221_X1)
+                                         _00_ (net)
+                  0.03    0.00    2.23 ^ pix_out$_DFF_PN0_/D (DFFR_X1)
+                                  2.23   data arrival time
+
+                         10.00   10.00   clock clk (rise edge)
+                          0.00   10.00   clock source latency
+     1    3.94    0.00    0.00   10.00 ^ clk (in)
+                                         clk (net)
+                  0.00    0.00   10.00 ^ pix_out$_DFF_PN0_/CK (DFFR_X1)
+                          0.00   10.00   clock reconvergence pessimism
+                         -0.04    9.96   library setup time
+                                  9.96   data required time
+-----------------------------------------------------------------------------
+                                  9.96   data required time
+                                 -2.23   data arrival time
+-----------------------------------------------------------------------------
+                                  7.73   slack (MET)
+
+
+
+==========================================================================
+finish report_check_types -max_slew -max_cap -max_fanout -violators
+--------------------------------------------------------------------------
+
+==========================================================================
+finish max_slew_check_slack
+--------------------------------------------------------------------------
+0.15770065784454346
+
+==========================================================================
+finish max_slew_check_limit
+--------------------------------------------------------------------------
+0.1985349953174591
+
+==========================================================================
+finish max_slew_check_slack_limit
+--------------------------------------------------------------------------
+0.7943
+
+==========================================================================
+finish max_fanout_check_slack
+--------------------------------------------------------------------------
+1.0000000150474662e+30
+
+==========================================================================
+finish max_fanout_check_limit
+--------------------------------------------------------------------------
+1.0000000150474662e+30
+
+==========================================================================
+finish max_capacitance_check_slack
+--------------------------------------------------------------------------
+18.14134407043457
+
+==========================================================================
+finish max_capacitance_check_limit
+--------------------------------------------------------------------------
+20.904499053955078
+
+==========================================================================
+finish max_capacitance_check_slack_limit
+--------------------------------------------------------------------------
+0.8678
+
+==========================================================================
+finish max_slew_violation_count
+--------------------------------------------------------------------------
+max slew violation count 0
+
+==========================================================================
+finish max_fanout_violation_count
+--------------------------------------------------------------------------
+max fanout violation count 0
+
+==========================================================================
+finish max_cap_violation_count
+--------------------------------------------------------------------------
+max cap violation count 0
+
+==========================================================================
+finish setup_violation_count
+--------------------------------------------------------------------------
+setup violation count 0
+
+==========================================================================
+finish hold_violation_count
+--------------------------------------------------------------------------
+hold violation count 0
+
+==========================================================================
+finish report_checks -path_delay max reg to reg
+--------------------------------------------------------------------------
+No paths found.
+
+==========================================================================
+finish report_checks -path_delay min reg to reg
+--------------------------------------------------------------------------
+No paths found.
+
+==========================================================================
+finish critical path target clock latency max path
+--------------------------------------------------------------------------
+0.0002
+
+==========================================================================
+finish critical path target clock latency min path
+--------------------------------------------------------------------------
+0.0002
+
+==========================================================================
+finish critical path source clock latency min path
+--------------------------------------------------------------------------
+0.0000
+
+==========================================================================
+finish critical path delay
+--------------------------------------------------------------------------
+2.2325
+
+==========================================================================
+finish critical path slack
+--------------------------------------------------------------------------
+7.7276
+
+==========================================================================
+finish slack div critical path delay
+--------------------------------------------------------------------------
+346.141097
+
+==========================================================================
+finish report_power
+--------------------------------------------------------------------------
+Group                  Internal  Switching    Leakage      Total
+                          Power      Power      Power      Power (Watts)
+----------------------------------------------------------------
+Sequential             6.58e-07   3.04e-08   8.57e-08   7.74e-07  15.6%
+Combinational          1.70e-06   1.19e-06   1.30e-06   4.19e-06  84.4%
+Clock                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Macro                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Pad                    0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+----------------------------------------------------------------
+Total                  2.36e-06   1.22e-06   1.39e-06   4.96e-06 100.0%
+                          47.5%      24.5%      27.9%
+</pre></details></section>
+<section><h2>14. Final Output 說明</h2><table><tr><th>檔案</th><th>用途</th></tr><tr><td>6_final.gds</td><td>最終 GDSII layout / KLayout</td></tr><tr><td>6_final.def</td><td>die/core/cell/routing geometry</td></tr><tr><td>6_final.odb</td><td>OpenROAD/OpenDB database</td></tr><tr><td>6_final.v</td><td>post-layout gate netlist</td></tr><tr><td>6_final.sdc</td><td>STA constraints</td></tr><tr><td>6_final.spef</td><td>parasitic R/C</td></tr><tr><td>6_final_lec.v</td><td>logic equivalence</td></tr><tr><td>route.guide</td><td>global routing guide</td></tr></table></section>
+<section><h2>15. ZIP 內容</h2><pre><code>Part4_Windows_OSS_WSL_OpenROAD_Complete_Final/
+├── index.html / README.txt
+├── windows/code/design.sv
+├── wsl_orfs/designs/... RTL + SDC + config
+├── wsl_orfs/bin/*.sh
+├── images/  # 10 張實際 OpenROAD 圖
+├── reports/nangate45/binarization/base/  # 完整 reports
+└── results/nangate45/binarization/base/  # 完整 results，含 6_final.gds/def/spef/v/sdc/odb</code></pre></section></main><footer style="text-align:center;padding:30px;color:#8aa2b8">Part 4 · Windows OSS CAD Suite + WSL2 + OpenROAD-flow-scripts · binarization / Nangate45</footer><script>function cp(b){let c=b.closest(".code").querySelector("code").innerText;navigator.clipboard.writeText(c);b.innerText="Copied!";setTimeout(()=>b.innerText="Copy",900)}</script></body></html>

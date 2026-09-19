@@ -1,0 +1,10 @@
+read_verilog -sv design.sv
+hierarchy -check -top binarization
+proc; opt; fsm; opt; memory; opt
+techmap; opt
+dfflibmap -liberty ../lib/teaching.lib
+abc -liberty ../lib/teaching.lib
+clean
+stat -liberty ../lib/teaching.lib
+write_verilog -noattr ../results/binarization_mapped.v
+write_json ../results/binarization_mapped.json

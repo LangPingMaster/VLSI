@@ -1,0 +1,20 @@
+# Interactive Yosys commands
+
+read_verilog -sv design.sv
+hierarchy -check -top binarization
+proc
+opt
+fsm
+opt
+memory
+opt
+techmap
+opt
+abc -g AND,OR,XOR,XNOR,NAND,NOR,MUX
+clean
+stat
+write_verilog -noattr binarization_yosys.v
+write_json binarization_yosys.json
+
+# Or run the whole script:
+yosys -s synthesis.ys

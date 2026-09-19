@@ -1,0 +1,66 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Part 2｜Real Image RTL Binarization Verification</title><style>
+:root{--bg:#eef3f8;--ink:#172033;--blue:#2563eb;--teal:#0f766e;--line:#dbe4ef}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 Segoe UI,Noto Sans TC,Microsoft JhengHei,sans-serif}header{padding:48px 24px;color:white;background:linear-gradient(125deg,#172554,#1d4ed8 45%,#0f766e)}header div,main{max-width:1180px;margin:auto}h1{font-size:clamp(1.8rem,4vw,2.8rem);margin:0}main{padding:26px 18px 70px}section{background:white;border:1px solid var(--line);border-radius:20px;padding:26px;margin:20px 0;box-shadow:0 14px 36px #0f172a12}h2{color:#134e4a;border-left:7px solid #14b8a6;padding-left:12px}h3{color:#1d4ed8}.flow{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.b{padding:12px 14px;border-radius:12px;background:#ecfeff;border:1px solid #99f6e4;font-weight:700}.a{font-size:24px;color:#94a3b8}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.shot{border:1px solid var(--line);padding:15px;border-radius:16px;background:#f8fafc}img{max-width:100%;height:auto;border-radius:12px}.poster{width:100%;box-shadow:0 8px 25px #0f172a20}pre{position:relative;background:#0f172a;color:#e5edf7;padding:48px 18px 18px;border-radius:14px;overflow:auto}pre button{position:absolute;right:10px;top:10px;background:#334155;color:white;border:1px solid #64748b;border-radius:8px;padding:7px 11px;cursor:pointer}table{width:100%;border-collapse:collapse}th,td{border:1px solid var(--line);padding:10px}th{background:#ecfeff}.key{background:#ecfdf5;border-left:5px solid #10b981;padding:14px;border-radius:10px}@media(max-width:760px){.grid{grid-template-columns:1fr}}
+</style></head><body><header><div><h1>Part 2｜Real Color Image → Grayscale → RTL Binarization → Binary Image</h1><p>Golden Model Verification with Real Images · 256×256 · Threshold = 128</p></div></header><main>
+<section><h2>完整流程圖</h2><div class="flow"><span class="b">4 Color BMP</span><span class="a">→</span><span class="b">RGB → Gray</span><span class="a">→</span><span class="b">gray.hex</span><span class="a">→</span><span class="b">RTL Binarization</span><span class="a">→</span><span class="b">rtl_binary.txt</span><span class="a">→</span><span class="b">Rebuild PNG</span><span class="a">→</span><span class="b">Golden Compare</span><span class="a">→</span><span class="b">PASS</span></div><p class="key">先以 Python 產生 Golden Model，再用相同灰階 pixel 餵給 Verilog RTL；最後逐 pixel 比較。Mismatch = 0 才算通過。</p></section>
+<section><h2>Part 2 全流程 PNG</h2><img class="poster" src="Part2_Full_Flow.png"></section>
+<section><h2>四張 BMP 測試圖片</h2><div class="grid"><div class="shot"><h3>Sample 1</h3><img src="images/drawBbox_result_p1.png"><p>原始 BMP：<code>drawBbox_result_p1.bmp</code>。可替換為任一 256×256 彩色輸入，走相同驗證流程。</p></div><div class="shot"><h3>Sample 2</h3><img src="images/drawBbox_result_p2.png"><p>原始 BMP：<code>drawBbox_result_p2.bmp</code>。可替換為任一 256×256 彩色輸入，走相同驗證流程。</p></div><div class="shot"><h3>Sample 3</h3><img src="images/drawBbox_result_p3.png"><p>原始 BMP：<code>drawBbox_result_p3.bmp</code>。可替換為任一 256×256 彩色輸入，走相同驗證流程。</p></div><div class="shot"><h3>Sample 4</h3><img src="images/drawBbox_result_p4.png"><p>原始 BMP：<code>drawBbox_result_p4.bmp</code>。可替換為任一 256×256 彩色輸入，走相同驗證流程。</p></div></div></section>
+<section><h2>實際資料範例（p2）</h2><div class="grid"><div class="shot"><h3>Grayscale</h3><img src="images/sample_gray.png"></div><div class="shot"><h3>Golden Binary</h3><img src="images/sample_binary_golden.png"></div></div><p>Threshold = 128：Gray ≥ 128 → 1/白；Gray &lt; 128 → 0/黑。輸入共有 256×256 = 65,536 pixels。</p></section>
+<section><h2>驗證分工</h2><table><tr><th>階段</th><th>檔案</th><th>目的</th></tr><tr><td>Golden</td><td>prepare_image.py</td><td>BMP→Gray、gray.hex、golden_binary.txt</td></tr><tr><td>RTL</td><td>design.sv</td><td>clocked threshold comparator</td></tr><tr><td>Testbench</td><td>testbench_image.sv</td><td>$readmemh 送 65,536 pixels，輸出 rtl_binary.txt</td></tr><tr><td>Compare</td><td>rebuild_and_compare.py</td><td>重建 PNG、逐 pixel 比較、PASS/FAIL</td></tr></table></section>
+<section><h2>Code Files</h2><h3>design.sv</h3><pre><button onclick="copy(this)">Copy</button><code>`timescale 1ns/1ps
+module binarization(
+ input wire clk, input wire rst_n, input wire [7:0] pix_in,
+ input wire [7:0] threshold, output reg pix_out
+);
+always @(posedge clk or negedge rst_n) begin
+ if(!rst_n) pix_out &lt;= 1&#x27;b0;
+ else if(pix_in &gt;= threshold) pix_out &lt;= 1&#x27;b1;
+ else pix_out &lt;= 1&#x27;b0;
+end
+endmodule
+</code></pre><h3>testbench_image.sv</h3><pre><button onclick="copy(this)">Copy</button><code>`timescale 1ns/1ps
+module tb_binarization_image;
+localparam N=65536;
+reg clk, rst_n; reg [7:0] pix_in, threshold; wire pix_out;
+reg [7:0] img_mem [0:N-1]; integer i, fout;
+binarization dut(.clk(clk),.rst_n(rst_n),.pix_in(pix_in),.threshold(threshold),.pix_out(pix_out));
+initial clk=0; always #5 clk=~clk;
+initial begin
+ $readmemh(&quot;gray.hex&quot;,img_mem);
+ fout=$fopen(&quot;rtl_binary.txt&quot;,&quot;w&quot;);
+ threshold=8&#x27;d128; rst_n=0; pix_in=0; #12 rst_n=1;
+ for(i=0;i&lt;N;i=i+1) begin
+   @(negedge clk); pix_in=img_mem[i];
+   @(posedge clk); #1; $fwrite(fout,&quot;%0d\n&quot;,pix_out);
+ end
+ $fclose(fout); $display(&quot;Processed %0d pixels. Done.&quot;,N); #10 $finish;
+end
+endmodule
+</code></pre><h3>prepare_image.py</h3><pre><button onclick="copy(this)">Copy</button><code>from PIL import Image
+from pathlib import Path
+THRESHOLD=128
+INPUT=Path(&quot;../images/drawBbox_result_p2.bmp&quot;)
+img=Image.open(INPUT).convert(&quot;RGB&quot;)
+gray=img.convert(&quot;L&quot;)
+gray.save(&quot;../images/sample_gray.png&quot;)
+vals=list(gray.getdata())
+Path(&quot;../data/gray.hex&quot;).write_text(&quot;\n&quot;.join(f&quot;{v:02x}&quot; for v in vals)+&quot;\n&quot;)
+Path(&quot;../data/golden_binary.txt&quot;).write_text(&quot;\n&quot;.join(&quot;1&quot; if v&gt;=THRESHOLD else &quot;0&quot; for v in vals)+&quot;\n&quot;)
+gray.point(lambda p:255 if p&gt;=THRESHOLD else 0).save(&quot;../images/sample_binary_golden.png&quot;)
+print(&quot;Prepared&quot;,len(vals),&quot;pixels&quot;)
+</code></pre><h3>rebuild_and_compare.py</h3><pre><button onclick="copy(this)">Copy</button><code>from pathlib import Path
+from PIL import Image
+import numpy as np
+golden=np.loadtxt(&quot;../data/golden_binary.txt&quot;,dtype=np.uint8)
+rtl=np.loadtxt(&quot;rtl_binary.txt&quot;,dtype=np.uint8)
+if rtl.size != golden.size: raise SystemExit(f&quot;size mismatch: RTL={rtl.size}, golden={golden.size}&quot;)
+mismatch=int(np.count_nonzero(rtl!=golden))
+Image.fromarray((rtl.reshape(256,256)*255).astype(np.uint8),mode=&quot;L&quot;).save(&quot;../images/sample_binary_rtl.png&quot;)
+print(&quot;Total pixels:&quot;,golden.size); print(&quot;Mismatch pixels:&quot;,mismatch); print(&quot;Accuracy: %.2f%%&quot;%((1-mismatch/golden.size)*100)); print(&quot;PASS&quot; if mismatch==0 else &quot;FAIL&quot;)
+</code></pre></section>
+<section><h2>執行順序</h2><pre><code>cd code
+python prepare_image.py
+cp ../data/gray.hex .
+iverilog -g2012 -o simv design.sv testbench_image.sv
+vvp simv
+python rebuild_and_compare.py</code></pre><p class="key">完成 Part 2 後，再進 Part 3：Technology Mapping → Gate-Level Netlist → Gate-Level Simulation，並用同一張圖片再次驗證。</p></section>
+</main><script>async function copy(b){let t=b.parentElement.querySelector('code').innerText;await navigator.clipboard.writeText(t);b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1200)}</script></body></html>

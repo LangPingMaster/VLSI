@@ -1,0 +1,9 @@
+OpenROAD Part 7 evidence
+Post-layout STA: PASS
+Worst reported slack: +6.4745 ns (MET)
+SDF generation: PASS
+SDF size observed: ~19 KB
+SDF CELL count: 92
+SDF IOPATH count: 106
+SDF INTERCONNECT count: 76
+SDF TIMESCALE: 1ns

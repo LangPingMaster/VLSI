@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Part 2｜Real Image RTL Binarization Verification</title>
+<style>
+:root{--bg:#eef3f8;--ink:#172033;--blue:#2563eb;--teal:#0f766e;--line:#dbe4ef;--green:#059669;--orange:#d97706;--purple:#7c3aed}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 Segoe UI,Noto Sans TC,Microsoft JhengHei,sans-serif}header{padding:48px 24px;color:#fff;background:linear-gradient(125deg,#172554,#1d4ed8 45%,#0f766e)}header div,main{max-width:1180px;margin:auto}h1{font-size:clamp(1.8rem,4vw,2.8rem);margin:0}main{padding:26px 18px 70px}section{background:#fff;border:1px solid var(--line);border-radius:20px;padding:26px;margin:20px 0;box-shadow:0 14px 36px #0f172a12}h2{color:#134e4a;border-left:7px solid #14b8a6;padding-left:12px}h3{color:#1d4ed8}.flow{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.b{padding:12px 14px;border-radius:12px;background:#ecfeff;border:1px solid #99f6e4;font-weight:700}.a{font-size:24px;color:#94a3b8}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.shot{border:1px solid var(--line);padding:15px;border-radius:16px;background:#f8fafc}img{max-width:100%;height:auto;border-radius:12px}.poster{width:100%;box-shadow:0 8px 25px #0f172a20}pre{position:relative;background:#0f172a;color:#e5edf7;padding:48px 18px 18px;border-radius:14px;overflow:auto}pre button{position:absolute;right:10px;top:10px;background:#334155;color:#fff;border:1px solid #64748b;border-radius:8px;padding:7px 11px;cursor:pointer}table{width:100%;border-collapse:collapse}th,td{border:1px solid var(--line);padding:10px;vertical-align:top}th{background:#ecfeff}.key{background:#ecfdf5;border-left:5px solid #10b981;padding:14px;border-radius:10px}.warn{background:#fff7ed;border-left:5px solid #f59e0b;padding:14px;border-radius:10px}.step{display:grid;grid-template-columns:52px 1fr;gap:14px;margin:14px 0}.num{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;background:linear-gradient(135deg,#2563eb,#0f766e)}.box{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:16px}@media(max-width:760px){.grid{grid-template-columns:1fr}.step{grid-template-columns:1fr}}
+</style></head><body>
+<header><div><h1>Part 2｜Real Color Image → Grayscale → RTL Binarization → Binary Image</h1><p>Golden Model Verification with Real Images · 256×256 · Threshold = 128</p></div></header><main>
+<section><h2>快速導覽</h2><div class="flow"><a class="b" href="#editflow">完整編輯流程</a><a class="b" href="#edap">EDA Playground</a><a class="b" href="#codes">Code Files</a><a class="b" href="#pass">PASS 判定</a></div></section>
+<section><h2>0. 完整流程</h2><div class="flow"><span class="b">Color BMP</span><span class="a">→</span><span class="b">Grayscale</span><span class="a">→</span><span class="b">gray.hex</span><span class="a">→</span><span class="b">Verilog RTL</span><span class="a">→</span><span class="b">65,536 Pixel Simulation</span><span class="a">→</span><span class="b">rtl_binary.txt</span><span class="a">→</span><span class="b">Binary Image</span><span class="a">→</span><span class="b">Golden Compare</span><span class="a">→</span><span class="b">PASS</span></div><p class="key"><b>核心原則：</b>先用 Python 產生 Golden Model，再把完全相同的 65,536 個灰階 pixel 餵給 Verilog RTL。最後逐 pixel 比較；Mismatch = 0 才算 PASS。</p></section>
+<section><h2>1. Part 2 全流程 PNG</h2><img class="poster" src="Part2_Full_Flow.png" alt="Part 2 full flow"></section>
+<section><h2>2. 四張 BMP 測試圖片</h2><div class="grid"><div class="shot"><h3>Sample 1</h3><img src="images/drawBbox_result_p1.png"><p>原始檔：<code>drawBbox_result_p1.bmp</code></p></div><div class="shot"><h3>Sample 2</h3><img src="images/drawBbox_result_p2.png"><p>原始檔：<code>drawBbox_result_p2.bmp</code></p></div><div class="shot"><h3>Sample 3</h3><img src="images/drawBbox_result_p3.png"><p>原始檔：<code>drawBbox_result_p3.bmp</code></p></div><div class="shot"><h3>Sample 4</h3><img src="images/drawBbox_result_p4.png"><p>原始檔：<code>drawBbox_result_p4.bmp</code></p></div></div></section>
+<section><h2>3. 目前實際使用 Sample 2</h2><div class="grid"><div class="shot"><h3>Grayscale</h3><img src="images/sample_gray.png"></div><div class="shot"><h3>Golden Binary</h3><img src="images/sample_binary_golden.png"></div></div><p>Threshold = 128：Gray ≥ 128 → 1 / 白；Gray &lt; 128 → 0 / 黑。256×256 = 65,536 pixels。</p></section>
+<section><h2>4. 資料夾與路徑規則</h2><pre><code>Binarization_Part2_Real_Image_Verification/
+├─ code/
+│  ├─ design.sv
+│  ├─ testbench_image.sv              ← 本機版
+│  ├─ testbench_image_edaplayground.sv← EDA Playground 版
+│  ├─ prepare_image.py
+│  ├─ rebuild_and_compare.py
+│  ├─ run_local.ps1
+│  └─ run_local.sh
+├─ data/
+│  ├─ gray.hex
+│  └─ golden_binary.txt
+├─ images/
+│  ├─ drawBbox_result_p1~p4.bmp
+│  └─ 產生的 PNG
+├─ index.html
+└─ Part2_Full_Flow.png</code></pre><div class="key"><b>本機規則：</b><code>testbench_image.sv</code> 直接讀 <code>../data/gray.hex</code>，不再需要把 gray.hex 複製到 code 資料夾。</div><div class="warn"><b>EDA Playground 規則：</b>線上環境沒有你的 Windows <code>../data/</code> 資料夾，因此使用 <code>testbench_image_edaplayground.sv</code>，其中讀取的是 <code>gray.hex</code>。</div></section>
+<section><h2>5. Windows PowerShell：完整執行順序</h2>
+<div class="step"><div class="num">1</div><div class="box"><b>產生灰階資料與 Golden Model</b><pre><code>python prepare_image.py</code></pre><p>成功時會顯示 <code>Prepared 65536 pixels</code>，並在 <code>../data/</code> 產生 <code>gray.hex</code> 與 <code>golden_binary.txt</code>。</p></div></div>
+<div class="step"><div class="num">2</div><div class="box"><b>Compile Verilog</b><pre><code>iverilog -g2012 -o simv design.sv testbench_image.sv</code></pre></div></div>
+<div class="step"><div class="num">3</div><div class="box"><b>執行 65,536-pixel RTL Simulation</b><pre><code>vvp simv</code></pre><p>成功時會顯示 <code>Processed 65536 pixels. Done.</code>，並在 code 資料夾產生 <code>rtl_binary.txt</code>。</p></div></div>
+<div class="step"><div class="num">4</div><div class="box"><b>重建圖片並與 Golden Model 比較</b><pre><code>python rebuild_and_compare.py</code></pre><p>理想結果：Mismatch = 0、Accuracy = 100.00%、PASS。</p></div></div>
+<p class="key">也可以一次執行全部步驟：<code>.
+un_local.ps1</code></p></section>
+
+<section id="editflow"><h2>5A. 完整「編輯 → 執行 → 驗證」流程</h2>
+<p>這一節把從解壓 ZIP、修改 Python / Verilog、產生資料、Compile、Simulation 到結果比對的整個操作順序串在一起。第一次操作建議完全照此順序，不要跳步。</p>
+<div class="flow"><span class="b">解壓 ZIP</span><span class="a">→</span><span class="b">選 BMP</span><span class="a">→</span><span class="b">編輯 prepare_image.py</span><span class="a">→</span><span class="b">產生 gray.hex</span><span class="a">→</span><span class="b">檢查 design.sv</span><span class="a">→</span><span class="b">檢查 testbench</span><span class="a">→</span><span class="b">Compile</span><span class="a">→</span><span class="b">Simulation</span><span class="a">→</span><span class="b">Rebuild</span><span class="a">→</span><span class="b">Compare PASS</span></div>
+
+<div class="step"><div class="num">1</div><div class="box"><b>解壓縮並進入 code 資料夾</b><pre><code>cd "D:\...\Binarization_Part2_Real_Image_Verification\code"</code></pre><p>先用 <code>dir</code> 確認看到 <code>design.sv</code>、<code>testbench_image.sv</code>、<code>prepare_image.py</code>、<code>rebuild_and_compare.py</code>。</p></div></div>
+
+<div class="step"><div class="num">2</div><div class="box"><b>選擇要驗證的 BMP</b><p>四張 BMP 都放在 <code>../images/</code>。第一次可使用 Sample 2。若要換圖，只需修改 <code>prepare_image.py</code> 的輸入檔名。</p><pre><code>INPUT_IMAGE = "../images/drawBbox_result_p2.bmp"</code></pre><p>例如改成 Sample 4：</p><pre><code>INPUT_IMAGE = "../images/drawBbox_result_p4.bmp"</code></pre></div></div>
+
+<div class="step"><div class="num">3</div><div class="box"><b>檢查影像尺寸與 Threshold</b><p>本教材固定使用 256×256，因此：</p><pre><code>WIDTH  = 256
+HEIGHT = 256
+THRESHOLD = 128</code></pre><p>若更換其他尺寸圖片，除了 Python，Testbench 的 <code>N</code> 也必須同步修改成 <code>WIDTH × HEIGHT</code>。</p></div></div>
+
+<div class="step"><div class="num">4</div><div class="box"><b>執行 Python Preprocess</b><pre><code>python prepare_image.py</code></pre><p>成功後應看到：</p><pre><code>Prepared 65536 pixels</code></pre><p>然後確認資料檔：</p><pre><code>Get-ChildItem ..\data</code></pre><p>應包含 <code>gray.hex</code> 與 <code>golden_binary.txt</code>。</p></div></div>
+
+<div class="step"><div class="num">5</div><div class="box"><b>檢查 gray.hex 是否真的有資料</b><pre><code>Get-Content ..\data\gray.hex -TotalCount 10</code></pre><p>會看到類似 <code>34</code>、<code>80</code>、<code>9f</code> 的 8-bit hexadecimal grayscale values。每行就是一個 pixel。</p></div></div>
+
+<div class="step"><div class="num">6</div><div class="box"><b>檢查 RTL：design.sv</b><p>核心功能必須維持：</p><pre><code>else if (pix_in &gt;= threshold)
+    pix_out &lt;= 1'b1;
+else
+    pix_out &lt;= 1'b0;</code></pre><p>這裡的 <code>threshold</code> 是由 Testbench 輸入；本例設定為 128。</p></div></div>
+
+<div class="step"><div class="num">7</div><div class="box"><b>檢查本機 Testbench 路徑</b><p>本機版本一定要讀：</p><pre><code>$readmemh("../data/gray.hex", img_mem);</code></pre><p>輸出則寫到目前的 <code>code/</code>：</p><pre><code>fout = $fopen("rtl_binary.txt", "w");</code></pre><p>因此 Simulation 後應新增 <code>code/rtl_binary.txt</code>。</p></div></div>
+
+<div class="step"><div class="num">8</div><div class="box"><b>Compile Verilog</b><pre><code>iverilog -g2012 -o simv design.sv testbench_image.sv</code></pre><p>若沒有任何錯誤訊息，代表 Compile 成功，並產生 <code>simv</code>。</p></div></div>
+
+<div class="step"><div class="num">9</div><div class="box"><b>執行 65,536 Pixel Simulation</b><pre><code>vvp simv</code></pre><p>成功時：</p><pre><code>Processed 65536 pixels. Done.</code></pre><p>接著確認：</p><pre><code>Get-Item .\rtl_binary.txt</code></pre></div></div>
+
+<div class="step"><div class="num">10</div><div class="box"><b>重建 RTL Binary Image 並做 Golden Compare</b><pre><code>python rebuild_and_compare.py</code></pre><p>程式會讀取：</p><pre><code>../data/golden_binary.txt
+./rtl_binary.txt</code></pre><p>並重建 RTL 的二值化結果圖，再做 pixel-by-pixel 比較。</p></div></div>
+
+<div class="step"><div class="num">11</div><div class="box"><b>判斷 PASS / FAIL</b><pre><code>Total pixels    : 65536
+Matched pixels  : 65536
+Mismatch pixels : 0
+Accuracy        : 100.00%
+Result          : PASS</code></pre><p>只有 <code>Mismatch pixels = 0</code> 才代表 RTL 與 Python Golden Model 完全一致。</p></div></div>
+
+<div class="step"><div class="num">12</div><div class="box"><b>修改後重新驗證</b><p>若你改了圖片、threshold、RTL 條件，完整重跑順序永遠是：</p><pre><code>python prepare_image.py
+iverilog -g2012 -o simv design.sv testbench_image.sv
+vvp simv
+python rebuild_and_compare.py</code></pre><p>或直接：</p><pre><code>.\run_local.ps1</code></pre></div></div>
+
+<div class="key"><b>編輯規則：</b>改圖片或 Threshold → 先重新執行 <code>prepare_image.py</code>；改 RTL / Testbench → 至少重新 Compile + Simulation；任何修改後都應重新跑 Golden Compare。</div>
+</section>
+
+<section id="edap"><h2>5B. EDA Playground 編輯流程（線上 Simulation）</h2>
+<p>若要在線上驗證同一個 RTL，使用專用的 <code>testbench_image_edaplayground.sv</code>。EDA Playground 不認得你 Windows 的 <code>../data/</code> 路徑，因此必須使用同層檔名 <code>gray.hex</code>。</p>
+<div class="step"><div class="num">1</div><div class="box"><b>右側 Design Editor</b><p>貼入 <code>design.sv</code> 全部內容。</p></div></div>
+<div class="step"><div class="num">2</div><div class="box"><b>左側 Testbench Editor</b><p>貼入 <code>testbench_image_edaplayground.sv</code>，其中必須是：</p><pre><code>$readmemh("gray.hex", img_mem);</code></pre></div></div>
+<div class="step"><div class="num">3</div><div class="box"><b>加入 gray.hex</b><p>利用 EDA Playground 的新增檔案功能建立/加入 <code>gray.hex</code>，內容直接來自本機 <code>data/gray.hex</code>。</p><div class="warn">65,536 行資料很多；若線上平台或瀏覽器對大檔案不方便，Part 2 的整張圖片 Simulation 以本機 Icarus 為主，EDA Playground 建議用小尺寸/抽樣 pixel 驗證。</div></div></div>
+<div class="step"><div class="num">4</div><div class="box"><b>設定 Simulator</b><pre><code>Language: SystemVerilog/Verilog
+Tools &amp; Simulators: Icarus Verilog 12.0</code></pre><p>整張圖第一次不建議開 EPWave，避免 VCD 太大。</p></div></div>
+<div class="step"><div class="num">5</div><div class="box"><b>Run</b><p>目標是讓 Testbench 讀完所有 grayscale pixels 並輸出 binary result。若平台可下載輸出檔，再把結果拿回本機執行 <code>rebuild_and_compare.py</code>。</p></div></div>
+<div class="key"><b>建議：</b>Part 2 完整 65,536 pixels 以本機 Icarus 為主；EDA Playground 用來示範相同 RTL / Testbench 概念，以及抽樣波形。Part 3 再使用 EDA Playground + Yosys 做 Synthesis。</div>
+</section>
+
+<section><h2>6. 驗證分工</h2><table><tr><th>階段</th><th>檔案</th><th>目的</th></tr><tr><td>Preprocess + Golden</td><td>prepare_image.py</td><td>BMP → Gray → gray.hex + golden_binary.txt</td></tr><tr><td>RTL</td><td>design.sv</td><td>clocked threshold comparator</td></tr><tr><td>Local Testbench</td><td>testbench_image.sv</td><td><code>$readmemh("../data/gray.hex")</code>；送 65,536 pixels</td></tr><tr><td>EDA Playground Testbench</td><td>testbench_image_edaplayground.sv</td><td><code>$readmemh("gray.hex")</code></td></tr><tr><td>Compare</td><td>rebuild_and_compare.py</td><td>重建 RTL Binary PNG + pixel-by-pixel compare</td></tr></table></section>
+<section id="codes"><h2>7. Code Files</h2>
+<h3>design.sv</h3><pre><button onclick="copy(this)">Copy</button><code>`timescale 1ns/1ps
+module binarization(
+ input wire clk, input wire rst_n, input wire [7:0] pix_in,
+ input wire [7:0] threshold, output reg pix_out
+);
+always @(posedge clk or negedge rst_n) begin
+ if(!rst_n) pix_out &lt;= 1'b0;
+ else if(pix_in &gt;= threshold) pix_out &lt;= 1'b1;
+ else pix_out &lt;= 1'b0;
+end
+endmodule</code></pre>
+<h3>testbench_image.sv（Local PC）</h3><pre><button onclick="copy(this)">Copy</button><code>`timescale 1ns/1ps
+module tb_binarization_image;
+localparam N = 65536;
+reg clk, rst_n;
+reg [7:0] pix_in, threshold;
+wire pix_out;
+reg [7:0] img_mem [0:N-1];
+integer i, fout;
+binarization dut(.clk(clk),.rst_n(rst_n),.pix_in(pix_in),.threshold(threshold),.pix_out(pix_out));
+initial clk=0; always #5 clk=~clk;
+initial begin
+  $readmemh("../data/gray.hex", img_mem);
+  fout=$fopen("rtl_binary.txt","w");
+  threshold=8'd128; rst_n=0; pix_in=0; #12 rst_n=1;
+  for(i=0;i&lt;N;i=i+1) begin
+    @(negedge clk); pix_in=img_mem[i];
+    @(posedge clk); #1; $fwrite(fout,"%0d
+",pix_out);
+  end
+  $fclose(fout);
+  $display("Processed %0d pixels. Done.",N);
+  #10 $finish;
+end
+endmodule</code></pre>
+<h3>EDA Playground 版最重要差異</h3><pre><code>$readmemh("gray.hex", img_mem);</code></pre><p>其餘 RTL 與測試流程相同。</p></section>
+<section id="pass"><h2>8. 最終 PASS 應該看到</h2><pre><code>Total pixels    : 65536
+Matched pixels  : 65536
+Mismatch pixels : 0
+Accuracy        : 100.00%
+Result          : PASS</code></pre><p class="key">完成 Part 2 後，再進 Part 3：Technology Mapping → Gate-Level Netlist → Gate-Level Simulation，並用同一張圖片再次驗證。</p></section>
+</main><script>async function copy(b){let t=b.parentElement.querySelector('code').innerText;try{await navigator.clipboard.writeText(t)}catch(e){let x=document.createElement('textarea');x.value=t;document.body.appendChild(x);x.select();document.execCommand('copy');x.remove()}b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1200)}</script></body></html>

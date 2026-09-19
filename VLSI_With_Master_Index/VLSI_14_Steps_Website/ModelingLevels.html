@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ModelingLevels.html — Verilog 描述階層完整教學</title>
+<style>
+:root{
+  --bg:#f4f7fb; --card:#ffffff; --text:#1f2937; --muted:#64748b;
+  --blue:#2563eb; --cyan:#0891b2; --green:#059669; --orange:#d97706;
+  --red:#dc2626; --purple:#7c3aed; --line:#dbe3ec; --code:#0f172a;
+  --soft:#f8fafc; --accent:#14b8a6;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;
+  line-height:1.78;
+}
+header{
+  background:linear-gradient(135deg,#1e3a8a 0%,#0f766e 58%,#115e59 100%);
+  color:#fff;padding:52px 24px 46px;
+}
+header .inner{max-width:1180px;margin:auto}
+header h1{margin:0 0 8px;font-size:2.3rem;letter-spacing:.3px}
+header p{max-width:960px;margin:7px 0;opacity:.96}
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.pill{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);padding:5px 10px;border-radius:999px;font-size:.9rem}
+.wrap{max-width:1180px;margin:auto;padding:28px 20px 80px}
+.card{
+  background:var(--card);border-radius:18px;padding:26px;margin:22px 0;
+  box-shadow:0 8px 28px rgba(15,23,42,.07);
+}
+h2{margin:0 0 16px;color:#134e4a;border-left:6px solid var(--accent);padding-left:12px}
+h3{color:#1d4ed8;margin-top:26px}
+h4{color:#7c3aed;margin:22px 0 8px}
+a{color:#0f766e}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{
+  background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;
+  overflow:auto;line-height:1.55;position:relative;margin:12px 0 18px;
+}
+.inline{background:#e2e8f0;padding:2px 6px;border-radius:6px;font-family:Consolas,monospace}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}
+th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{
+  padding:14px 16px;border-radius:10px;margin:16px 0;
+}
+.note{background:#fff7ed;border-left:5px solid #f59e0b}
+.tip{background:#eff6ff;border-left:5px solid #3b82f6}
+.warn{background:#fef2f2;border-left:5px solid #ef4444}
+.key{background:#ecfdf5;border-left:5px solid #10b981}
+.toc ol{columns:2;column-gap:36px}
+.toc li{margin:7px 0;break-inside:avoid}
+.toc a{text-decoration:none}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mini{
+  background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px;
+}
+.badge{
+  display:inline-block;padding:3px 9px;border-radius:999px;background:#e0f2fe;
+  color:#075985;font-size:.84rem;margin-left:6px
+}
+.level-flow{
+  display:flex;align-items:stretch;justify-content:center;gap:9px;flex-wrap:wrap;margin:22px 0;
+}
+.level{
+  flex:1 1 155px;min-width:145px;max-width:210px;text-align:center;padding:15px 12px;
+  border:2px solid #67e8f9;background:#ecfeff;border-radius:14px;font-weight:700;
+}
+.level small{display:block;color:#475569;font-weight:500;margin-top:5px}
+.arrow{font-size:1.6rem;align-self:center;color:#64748b}
+.compare{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:16px 0
+}
+.compare .c{border:1px solid var(--line);border-radius:14px;padding:15px;background:#fff}
+.c.struct{border-top:5px solid #f59e0b}
+.c.data{border-top:5px solid #3b82f6}
+.c.behav{border-top:5px solid #10b981}
+.diagram{
+  background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0;
+}
+.logic{
+  display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;
+  font-family:Consolas,monospace;font-weight:700
+}
+.logic .block{padding:12px 16px;border-radius:10px;border:2px solid #94a3b8;background:#fff}
+.logic .wire{font-size:1.5rem;color:#64748b}
+.copy-btn{
+  float:right;border:0;border-radius:8px;padding:6px 10px;background:#334155;color:white;
+  cursor:pointer;font-size:.8rem
+}
+.copy-btn:hover{background:#475569}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.tabbtn{
+  border:1px solid #cbd5e1;background:#fff;border-radius:9px;padding:8px 12px;cursor:pointer;
+  font-weight:700;color:#334155
+}
+.tabbtn.active{background:#0f766e;color:#fff;border-color:#0f766e}
+.tabpanel{display:none}
+.tabpanel.active{display:block}
+.quiz{
+  border:1px dashed #94a3b8;border-radius:14px;padding:16px;background:#fff;margin:12px 0
+}
+.quiz summary{cursor:pointer;font-weight:700;color:#1e40af}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.kpi div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px}
+.kpi b{display:block;font-size:1.35rem;color:#0f766e}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+.sticky{
+  position:sticky;top:0;z-index:20;background:rgba(244,247,251,.94);backdrop-filter:blur(8px);
+  border-bottom:1px solid #dbe3ec
+}
+.sticky .bar{max-width:1180px;margin:auto;padding:8px 20px;display:flex;gap:12px;overflow:auto;white-space:nowrap}
+.sticky a{text-decoration:none;font-size:.9rem;padding:5px 9px;border-radius:8px}
+.sticky a:hover{background:#e2e8f0}
+@media(max-width:820px){
+  .toc ol{columns:1}.compare{grid-template-columns:1fr}header h1{font-size:1.8rem}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <h1>Verilog 描述階層（Modeling Levels）完整教學</h1>
+    <p>
+      從 <b>Structural / Gate-Level</b>、<b>Dataflow</b> 到 <b>Behavioral / RTL</b>，
+      用同一個電路反覆改寫，理解「越高階越描述功能、越低階越接近硬體結構」。
+    </p>
+    <p>本頁特別加入大量 Verilog 範例、等價寫法、合成後硬體直覺、常見錯誤與練習。</p>
+    <div class="pills">
+      <span class="pill">Structural / Gate-Level</span>
+      <span class="pill">Dataflow / assign</span>
+      <span class="pill">Behavioral / always</span>
+      <span class="pill">RTL / Sequential Logic</span>
+      <span class="pill">Synthesis</span>
+    </div>
+  </div>
+</header>
+
+<nav class="sticky">
+  <div class="bar">
+    <a href="#bigpicture">總覽</a>
+    <a href="#structural">Structural</a>
+    <a href="#dataflow">Dataflow</a>
+    <a href="#behavioral">Behavioral</a>
+    <a href="#rtl">RTL</a>
+    <a href="#samefunction">同功能三種寫法</a>
+    <a href="#examples">大量例子</a>
+    <a href="#synthesis">合成觀念</a>
+    <a href="#pitfalls">常見錯誤</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section class="card toc">
+  <h2>目錄</h2>
+  <ol>
+    <li><a href="#bigpicture">Modeling Levels 到底是什麼？</a></li>
+    <li><a href="#abstraction">從 Specification 到 Layout 的抽象層級</a></li>
+    <li><a href="#structural">Structural / Gate-Level</a></li>
+    <li><a href="#dataflow">Dataflow Level</a></li>
+    <li><a href="#behavioral">Behavioral Level</a></li>
+    <li><a href="#rtl">RTL 與 Behavioral 的關係</a></li>
+    <li><a href="#samefunction">同一功能三種描述方式</a></li>
+    <li><a href="#examples">大量 Verilog 範例</a></li>
+    <li><a href="#combinational-sequential">組合邏輯 vs. 時序邏輯</a></li>
+    <li><a href="#synthesis">Synthesis 如何理解這些描述</a></li>
+    <li><a href="#choose">實務上該選哪一層？</a></li>
+    <li><a href="#pitfalls">常見錯誤與考試重點</a></li>
+  </ol>
+</section>
+
+<section class="card" id="bigpicture">
+  <h2>1. Modeling Levels 到底是什麼？</h2>
+  <p>
+    Verilog 可以用不同「抽象程度」描述同一個數位電路。最重要的差別不是語法漂亮與否，而是：
+    <b>你要告訴工具多少硬體結構細節？</b>
+  </p>
+
+  <div class="level-flow">
+    <div class="level">Behavioral / RTL<small>描述「做什麼」</small></div>
+    <div class="arrow">→</div>
+    <div class="level">Dataflow<small>描述「資料如何運算」</small></div>
+    <div class="arrow">→</div>
+    <div class="level">Structural / Gate<small>描述「由哪些元件組成」</small></div>
+    <div class="arrow">→</div>
+    <div class="level">Transistor / Layout<small>接近實體 IC</small></div>
+  </div>
+
+  <div class="key">
+    <b>核心直覺：</b>
+    Behavioral / RTL 越像在說明功能；Gate-Level 越像在畫電路圖。
+    最後 synthesis 會把可合成的高階描述轉成由 Standard Cells 組成的 Gate-Level Netlist。
+  </div>
+
+  <table>
+    <tr><th>層級</th><th>主要問題</th><th>典型 Verilog</th><th>設計者控制程度</th></tr>
+    <tr><td>Behavioral</td><td>這個電路要「做什麼」？</td><td>always, if, case, for</td><td>低層細節少、功能意圖高</td></tr>
+    <tr><td>RTL</td><td>每個 clock 之間資料如何流動與被暫存？</td><td>always @(posedge clk), reg, mux, arithmetic</td><td>架構控制很高</td></tr>
+    <tr><td>Dataflow</td><td>輸出和輸入之間的邏輯/算術關係是什麼？</td><td>assign, ?:, +, &, |, ^</td><td>中等</td></tr>
+    <tr><td>Structural / Gate</td><td>到底用了哪些 gate / module，怎麼接？</td><td>and, or, not, xor, module instances</td><td>非常高</td></tr>
+  </table>
+</section>
+
+<section class="card" id="abstraction">
+  <h2>2. 從 Specification 到 Layout：Modeling Level 在整個 IC 流程的位置</h2>
+  <div class="diagram">
+    <div class="level-flow">
+      <div class="level">Specification<small>需求、功能、介面</small></div>
+      <div class="arrow">↓</div>
+      <div class="level">Behavior<small>演算法 / 行為</small></div>
+      <div class="arrow">↓</div>
+      <div class="level">RTL<small>register + combinational logic</small></div>
+      <div class="arrow">↓</div>
+      <div class="level">Gate<small>standard cells</small></div>
+      <div class="arrow">↓</div>
+      <div class="level">Circuit / Layout<small>transistor / geometry</small></div>
+    </div>
+  </div>
+  <p>
+    對數位 IC 課程來說，你最常寫的是 <b>RTL</b>。Gate-Level 通常由 synthesis 工具產生；
+    Layout 再由 P&amp;R 工具完成。因此學 Modeling Levels 的目的，是理解：
+    <b>同一個邏輯功能可以由不同抽象層級表示，而且高階描述最後仍會被實作成真實 gates。</b>
+  </p>
+</section>
+
+<section class="card" id="structural">
+  <h2>3. Structural / Gate-Level Modeling</h2>
+  <p>
+    Structural modeling 就像「在 Verilog 裡畫 schematic」。你明確列出 AND、OR、NOT、XOR、NAND，
+    或者例化其他 modules，並用 wires 把它們接起來。
+  </p>
+
+  <h3>3.1 最基本範例：f = (x1 &amp; x2) | (~x2 &amp; x3)</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module logic_structural (
+    input  x1, x2, x3,
+    output f
+);
+    wire g, k, h;
+
+    and (g, x1, x2);   // g = x1 & x2
+    not (k, x2);       // k = ~x2
+    and (h, k, x3);    // h = ~x2 & x3
+    or  (f, g, h);     // f = g | h
+endmodule</code></pre>
+
+  <div class="logic">
+    <span class="block">x1,x2 → AND → g</span><span class="wire">↘</span>
+    <span class="block">OR → f</span>
+    <span class="wire">↗</span><span class="block">x2 → NOT, 與 x3 → AND → h</span>
+  </div>
+
+  <h3>3.2 Structural 不一定只用 primitive gates</h3>
+  <p>你也可以例化自己寫的 module。這是「階層式設計（hierarchical design）」的核心。</p>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module half_adder(
+    input  a, b,
+    output sum, carry
+);
+    xor (sum, a, b);
+    and (carry, a, b);
+endmodule
+
+module full_adder_struct(
+    input  a, b, cin,
+    output sum, cout
+);
+    wire s1, c1, c2;
+
+    half_adder HA0(.a(a),  .b(b),   .sum(s1),  .carry(c1));
+    half_adder HA1(.a(s1), .b(cin), .sum(sum), .carry(c2));
+
+    or (cout, c1, c2);
+endmodule</code></pre>
+
+  <div class="tip">
+    <b>何時適合 Structural？</b> 教 gate-level、做特殊 datapath、例化 IP / memory / standard-cell-like block、
+    或當你真的需要控制硬體結構時。
+  </div>
+</section>
+
+<section class="card" id="dataflow">
+  <h2>4. Dataflow Modeling</h2>
+  <p>
+    Dataflow 主要透過 <span class="inline">assign</span> 與運算式直接描述訊號之間的關係。
+    它非常適合組合邏輯。你不需要手動拆成每一顆 gate，synthesis 會幫你完成。
+  </p>
+
+  <h3>4.1 同一個邏輯函數</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module logic_dataflow (
+    input  x1, x2, x3,
+    output f
+);
+    assign f = (x1 & x2) | (~x2 & x3);
+endmodule</code></pre>
+
+  <h3>4.2 2-to-1 MUX</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module mux2_dataflow(
+    input  a, b, sel,
+    output y
+);
+    assign y = sel ? b : a;
+endmodule</code></pre>
+  <p><b>硬體直覺：</b><span class="inline">?:</span> 通常會合成成 multiplexer。</p>
+
+  <h3>4.3 4-bit Adder</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module add4_dataflow(
+    input  [3:0] a, b,
+    input        cin,
+    output [3:0] sum,
+    output       cout
+);
+    assign {cout, sum} = a + b + cin;
+endmodule</code></pre>
+
+  <h3>4.4 Comparator</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module compare8(
+    input  [7:0] a, b,
+    output       gt, eq, lt
+);
+    assign gt = (a > b);
+    assign eq = (a == b);
+    assign lt = (a < b);
+endmodule</code></pre>
+
+  <h3>4.5 Decoder</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module decoder2to4(
+    input  [1:0] a,
+    output [3:0] y
+);
+    assign y = 4'b0001 << a;
+endmodule</code></pre>
+
+  <div class="key">
+    Dataflow 的重要觀念是「連續指定」：右邊的輸入只要改變，左邊的 net 就重新求值。
+    它不是 CPU 逐行執行程式，而是在描述持續存在的硬體關係。
+  </div>
+</section>
+
+<section class="card" id="behavioral">
+  <h2>5. Behavioral Modeling</h2>
+  <p>
+    Behavioral modeling 直接描述「如果發生某個條件，輸出應該怎麼變」。
+    常見語法是 <span class="inline">always</span>、<span class="inline">if</span>、
+    <span class="inline">case</span>、<span class="inline">for</span>。
+  </p>
+
+  <h3>5.1 2-to-1 MUX：if / else</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module mux2_behavioral(
+    input  a, b, sel,
+    output reg y
+);
+    always @(*) begin
+        if (sel)
+            y = b;
+        else
+            y = a;
+    end
+endmodule</code></pre>
+
+  <h3>5.2 4-to-1 MUX：case</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module mux4_behavioral(
+    input  [3:0] d,
+    input  [1:0] sel,
+    output reg   y
+);
+    always @(*) begin
+        case (sel)
+            2'b00: y = d[0];
+            2'b01: y = d[1];
+            2'b10: y = d[2];
+            2'b11: y = d[3];
+        endcase
+    end
+endmodule</code></pre>
+
+  <h3>5.3 Priority Encoder：if / else-if</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module priority_encoder4(
+    input  [3:0] req,
+    output reg [1:0] code,
+    output reg       valid
+);
+    always @(*) begin
+        valid = 1'b1;
+
+        if      (req[3]) code = 2'd3;
+        else if (req[2]) code = 2'd2;
+        else if (req[1]) code = 2'd1;
+        else if (req[0]) code = 2'd0;
+        else begin
+            code  = 2'd0;
+            valid = 1'b0;
+        end
+    end
+endmodule</code></pre>
+
+  <div class="note">
+    <b>重要：</b> Behavioral 不代表「不能合成」。只要使用的是 synthesizable subset，
+    behavioral / RTL code 一樣可以合成成真實硬體。
+  </div>
+</section>
+
+<section class="card" id="rtl">
+  <h2>6. RTL（Register-Transfer Level）與 Behavioral 的關係</h2>
+  <p>
+    RTL 可以視為「可合成 Behavioral modeling 中最重要的一種設計風格」。
+    它明確表達兩件事：<b>register 在哪裡</b>，以及 <b>register 之間的 combinational logic 是什麼</b>。
+  </p>
+
+  <div class="diagram">
+    <div class="logic">
+      <span class="block">Register A</span><span class="wire">→</span>
+      <span class="block">Combinational Logic<br>+ / MUX / ALU</span><span class="wire">→</span>
+      <span class="block">Register B</span>
+    </div>
+    <p style="text-align:center;margin-bottom:0;color:#64748b">每一個 clock edge 把新資料存入下一級 register。</p>
+  </div>
+
+  <h3>6.1 D Flip-Flop</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module dff(
+    input  clk,
+    input  d,
+    output reg q
+);
+    always @(posedge clk) begin
+        q <= d;
+    end
+endmodule</code></pre>
+
+  <h3>6.2 帶 reset 的 8-bit Register</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module reg8(
+    input        clk,
+    input        rst_n,
+    input  [7:0] d,
+    output reg [7:0] q
+);
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            q <= 8'h00;
+        else
+            q <= d;
+    end
+endmodule</code></pre>
+
+  <h3>6.3 Counter</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module counter8(
+    input        clk,
+    input        rst_n,
+    input        en,
+    output reg [7:0] count
+);
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            count <= 8'd0;
+        else if (en)
+            count <= count + 1'b1;
+    end
+endmodule</code></pre>
+
+  <h3>6.4 Shift Register</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module shift4(
+    input        clk,
+    input        rst_n,
+    input        din,
+    output reg [3:0] q
+);
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            q <= 4'b0000;
+        else
+            q <= {q[2:0], din};
+    end
+endmodule</code></pre>
+
+  <div class="warn">
+    在 clocked always block 中，通常使用 <b>nonblocking assignment</b>：
+    <span class="inline">&lt;=</span>。這樣能正確表達「所有 flip-flops 在同一個 clock edge 同步更新」。
+  </div>
+</section>
+
+<section class="card" id="samefunction">
+  <h2>7. 同一個功能，用三種 Modeling Level 改寫</h2>
+
+  <h3>例 1：2-to-1 MUX</h3>
+  <div class="tabs">
+    <button class="tabbtn active" onclick="showTab('mux','m1',this)">Structural</button>
+    <button class="tabbtn" onclick="showTab('mux','m2',this)">Dataflow</button>
+    <button class="tabbtn" onclick="showTab('mux','m3',this)">Behavioral</button>
+  </div>
+  <div id="m1" class="tabpanel mux active">
+<pre><code>module mux2_struct(input a,b,sel, output y);
+    wire nsel, w0, w1;
+    not (nsel, sel);
+    and (w0, a, nsel);
+    and (w1, b, sel);
+    or  (y, w0, w1);
+endmodule</code></pre>
+  </div>
+  <div id="m2" class="tabpanel mux">
+<pre><code>module mux2_df(input a,b,sel, output y);
+    assign y = sel ? b : a;
+endmodule</code></pre>
+  </div>
+  <div id="m3" class="tabpanel mux">
+<pre><code>module mux2_beh(input a,b,sel, output reg y);
+    always @(*) begin
+        if (sel) y = b;
+        else     y = a;
+    end
+endmodule</code></pre>
+  </div>
+
+  <p>
+    這三段 code 在功能上可以完全相同，但抽象層級不同。Structural 明確指名 gate；
+    Dataflow 直接寫 Boolean / conditional expression；Behavioral 用程序式敘述表達條件。
+  </p>
+
+  <h3>例 2：1-bit Full Adder</h3>
+  <div class="compare">
+    <div class="c struct">
+      <h4>Structural</h4>
+<pre><code>xor (sum, a, b, cin);
+and (c1, a, b);
+and (c2, a, cin);
+and (c3, b, cin);
+or  (cout, c1, c2, c3);</code></pre>
+    </div>
+    <div class="c data">
+      <h4>Dataflow</h4>
+<pre><code>assign sum  = a ^ b ^ cin;
+assign cout = (a & b) |
+              (a & cin) |
+              (b & cin);</code></pre>
+    </div>
+    <div class="c behav">
+      <h4>Behavioral</h4>
+<pre><code>always @(*) begin
+    {cout, sum} = a + b + cin;
+end</code></pre>
+    </div>
+  </div>
+
+  <div class="key">
+    <b>最值得記住：</b>不是哪一種寫法「比較硬體」才叫 Verilog。
+    三種都是硬體描述；差別是你把多少低階結構交給 synthesis tool 決定。
+  </div>
+</section>
+
+<section class="card" id="examples">
+  <h2>8. 大量範例：看到題目時，如何選 Modeling Style？</h2>
+
+  <h3>8.1 AND / OR / NOT 邏輯</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>// Gate
+and (w1, a, b);
+not (w2, c);
+or  (y, w1, w2);
+
+// Dataflow
+assign y = (a & b) | ~c;
+
+// Behavioral
+always @(*) begin
+    y = (a & b) | ~c;
+end</code></pre>
+
+  <h3>8.2 8-bit ALU</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module alu8(
+    input  [7:0] a, b,
+    input  [2:0] op,
+    output reg [7:0] y
+);
+    always @(*) begin
+        case (op)
+            3'b000: y = a + b;
+            3'b001: y = a - b;
+            3'b010: y = a & b;
+            3'b011: y = a | b;
+            3'b100: y = a ^ b;
+            3'b101: y = a << 1;
+            3'b110: y = a >> 1;
+            default: y = 8'h00;
+        endcase
+    end
+endmodule</code></pre>
+  <p>這是典型 Behavioral / RTL combinational logic，<span class="inline">case</span> 多半對應到 mux + arithmetic / logic units。</p>
+
+  <h3>8.3 Signed / Unsigned Max</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>// unsigned compare
+assign max_u = (a > b) ? a : b;
+
+// signed compare
+wire signed [7:0] as = a;
+wire signed [7:0] bs = b;
+assign max_s = (as > bs) ? as : bs;</code></pre>
+
+  <h3>8.4 8-bit Population Count（for loop）</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module popcount8(
+    input  [7:0] x,
+    output reg [3:0] count
+);
+    integer i;
+    always @(*) begin
+        count = 0;
+        for (i = 0; i < 8; i = i + 1)
+            count = count + x[i];
+    end
+endmodule</code></pre>
+  <div class="tip">
+    固定邊界的 synthesizable <span class="inline">for</span> loop 通常會在 synthesis 時展開成硬體。
+    它不是「只做一顆加法器，跑 8 個 clock」；除非你另外設計 FSM / counter 讓它逐 cycle 執行。
+  </div>
+
+  <h3>8.5 8-to-3 Encoder：case</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(*) begin
+    case (in)
+        8'b0000_0001: code = 3'd0;
+        8'b0000_0010: code = 3'd1;
+        8'b0000_0100: code = 3'd2;
+        8'b0000_1000: code = 3'd3;
+        8'b0001_0000: code = 3'd4;
+        8'b0010_0000: code = 3'd5;
+        8'b0100_0000: code = 3'd6;
+        8'b1000_0000: code = 3'd7;
+        default:      code = 3'd0;
+    endcase
+end</code></pre>
+
+  <h3>8.6 Saturating Adder</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>wire [8:0] temp;
+assign temp = a + b;
+assign y = temp[8] ? 8'hFF : temp[7:0];</code></pre>
+
+  <h3>8.7 Register with Enable</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        q <= 8'h00;
+    else if (en)
+        q <= d;
+end</code></pre>
+  <p>若 <span class="inline">en=0</span>，q 沒有被重新指定，這在 clocked block 中代表「保持原本 register 值」。</p>
+
+  <h3>8.8 Finite State Machine（FSM）</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module simple_fsm(
+    input  clk, rst_n, start, done,
+    output reg busy
+);
+    localparam IDLE = 1'b0,
+               RUN  = 1'b1;
+
+    reg state, next_state;
+
+    // state register
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            state <= IDLE;
+        else
+            state <= next_state;
+    end
+
+    // next-state logic
+    always @(*) begin
+        next_state = state;
+        case (state)
+            IDLE: if (start) next_state = RUN;
+            RUN : if (done)  next_state = IDLE;
+        endcase
+    end
+
+    // output logic
+    always @(*) begin
+        busy = (state == RUN);
+    end
+endmodule</code></pre>
+
+  <p>
+    FSM 是最典型的 RTL：一個 state register + 一段 combinational next-state logic + output logic。
+  </p>
+</section>
+
+<section class="card" id="combinational-sequential">
+  <h2>9. Modeling Level 與「組合 / 時序」不要混在一起</h2>
+  <p>
+    很多人會誤以為「Dataflow = 組合、Behavioral = 時序」。這是不對的。
+    <b>Modeling level</b> 是描述方式；<b>combinational / sequential</b> 是電路種類。
+  </p>
+  <table>
+    <tr><th></th><th>組合邏輯</th><th>時序邏輯</th></tr>
+    <tr>
+      <td>Dataflow</td>
+      <td>非常常見：<code>assign y = a & b;</code></td>
+      <td>通常不直接用 assign 來描述 flip-flop</td>
+    </tr>
+    <tr>
+      <td>Behavioral</td>
+      <td><code>always @(*)</code> + blocking <code>=</code></td>
+      <td><code>always @(posedge clk)</code> + nonblocking <code>&lt;=</code></td>
+    </tr>
+    <tr>
+      <td>Structural</td>
+      <td>例化 AND/OR/MUX</td>
+      <td>也能直接例化 DFF cells</td>
+    </tr>
+  </table>
+</section>
+
+<section class="card" id="synthesis">
+  <h2>10. Synthesis 如何看待不同 Modeling Levels？</h2>
+  <p>
+    Synthesis 不在乎你「寫得像 C 還是像 schematic」，它在乎：
+    <b>這段 HDL 能否對應成實際硬體，而且邏輯意圖是否明確。</b>
+  </p>
+
+  <div class="level-flow">
+    <div class="level">RTL / Behavioral / Dataflow<small>可合成 HDL</small></div>
+    <div class="arrow">→</div>
+    <div class="level">Elaboration<small>展開 hierarchy / parameters</small></div>
+    <div class="arrow">→</div>
+    <div class="level">Logic Optimization<small>Boolean / arithmetic optimization</small></div>
+    <div class="arrow">→</div>
+    <div class="level">Technology Mapping<small>映射到 standard cells</small></div>
+    <div class="arrow">→</div>
+    <div class="level">Gate-Level Netlist<small>INV / NAND / DFF / MUX...</small></div>
+  </div>
+
+  <h3>10.1 這三種可能合成到幾乎一樣的硬體</h3>
+<pre><code>// A
+assign y = (a & b) | (a & c);
+
+// B
+always @(*) begin
+    y = a & (b | c);
+end
+
+// C
+wire t;
+or  (t, b, c);
+and (y, a, t);</code></pre>
+  <p>
+    因為布林代數等價，工具通常會做最佳化。這就是為什麼高階 RTL 不需要手動把每個 gate 都「最佳化」到最底層。
+  </p>
+</section>
+
+<section class="card" id="choose">
+  <h2>11. 實務上到底該選哪一層？</h2>
+  <div class="kpi">
+    <div><b>90%+</b>一般 ASIC/FPGA RTL 寫作以 RTL / Behavioral + Dataflow 為主</div>
+    <div><b>assign</b>短小清楚的 combinational equations 很適合</div>
+    <div><b>always</b>複雜 mux、decoder、FSM、clocked register 更好讀</div>
+    <div><b>Structural</b>用於 hierarchy、IP integration、特殊 cell / memory instance</div>
+  </div>
+
+  <table>
+    <tr><th>情況</th><th>推薦</th><th>原因</th></tr>
+    <tr><td>簡單布林式</td><td>Dataflow</td><td>最簡潔</td></tr>
+    <tr><td>MUX / decoder / ALU 控制</td><td>Behavioral combinational</td><td>if/case 可讀性高</td></tr>
+    <tr><td>register / counter / pipeline</td><td>RTL sequential</td><td>清楚表達 clock edge</td></tr>
+    <tr><td>FSM</td><td>RTL</td><td>state register + next-state logic</td></tr>
+    <tr><td>例化 SRAM、IP、子模組</td><td>Structural</td><td>直接描述 hierarchy</td></tr>
+    <tr><td>post-synthesis netlist</td><td>Gate-Level</td><td>由工具產生 standard-cell instances</td></tr>
+  </table>
+</section>
+
+<section class="card" id="pitfalls">
+  <h2>12. 常見錯誤與考試重點</h2>
+
+  <h3>12.1 Behavioral 不是 software</h3>
+  <div class="warn">
+    Verilog 的 <code>if</code>、<code>case</code> 看起來像 C，但合成後通常變成 MUX、decoder、enable logic，
+    並不是「CPU 執行 if 敘述」。
+  </div>
+
+  <h3>12.2 Combinational always 必須完整賦值</h3>
+<pre><code>// 錯誤：sel=0 時沒有指定 y → 可能推導 latch
+always @(*) begin
+    if (sel)
+        y = a;
+end
+
+// 正確
+always @(*) begin
+    if (sel)
+        y = a;
+    else
+        y = b;
+end</code></pre>
+
+  <h3>12.3 Sequential 用 &lt;=，Combinational 常用 =</h3>
+<pre><code>// sequential
+always @(posedge clk)
+    q <= d;
+
+// combinational
+always @(*)
+    y = a & b;</code></pre>
+
+  <h3>12.4 wire / reg 的傳統 Verilog 觀念</h3>
+  <p>
+    傳統 Verilog 中，continuous assignment / module output connection 常使用 <code>wire</code>；
+    procedural block 內被賦值的變數使用 <code>reg</code>。但 <code>reg</code> 這個名字
+    <b>不保證一定合成成 register</b>，是否是 register 取決於你的描述方式。
+  </p>
+
+  <h3>12.5 Gate-Level 並不等於「手寫 gate 才是專業」</h3>
+  <p>
+    真正大型設計如果全部手寫 gate，維護、驗證與最佳化成本極高。現代數位 IC 設計的重點是：
+    <b>用清楚、可合成、可驗證的 RTL 表達架構，再讓 EDA 工具做 synthesis 與 mapping。</b>
+  </p>
+
+  <h3>12.6 快速自我測驗</h3>
+  <details class="quiz">
+    <summary>Q1：assign y = sel ? a : b; 大多會合成成什麼？</summary>
+    <p>2-to-1 Multiplexer。</p>
+  </details>
+  <details class="quiz">
+    <summary>Q2：always @(*) 是不是代表 flip-flop？</summary>
+    <p>不是。它通常表示 combinational procedural block；是否產生 latch 取決於是否有未完整賦值的路徑。</p>
+  </details>
+  <details class="quiz">
+    <summary>Q3：always @(posedge clk) q &lt;= d; 代表什麼？</summary>
+    <p>典型 edge-triggered D Flip-Flop。</p>
+  </details>
+  <details class="quiz">
+    <summary>Q4：Dataflow 一定比 Behavioral 更接近 gate 嗎？</summary>
+    <p>通常抽象程度可視為介於 gate 與 behavioral 之間，但 synthesis 會做最佳化，最終 netlist 不一定保留你原本運算式的表面結構。</p>
+  </details>
+</section>
+
+<section class="card">
+  <h2>13. 一頁記憶版</h2>
+  <div class="grid3">
+    <div class="mini">
+      <h3 style="margin-top:0;color:#d97706">Structural</h3>
+      <p><b>想像：</b>「我自己接 gates / modules。」</p>
+      <p><code>and</code>, <code>or</code>, <code>not</code>, instance</p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0;color:#2563eb">Dataflow</h3>
+      <p><b>想像：</b>「我寫出輸入到輸出的運算關係。」</p>
+      <p><code>assign</code>, operators, <code>?:</code></p>
+    </div>
+    <div class="mini">
+      <h3 style="margin-top:0;color:#059669">Behavioral / RTL</h3>
+      <p><b>想像：</b>「我描述功能、clock、state 與資料轉移。」</p>
+      <p><code>always</code>, <code>if</code>, <code>case</code>, <code>for</code></p>
+    </div>
+  </div>
+
+  <div class="key">
+    <b>最後一句：</b>
+    同一個 circuit 可以有多種 Verilog 寫法；真正重要的是功能是否正確、是否可合成、
+    推導出的硬體是否符合你的 architecture、timing、area、power 目標。
+  </div>
+</section>
+
+<div class="footer">
+  ModelingLevels.html — Verilog Modeling Levels 詳細教學頁
+</div>
+</main>
+
+<script>
+function copyCode(btn){
+  const pre = btn.parentElement;
+  const code = pre.querySelector("code").innerText;
+  navigator.clipboard.writeText(code).then(()=>{
+    const old=btn.innerText; btn.innerText="Copied!";
+    setTimeout(()=>btn.innerText=old,1200);
+  });
+}
+function showTab(group,id,btn){
+  document.querySelectorAll(".tabpanel."+group).forEach(x=>x.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  btn.parentElement.querySelectorAll(".tabbtn").forEach(x=>x.classList.remove("active"));
+  btn.classList.add("active");
+}
+</script>
+</body>
+</html>

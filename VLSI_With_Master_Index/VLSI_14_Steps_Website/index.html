@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VLSI System Design — 14 Steps 主學習網頁</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#64748b;--blue:#2563eb;--teal:#0f766e;--line:#dbe3ec}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;line-height:1.72}
+.hero{background:linear-gradient(135deg,#1e3a8a,#0f766e 62%,#115e59);color:white;padding:62px 24px 52px}
+.hero .inner,.wrap{max-width:1240px;margin:auto}
+.hero h1{font-size:2.4rem;margin:0 0 12px}
+.hero p{max-width:980px;margin:8px 0;opacity:.96}
+.badges{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
+.badge{padding:6px 11px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.12);border-radius:999px;font-size:.9rem}
+.wrap{padding:30px 22px 70px}
+.intro{background:white;border-radius:18px;padding:24px 26px;box-shadow:0 8px 28px rgba(15,23,42,.07);margin-bottom:26px}
+.intro h2{color:#134e4a;border-left:6px solid #14b8a6;padding-left:12px}
+.roadmap{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0}
+.node{padding:8px 12px;border-radius:10px;background:#ecfeff;border:1px solid #a5f3fc;font-weight:700;font-size:.9rem}
+.arr{color:#64748b;font-size:1.15rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:22px}
+.card{display:block;background:white;color:inherit;text-decoration:none;border-radius:18px;overflow:hidden;box-shadow:0 8px 28px rgba(15,23,42,.07);border:1px solid transparent;transition:.2s}
+.card:hover{transform:translateY(-5px);border-color:#99f6e4;box-shadow:0 15px 34px rgba(15,23,42,.12)}
+.card img{display:block;width:100%;aspect-ratio:5/3;object-fit:cover;background:#eef2ff}
+.card-body{padding:20px}
+.step{font-size:.78rem;letter-spacing:.09em;color:#0f766e;font-weight:800}
+.card h2{font-size:1.22rem;margin:7px 0 7px;color:#1e3a8a}
+.card p{color:var(--muted);margin:0 0 14px}
+.open{color:#0f766e;font-weight:800}
+.footer{text-align:center;color:#64748b;padding:28px 16px 48px}
+.note{background:#eff6ff;border-left:5px solid #3b82f6;border-radius:10px;padding:14px 16px;margin-top:18px}
+@media(max-width:700px){.hero h1{font-size:1.8rem}}
+</style>
+</head>
+<body>
+<section class="hero"><div class="inner">
+<h1>VLSI System Design：14 Steps 主學習網頁</h1>
+<p>這個首頁把前面完成的 14 個主題串成一條完整學習路徑，從 Verilog 描述層次、RTL coding，到 synthesis、standard cell、characterization、NLDM，最後進入完整 Digital IC Flow。</p>
+<p>每一張圖都是入口：點擊圖片或卡片，即可進入對應的詳細教學 HTML。</p>
+<div class="badges"><span class="badge">14 個完整教學</span><span class="badge">Verilog → RTL</span><span class="badge">RTL → Gate</span><span class="badge">Standard Cell</span><span class="badge">RTL → GDSII</span></div>
+</div></section>
+
+<main class="wrap">
+<section class="intro">
+<h2>整體學習路徑</h2>
+<p>前 8 步建立 Verilog / RTL 基礎；第 9～13 步進入 synthesis 與 standard-cell timing model；第 14 步將所有概念整合回完整數位 IC 設計流程。</p>
+<div class="roadmap">
+<span class="node">1–3 基礎描述</span><span class="arr">→</span>
+<span class="node">4–7 Behavioral RTL</span><span class="arr">→</span>
+<span class="node">8 可合成 RTL</span><span class="arr">→</span>
+<span class="node">9 Synthesis</span><span class="arr">→</span>
+<span class="node">10–13 Standard Cell & Timing</span><span class="arr">→</span>
+<span class="node">14 Digital IC Flow</span>
+</div>
+<div class="note"><b>使用方式：</b>可依序從 Step 01 開始，也可以直接點選你目前上課進度的主題。所有頁面都使用相同風格，方便連續閱讀。</div>
+</section>
+
+<section class="grid">
+
+    <a class="card" href="ModelingLevels.html">
+      <img src="images/step01.svg" alt="Step 1: Verilog 描述階層">
+      <div class="card-body">
+        <div class="step">STEP 01</div>
+        <h2>Verilog 描述階層</h2>
+        <p>Structural / Dataflow / Behavioral / RTL</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="WireReg_DataTypes.html">
+      <img src="images/step02.svg" alt="Step 2: wire 與 reg">
+      <div class="card-body">
+        <div class="step">STEP 02</div>
+        <h2>wire 與 reg</h2>
+        <p>基本資料型別與 driver 概念</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="ContinuousAssignment.html">
+      <img src="images/step03.svg" alt="Step 3: Continuous Assignment">
+      <div class="card-body">
+        <div class="step">STEP 03</div>
+        <h2>Continuous Assignment</h2>
+        <p>assign 與組合邏輯</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="InitialAlways_Blocks.html">
+      <img src="images/step04.svg" alt="Step 4: initial 與 always">
+      <div class="card-body">
+        <div class="step">STEP 04</div>
+        <h2>initial 與 always</h2>
+        <p>程序區塊與事件驅動</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="TimingControl.html">
+      <img src="images/step05.svg" alt="Step 5: Timing Control">
+      <div class="card-body">
+        <div class="step">STEP 05</div>
+        <h2>Timing Control</h2>
+        <p>#delay、@、posedge、negedge</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="BlockingNonblocking.html">
+      <img src="images/step06.svg" alt="Step 6: Blocking / Nonblocking">
+      <div class="card-body">
+        <div class="step">STEP 06</div>
+        <h2>Blocking / Nonblocking</h2>
+        <p>= 與 <= 的模擬語意</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="ControlStructures.html">
+      <img src="images/step07.svg" alt="Step 7: 控制結構">
+      <div class="card-body">
+        <div class="step">STEP 07</div>
+        <h2>控制結構</h2>
+        <p>if / case / casex / casez / for</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="SynthesizableVerilog.html">
+      <img src="images/step08.svg" alt="Step 8: Synthesizable Verilog">
+      <div class="card-body">
+        <div class="step">STEP 08</div>
+        <h2>Synthesizable Verilog</h2>
+        <p>可合成子集與 RTL coding style</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="RTL_to_Synthesis_to_GateLevelNetlist.html">
+      <img src="images/step09.svg" alt="Step 9: RTL → Synthesis → Gate">
+      <div class="card-body">
+        <div class="step">STEP 09</div>
+        <h2>RTL → Synthesis → Gate</h2>
+        <p>從 RTL 到 Gate-Level Netlist</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="StandardCellLibrary.html">
+      <img src="images/step10.svg" alt="Step 10: Standard Cell Library">
+      <div class="card-body">
+        <div class="step">STEP 10</div>
+        <h2>Standard Cell Library</h2>
+        <p>標準元件庫與 drive strength</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="StandardCellFileFormats.html">
+      <img src="images/step11.svg" alt="Step 11: Standard Cell 檔案格式">
+      <div class="card-body">
+        <div class="step">STEP 11</div>
+        <h2>Standard Cell 檔案格式</h2>
+        <p>.lib / .lef / .v / .gds / .cdl</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="CellCharacterization.html">
+      <img src="images/step12.svg" alt="Step 12: Cell Characterization">
+      <div class="card-body">
+        <div class="step">STEP 12</div>
+        <h2>Cell Characterization</h2>
+        <p>SPICE、PVT、delay、slew、power</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="NLDM.html">
+      <img src="images/step13.svg" alt="Step 13: NLDM">
+      <div class="card-body">
+        <div class="step">STEP 13</div>
+        <h2>NLDM</h2>
+        <p>Input Slew × Output Load → Delay</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+    <a class="card" href="DigitalICFlow.html">
+      <img src="images/step14.svg" alt="Step 14: Digital IC Flow">
+      <div class="card-body">
+        <div class="step">STEP 14</div>
+        <h2>Digital IC Flow</h2>
+        <p>Specification → GDSII / Fabrication</p>
+        <span class="open">開啟教學網頁 →</span>
+      </div>
+    </a>
+</section>
+</main>
+
+<div class="footer">VLSI System Design · 14-Step Interactive Learning Hub</div>
+</body>
+</html>

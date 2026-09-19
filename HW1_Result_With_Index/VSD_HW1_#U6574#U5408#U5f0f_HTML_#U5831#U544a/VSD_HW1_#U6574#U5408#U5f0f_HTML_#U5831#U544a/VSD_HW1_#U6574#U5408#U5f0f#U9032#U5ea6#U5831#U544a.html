@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VSD HW1｜作業題目 × RTL 程式 × 驗證結果整合報告</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#667085;--line:#d9e2ef;--blue:#175cd3;--green:#067647;--amber:#b54708;--red:#b42318;--code:#101828}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;line-height:1.72}
+header{padding:55px 22px;background:linear-gradient(135deg,#0b1220,#263a63);color:white}.wrap{max-width:1180px;margin:auto}
+h1{font-size:38px;margin:.2em 0}h2{border-bottom:2px solid #e7edf6;padding-bottom:9px}h3{margin-top:28px}.sub{opacity:.85}
+nav{position:sticky;top:0;z-index:5;background:#ffffffee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px}
+nav .wrap{display:flex;gap:8px;flex-wrap:wrap}nav a{padding:6px 10px;border-radius:8px;text-decoration:none;color:var(--blue);font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:25px;margin:20px 0;box-shadow:0 4px 18px #1018280a}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}.stat{padding:18px;border:1px solid var(--line);border-radius:13px;background:#fbfcfe}
+.ok{color:var(--green);font-weight:800}.wait{color:var(--amber);font-weight:800}.badge{display:inline-block;border-radius:999px;padding:3px 9px;background:#ecfdf3;color:var(--green);font-weight:800}
+table{border-collapse:collapse;width:100%;margin:15px 0}th,td{border:1px solid var(--line);padding:10px;vertical-align:top}th{background:#edf4ff;text-align:left}
+pre{background:var(--code);color:#e6edf3;border-radius:12px;padding:16px;overflow:auto;white-space:pre-wrap;font:13px/1.5 Consolas,monospace}
+details{margin:12px 0;border:1px solid var(--line);border-radius:12px;background:#fbfcfe;padding:10px 14px}summary{cursor:pointer;font-weight:800;color:var(--blue)}
+figure{margin:18px auto;text-align:center}figure img{max-width:100%;max-height:590px;border:1px solid var(--line);border-radius:12px;box-shadow:0 4px 14px #0001}figcaption{color:var(--muted);font-size:.92em;margin-top:6px}
+.flow{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;padding:15px}.node{padding:14px 12px;border-radius:12px;min-width:145px;text-align:center;font-weight:800;border:2px solid #84adff;background:#eff4ff}.done{border-color:#6ce9a6;background:#ecfdf3}.todo{border-color:#fec84b;background:#fffaeb}.arrow{font-size:25px;color:#667085}
+.note{padding:13px 16px;border-left:5px solid #2e90fa;background:#eff8ff;border-radius:8px}.success{border-left-color:#12b76a;background:#ecfdf3}.warning{border-left-color:#f79009;background:#fffaeb}
+.timeline{border-left:4px solid #b2ccff;padding-left:20px}.step{margin:16px 0}footer{text-align:center;color:var(--muted);padding:30px}
+@media(max-width:700px){h1{font-size:29px}.arrow{transform:rotate(90deg)}}
+</style></head>
+<body>
+<header><div class="wrap"><div>VLSI System Design 2026 Fall · HW1</div>
+<h1>作業題目 × 投影片 × RTL 程式 × HTML 驗證結果</h1>
+<div class="sub">整合式進度報告｜清楚對照「老師要求什麼 → 我完成了什麼 → 如何驗證 → 還缺什麼」</div></div></header>
+<nav><div class="wrap"><a href="#overview">總覽</a><a href="#problem">題目對照</a><a href="#alu">ALU</a><a href="#fpu">FPU</a><a href="#code">程式</a><a href="#verify">驗證</a><a href="#flow">流程圖</a><a href="#todo">未完成</a><a href="#appendix">原 HTML</a></div></nav>
+<main class="wrap">
+
+<section class="card" id="overview"><h2>1. 目前進度總覽</h2>
+<div class="grid">
+<div class="stat"><b>ALU Provided</b><br><span class="ok">ALL PASS</span><br>31 個 instruction groups</div>
+<div class="stat"><b>ALU Defense</b><br><span class="ok">44 / 44 PASS</span><br>額外 corner cases</div>
+<div class="stat"><b>FPU Provided</b><br><span class="ok">2000 / 2000 PASS</span></div>
+<div class="stat"><b>FPU Defense</b><br><span class="ok">27 / 27 PASS</span></div>
+<div class="stat"><b>Yosys / Verilator</b><br><span class="ok">本機交叉預檢完成</span></div>
+<div class="stat"><b>VCS / JasperGold</b><br><span class="wait">待 SoC Lab 正式驗證</span></div>
+</div>
+<div class="note success"><b>目前基準：</b>ModelSim 功能 regression 已完成；本機 Yosys / Verilator 也已做交叉預檢。現階段先鎖定 RTL，不因單一工具 warning 隨意改動，待 VCS / JasperGold Superlint 正式結果再決定是否需要最小修改。</div>
+<figure><img src="assets/slide_22.jpg" alt="Homework 總覽：Problem A ALU 與 Problem B FPU"><figcaption>Homework 總覽：Problem A ALU 與 Problem B FPU（作業投影片第 22 頁）</figcaption></figure>
+</section>
+
+<section class="card" id="problem"><h2>2. 老師作業題目與目前成果逐項對照</h2>
+<table><tr><th>官方要求</th><th>投影片規格</th><th>目前程式／成果</th><th>狀態</th></tr>
+<tr><td>32-bit ALU</td><td>RV32IM 14 + RV32B 12 + DSP 5 = 31 instructions</td><td>Src/ALU.sv 已完成 instruction decode 與 31 類運算；Provided tests 全 PASS</td><td class="ok">完成</td></tr>
+<tr><td>32-bit FPU</td><td>IEEE-754 single；ADD/SUB、MIN/MAX、special cases、normalization、GRS</td><td>Src/FPU.sv 含 fp_minmax 與 fp_addsub；Provided 2000/2000 PASS</td><td class="ok">完成</td></tr>
+<tr><td>Hidden cases</td><td>兩設計須通過 provided patterns 與 hidden test cases</td><td>自行建立 Defense：ALU 44/44、FPU 27/27；注意這不是老師真正 hidden tests</td><td class="ok">本機防禦完成</td></tr>
+<tr><td>VCS</td><td>課程指定正式 simulator</td><td>尚未回 SoC Lab 跑正式 VCS</td><td class="wait">待完成</td></tr>
+<tr><td>Superlint</td><td>jg -superlint superlint.tcl；coverage ≤80% 有扣分</td><td>已有 Superlint.tcl 與 HW1_lint_top；正式 JasperGold 尚未跑</td><td class="wait">待完成</td></tr>
+<tr><td>Report / submission</td><td>Report PDF + 指定 hierarchy + .tar</td><td>報告內容與本整合 HTML 已建立；最終 PDF/hierarchy/tar 尚需收尾</td><td class="wait">部分完成</td></tr></table>
+<figure><img src="assets/slide_23.jpg" alt="官方 File hierarchy"><figcaption>官方 File hierarchy（作業投影片第 23 頁）</figcaption></figure>
+<figure><img src="assets/slide_24.jpg" alt="官方 VCS 與 Superlint Commands"><figcaption>官方 VCS 與 Superlint Commands（作業投影片第 24 頁）</figcaption></figure>
+</section>
+
+<section class="card" id="alu"><h2>3. Problem A — ALU：投影片規格如何落到程式</h2>
+<figure><img src="assets/slide_02.jpg" alt="ALU 架構概念：RV32IM + RV32B + Custom DSP → 32-bit ALU"><figcaption>ALU 架構概念：RV32IM + RV32B + Custom DSP → 32-bit ALU（作業投影片第 2 頁）</figcaption></figure>
+<figure><img src="assets/slide_03.jpg" alt="ALU I/O Port 與 R-type instruction format"><figcaption>ALU I/O Port 與 R-type instruction format（作業投影片第 3 頁）</figcaption></figure>
+<h3>3.1 RV32IM 14 instructions</h3><figure><img src="assets/slide_04.jpg" alt="RV32IM 14 個運算規格"><figcaption>RV32IM 14 個運算規格（作業投影片第 4 頁）</figcaption></figure>
+<h3>3.2 RV32B 12 instructions</h3><figure><img src="assets/slide_05.jpg" alt="RV32B Standard Extension 12 個運算"><figcaption>RV32B Standard Extension 12 個運算（作業投影片第 5 頁）</figcaption></figure>
+<h3>3.3 DSP 5 instructions</h3><figure><img src="assets/slide_06.jpg" alt="DOTP4、SADD8、SSUB8、ABS、CLIP8"><figcaption>DOTP4、SADD8、SSUB8、ABS、CLIP8（作業投影片第 6 頁）</figcaption></figure>
+<div class="note"><b>程式對照：</b>ALU.sv 先解出 opcode / funct3 / funct7，再依 encoding 進入對應 case。shift amount 使用 src_B_i[4:0]；signed/unsigned comparison 分開；DSP lane 以 signed 8-bit 處理並做 saturation。</div>
+<details><summary>展開：ALU.sv 完整程式</summary><pre>module ALU (
+    input  logic [31:0] instruction_i,
+    input  logic [31:0] src_A_i,
+    input  logic [31:0] src_B_i,
+    output logic [31:0] result_o
+);
+    logic [6:0] opcode, funct7;
+    logic [2:0] funct3;
+    integer i;
+    integer cnt;
+    integer shamt;
+    logic signed [63:0] prod_ss;
+    logic signed [63:0] prod_su;
+    logic [63:0] prod_uu;
+    logic signed [31:0] dot_sum;
+    logic signed [8:0] lane_tmp;
+
+    always @* begin
+        opcode = instruction_i[6:0];
+        funct3 = instruction_i[14:12];
+        funct7 = instruction_i[31:25];
+        shamt  = src_B_i[4:0];
+        result_o = 32&#x27;b0;
+        prod_ss = $signed(src_A_i) * $signed(src_B_i);
+        prod_su = $signed(src_A_i) * $signed({1&#x27;b0,src_B_i});
+        prod_uu = src_A_i * src_B_i;
+        dot_sum = 0;
+        lane_tmp = 0;
+
+        if (opcode == 7&#x27;b0110011) begin
+            case (funct7)
+                7&#x27;b0000000: begin
+                    case (funct3)
+                        3&#x27;b000: result_o = src_A_i + src_B_i;                         // ADD
+                        3&#x27;b001: result_o = src_A_i &lt;&lt; shamt;                          // SLL
+                        3&#x27;b010: result_o = ($signed(src_A_i) &lt; $signed(src_B_i));      // SLT
+                        3&#x27;b011: result_o = (src_A_i &lt; src_B_i);                        // SLTU
+                        3&#x27;b100: result_o = src_A_i ^ src_B_i;                          // XOR
+                        3&#x27;b101: result_o = src_A_i &gt;&gt; shamt;                           // SRL
+                        3&#x27;b110: result_o = src_A_i | src_B_i;                          // OR
+                        3&#x27;b111: result_o = src_A_i &amp; src_B_i;                          // AND
+                        default: result_o = 0;
+                    endcase
+                end
+                7&#x27;b0100000: begin
+                    case (funct3)
+                        3&#x27;b000: result_o = src_A_i - src_B_i;                          // SUB
+                        3&#x27;b101: result_o = $signed(src_A_i) &gt;&gt;&gt; shamt;                 // SRA
+                        default: result_o = 0;
+                    endcase
+                end
+                7&#x27;b0000001: begin
+                    case (funct3)
+                        3&#x27;b000: result_o = prod_uu[31:0];                              // MUL
+                        3&#x27;b001: result_o = prod_ss[63:32];                             // MULH
+                        3&#x27;b010: result_o = prod_su[63:32];                             // MULHSU
+                        3&#x27;b011: result_o = prod_uu[63:32];                             // MULHU
+                        default: result_o = 0;
+                    endcase
+                end
+                7&#x27;b0110000: begin
+                    case (funct3)
+                        3&#x27;b001: result_o = (src_A_i &lt;&lt; shamt) | (src_A_i &gt;&gt; ((32-shamt)&amp;31)); // ROL
+                        3&#x27;b101: result_o = (src_A_i &gt;&gt; shamt) | (src_A_i &lt;&lt; ((32-shamt)&amp;31)); // ROR
+                        default: result_o = 0;
+                    endcase
+                end
+                7&#x27;b0000101: begin
+                    case (funct3)
+                        3&#x27;b100: result_o = ($signed(src_A_i) &lt; $signed(src_B_i)) ? src_A_i : src_B_i; // MIN
+                        3&#x27;b110: result_o = ($signed(src_A_i) &gt; $signed(src_B_i)) ? src_A_i : src_B_i; // MAX
+                        3&#x27;b101: result_o = (src_A_i &lt; src_B_i) ? src_A_i : src_B_i;                    // MINU
+                        3&#x27;b111: result_o = (src_A_i &gt; src_B_i) ? src_A_i : src_B_i;                    // MAXU
+                        default: result_o = 0;
+                    endcase
+                end
+                7&#x27;b0010100: if (funct3==3&#x27;b001) result_o = src_A_i | (32&#x27;b1 &lt;&lt; shamt); // BSET
+                7&#x27;b0100100: begin
+                    if (funct3==3&#x27;b001) result_o = src_A_i &amp; ~(32&#x27;b1 &lt;&lt; shamt);        // BCLR
+                    else if (funct3==3&#x27;b101) result_o = (src_A_i &gt;&gt; shamt) &amp; 32&#x27;b1;    // BEXT
+                end
+                default: result_o = 0;
+            endcase
+        end else if (opcode == 7&#x27;b0010011 &amp;&amp; funct7 == 7&#x27;b0110000 &amp;&amp; funct3 == 3&#x27;b001) begin
+            cnt = 0;
+            if (instruction_i[24:20] == 5&#x27;b00000) begin                               // CLZ
+                cnt = 32;
+                for (i=31; i&gt;=0; i=i-1) if (src_A_i[i] &amp;&amp; cnt==32) cnt = 31-i;
+                result_o = cnt;
+            end else if (instruction_i[24:20] == 5&#x27;b00001) begin                      // CTZ
+                cnt = 32;
+                for (i=0; i&lt;32; i=i+1) if (src_A_i[i] &amp;&amp; cnt==32) cnt = i;
+                result_o = cnt;
+            end else if (instruction_i[24:20] == 5&#x27;b00010) begin                      // CPOP
+                cnt = 0;
+                for (i=0; i&lt;32; i=i+1) cnt = cnt + src_A_i[i];
+                result_o = cnt;
+            end
+        end else if (opcode == 7&#x27;b0001011 &amp;&amp; funct7 == 7&#x27;b0000000) begin
+            case (funct3)
+                3&#x27;b000: begin                                                         // DOTP4
+                    dot_sum = $signed(src_A_i[7:0])   * $signed(src_B_i[7:0]) +
+                              $signed(src_A_i[15:8])  * $signed(src_B_i[15:8]) +
+                              $signed(src_A_i[23:16]) * $signed(src_B_i[23:16]) +
+                              $signed(src_A_i[31:24]) * $signed(src_B_i[31:24]);
+                    result_o = dot_sum;
+                end
+                3&#x27;b001: begin                                                         // SADD8
+                    for (i=0; i&lt;4; i=i+1) begin
+                        lane_tmp = $signed(src_A_i[i*8 +: 8]) + $signed(src_B_i[i*8 +: 8]);
+                        if (lane_tmp &gt; 127) result_o[i*8 +: 8] = 8&#x27;h7f;
+                        else if (lane_tmp &lt; -128) result_o[i*8 +: 8] = 8&#x27;h80;
+                        else result_o[i*8 +: 8] = lane_tmp[7:0];
+                    end
+                end
+                3&#x27;b010: begin                                                         // SSUB8
+                    for (i=0; i&lt;4; i=i+1) begin
+                        lane_tmp = $signed(src_A_i[i*8 +: 8]) - $signed(src_B_i[i*8 +: 8]);
+                        if (lane_tmp &gt; 127) result_o[i*8 +: 8] = 8&#x27;h7f;
+                        else if (lane_tmp &lt; -128) result_o[i*8 +: 8] = 8&#x27;h80;
+                        else result_o[i*8 +: 8] = lane_tmp[7:0];
+                    end
+                end
+                3&#x27;b011: begin                                                         // ABS
+                    if (src_A_i == 32&#x27;h80000000) result_o = 32&#x27;h7fffffff;
+                    else if (src_A_i[31]) result_o = (~src_A_i) + 1&#x27;b1;
+                    else result_o = src_A_i;
+                end
+                3&#x27;b100: begin                                                         // CLIP8
+                    if ($signed(src_A_i) &gt; 127) result_o = 32&#x27;h0000007f;
+                    else if ($signed(src_A_i) &lt; -128) result_o = 32&#x27;hffffff80;
+                    else result_o = {{24{src_A_i[7]}},src_A_i[7:0]};
+                end
+                default: result_o = 0;
+            endcase
+        end
+    end
+endmodule
+</pre></details>
+</section>
+
+<section class="card" id="fpu"><h2>4. Problem B — FPU：IEEE-754 流程與程式對照</h2>
+<figure><img src="assets/slide_09.jpg" alt="IEEE-754 single precision：1 sign + 8 exponent + 23 fraction"><figcaption>IEEE-754 single precision：1 sign + 8 exponent + 23 fraction（作業投影片第 9 頁）</figcaption></figure>
+<figure><img src="assets/slide_10.jpg" alt="Mantissa 與 Guard / Round / Sticky bits"><figcaption>Mantissa 與 Guard / Round / Sticky bits（作業投影片第 10 頁）</figcaption></figure>
+<figure><img src="assets/slide_11.jpg" alt="Round-to-even 規則"><figcaption>Round-to-even 規則（作業投影片第 11 頁）</figcaption></figure>
+<figure><img src="assets/slide_12.jpg" alt="FPU Architecture：Adder ADD/SUB + Comparator MIN/MAX + MUX"><figcaption>FPU Architecture：Adder ADD/SUB + Comparator MIN/MAX + MUX（作業投影片第 12 頁）</figcaption></figure>
+<figure><img src="assets/slide_13.jpg" alt="FPU I/O Port"><figcaption>FPU I/O Port（作業投影片第 13 頁）</figcaption></figure>
+<h3>4.1 ADD/SUB 三階段</h3>
+<div class="flow"><div class="node done">Unpack<br>SEF / Special</div><div class="arrow">→</div><div class="node done">Align +<br>Add/Sub</div><div class="arrow">→</div><div class="node done">Normalize<br>+ GRS Round</div><div class="arrow">→</div><div class="node done">Repack<br>co / valid</div></div>
+<figure><img src="assets/slide_14.jpg" alt="Step 1：Unpacking 與 NaN / Inf / Zero 分類"><figcaption>Step 1：Unpacking 與 NaN / Inf / Zero 分類（作業投影片第 14 頁）</figcaption></figure>
+<figure><img src="assets/slide_15.jpg" alt="Step 2：Exponent alignment、mantissa ADD/SUB 與 special cases"><figcaption>Step 2：Exponent alignment、mantissa ADD/SUB 與 special cases（作業投影片第 15 頁）</figcaption></figure>
+<figure><img src="assets/slide_16.jpg" alt="Step 3：Normalize、GRS rounding、repack"><figcaption>Step 3：Normalize、GRS rounding、repack（作業投影片第 16 頁）</figcaption></figure>
+<div class="note"><b>程式對照：</b>fp_minmax() 處理 MIN/MAX、NaN 與 ±0；fp_addsub() 先調整 SUB 的第二運算元符號，再分類 special cases、對齊 exponent、做 significand 加減、normalization、GRS ties-to-even rounding，最後重新封裝 IEEE-754 32-bit 結果。</div>
+<details><summary>展開：FPU.sv 完整程式</summary><pre>module FPU(
+    input  logic        clk,
+    input  logic        rst,
+    input  logic        enable,
+    input  logic [1:0]  instruction,
+    input  logic [31:0] ai,
+    input  logic [31:0] bi,
+    output logic [31:0] co,
+    output logic        valid
+);
+
+function automatic [31:0] fp_minmax;
+    input [31:0] a, b;
+    input is_max;
+    reg a_nan,b_nan;
+    begin
+        a_nan = (&amp;a[30:23]) &amp;&amp; (|a[22:0]);
+        b_nan = (&amp;b[30:23]) &amp;&amp; (|b[22:0]);
+        if (a_nan || b_nan) fp_minmax = 32&#x27;hFFC00000;
+        else if ((a[30:0]==0) &amp;&amp; (b[30:0]==0)) begin
+            if (is_max) fp_minmax = (a[31] &amp; b[31]) ? 32&#x27;h80000000 : 32&#x27;h00000000;
+            else        fp_minmax = (a[31] | b[31]) ? 32&#x27;h80000000 : 32&#x27;h00000000;
+        end else if (a == b) fp_minmax = a;
+        else if (a[31] != b[31]) begin
+            if (is_max) fp_minmax = a[31] ? b : a;
+            else        fp_minmax = a[31] ? a : b;
+        end else if (!a[31]) begin
+            if (is_max) fp_minmax = (a[30:0] &gt; b[30:0]) ? a : b;
+            else        fp_minmax = (a[30:0] &lt; b[30:0]) ? a : b;
+        end else begin
+            if (is_max) fp_minmax = (a[30:0] &lt; b[30:0]) ? a : b;
+            else        fp_minmax = (a[30:0] &gt; b[30:0]) ? a : b;
+        end
+    end
+endfunction
+
+function automatic [31:0] fp_addsub;
+    input [31:0] a_in, b_in;
+    input sub;
+    reg [31:0] a,b;
+    reg sa,sb,sr;
+    reg [7:0] ea,eb;
+    reg [22:0] fa,fb;
+    reg a_nan,b_nan,a_inf,b_inf,a_zero,b_zero;
+    integer exa,exb,er,diff,k;
+    reg [26:0] ma,mb;
+    reg [27:0] sum;
+    reg [26:0] mr;
+    reg sticky;
+    reg guardb,roundb,stickyb,lsb,round_up;
+    reg [24:0] rounded;
+    begin
+        a = a_in;
+        b = b_in;
+        b[31] = b_in[31] ^ sub;
+        sa=a[31]; sb=b[31]; ea=a[30:23]; eb=b[30:23]; fa=a[22:0]; fb=b[22:0];
+        a_nan=(&amp;ea)&amp;&amp;(|fa); b_nan=(&amp;eb)&amp;&amp;(|fb);
+        a_inf=(&amp;ea)&amp;&amp;(~|fa); b_inf=(&amp;eb)&amp;&amp;(~|fb);
+        a_zero=(a[30:0]==0); b_zero=(b[30:0]==0);
+
+        if (a_nan || b_nan) fp_addsub=32&#x27;hFFC00000;
+        else if (a_inf &amp;&amp; b_inf &amp;&amp; (sa!=sb)) fp_addsub=32&#x27;hFFC00000;
+        else if (a_inf) fp_addsub={sa,8&#x27;hff,23&#x27;b0};
+        else if (b_inf) fp_addsub={sb,8&#x27;hff,23&#x27;b0};
+        else if (a_zero &amp;&amp; b_zero) fp_addsub={(sa &amp; sb),31&#x27;b0};
+        else if (a_zero) fp_addsub=b;
+        else if (b_zero) fp_addsub=a;
+        else begin
+            exa = (ea==0) ? 1 : ea;
+            exb = (eb==0) ? 1 : eb;
+            ma = {(ea!=0),fa,3&#x27;b000};
+            mb = {(eb!=0),fb,3&#x27;b000};
+            er = exa;
+            if (exa &gt; exb) begin
+                diff=exa-exb; er=exa;
+                if (diff &gt;= 27) mb = (mb!=0);
+                else begin
+                    sticky=0;
+                    for(k=0;k&lt;27;k=k+1) if(k&lt;diff) sticky=sticky|mb[k];
+                    mb=mb&gt;&gt;diff; mb[0]=mb[0]|sticky;
+                end
+            end else if (exb &gt; exa) begin
+                diff=exb-exa; er=exb;
+                if (diff &gt;= 27) ma = (ma!=0);
+                else begin
+                    sticky=0;
+                    for(k=0;k&lt;27;k=k+1) if(k&lt;diff) sticky=sticky|ma[k];
+                    ma=ma&gt;&gt;diff; ma[0]=ma[0]|sticky;
+                end
+            end
+
+            if (sa==sb) begin
+                sum={1&#x27;b0,ma}+{1&#x27;b0,mb}; sr=sa;
+                if(sum[27]) begin
+                    sticky=sum[0];
+                    mr=sum[27:1]; mr[0]=mr[0]|sticky; er=er+1;
+                end else mr=sum[26:0];
+            end else begin
+                if(ma&gt;mb) begin mr=ma-mb; sr=sa; end
+                else if(mb&gt;ma) begin mr=mb-ma; sr=sb; end
+                else begin mr=0; sr=0; end
+                while((mr[26]==0) &amp;&amp; (mr!=0) &amp;&amp; (er&gt;1)) begin mr=mr&lt;&lt;1; er=er-1; end
+            end
+
+            if(mr==0) fp_addsub=32&#x27;h00000000;
+            else if(er&gt;=255) fp_addsub={sr,8&#x27;hff,23&#x27;b0};
+            else begin
+                // If exponent is at the minimum, hidden bit may be zero (subnormal).
+                guardb=mr[2]; roundb=mr[1]; stickyb=mr[0]; lsb=mr[3];
+                round_up=guardb &amp;&amp; (roundb || stickyb || lsb);
+                rounded={1&#x27;b0,mr[26:3]} + round_up;
+                if(rounded[24]) begin rounded=rounded&gt;&gt;1; er=er+1; end
+                if(er&gt;=255) fp_addsub={sr,8&#x27;hff,23&#x27;b0};
+                else if((er==1) &amp;&amp; (rounded[23]==0)) fp_addsub={sr,8&#x27;h00,rounded[22:0]};
+                else fp_addsub={sr,er[7:0],rounded[22:0]};
+            end
+        end
+    end
+endfunction
+
+reg [31:0] next_result;
+always @* begin
+    case(instruction)
+        2&#x27;d0: next_result = fp_minmax(ai,bi,1&#x27;b0);
+        2&#x27;d1: next_result = fp_minmax(ai,bi,1&#x27;b1);
+        2&#x27;d2: next_result = fp_addsub(ai,bi,1&#x27;b0);
+        2&#x27;d3: next_result = fp_addsub(ai,bi,1&#x27;b1);
+        default: next_result = 32&#x27;b0;
+    endcase
+end
+
+always @(posedge clk) begin
+    if (rst) begin co&lt;=0; valid&lt;=0; end
+    else begin
+        valid &lt;= enable;
+        if(enable) co &lt;= next_result;
+    end
+end
+endmodule
+</pre></details>
+</section>
+
+<section class="card" id="code"><h2>5. 已完成的程式與測試檔案</h2>
+<table><tr><th>檔案</th><th>用途</th><th>目前狀態</th></tr>
+<tr><td>Src/ALU.sv</td><td>31 種 ALU operation RTL</td><td class="ok">完成並通過 ModelSim regression</td></tr>
+<tr><td>Src/FPU.sv</td><td>MIN/MAX、ADD/SUB、special case、normalize、GRS</td><td class="ok">完成並通過 2000 patterns</td></tr>
+<tr><td>Src/HW1_lint_top.sv</td><td>整合 ALU/FPU，供 lint hierarchy 預檢</td><td class="ok">完成</td></tr>
+<tr><td>Sim/ALU_tb.sv / FPU_tb.sv</td><td>Provided pattern simulation</td><td class="ok">已執行</td></tr>
+<tr><td>Sim/*_hidden_defense_tb.sv</td><td>額外 corner-case defense</td><td class="ok">71/71 targeted cases</td></tr>
+<tr><td>Sim/Superlint.tcl</td><td>JasperGold Superlint script</td><td class="wait">檔案完成，正式工具待跑</td></tr></table>
+<details><summary>HW1_lint_top.sv</summary><pre>module HW1_lint_top(
+    input  logic        clk,
+    input  logic        rst,
+    input  logic        enable,
+    input  logic [1:0]  fpu_instruction,
+    input  logic [31:0] instruction_i,
+    input  logic [31:0] src_A_i,
+    input  logic [31:0] src_B_i,
+    input  logic [31:0] ai,
+    input  logic [31:0] bi,
+    output logic [31:0] alu_result_o,
+    output logic [31:0] fpu_co,
+    output logic        fpu_valid
+);
+ALU u_alu(.instruction_i(instruction_i),.src_A_i(src_A_i),.src_B_i(src_B_i),.result_o(alu_result_o));
+FPU u_fpu(.clk(clk),.rst(rst),.enable(enable),.instruction(fpu_instruction),.ai(ai),.bi(bi),.co(fpu_co),.valid(fpu_valid));
+endmodule
+</pre></details>
+<details><summary>ALU_hidden_defense_tb.sv</summary><pre>`timescale 1ns/1ps
+`include &quot;../Src/ALU.sv&quot;
+module tb_ALU_hidden_defense;
+  logic [31:0] instruction_i, src_A_i, src_B_i;
+  wire  [31:0] result_o;
+  integer total, pass, fail;
+  ALU dut(.instruction_i(instruction_i),.src_A_i(src_A_i),.src_B_i(src_B_i),.result_o(result_o));
+
+  task check;
+    input [255:0] name;
+    input [31:0] inst,a,b,exp;
+    begin
+      instruction_i=inst; src_A_i=a; src_B_i=b; #1; total=total+1;
+      if (result_o === exp) begin pass=pass+1; $display(&quot;[PASS] %0s&quot;,name); end
+      else begin fail=fail+1; $display(&quot;[FAIL] %0s A=%h B=%h GOT=%h EXP=%h&quot;,name,a,b,result_o,exp); end
+    end
+  endtask
+
+  initial begin total=0; pass=0; fail=0;
+    $display(&quot;============================================&quot;);
+    $display(&quot;       ALU HIDDEN-TEST DEFENSE&quot;);
+    $display(&quot;============================================&quot;);
+    // RV32I boundaries
+    check(&quot;ADD wrap INT_MAX+1&quot;,32&#x27;h002081b3,32&#x27;h7fffffff,32&#x27;h00000001,32&#x27;h80000000);
+    check(&quot;ADD wrap FFFFFFFF+1&quot;,32&#x27;h002081b3,32&#x27;hffffffff,32&#x27;h00000001,32&#x27;h00000000);
+    check(&quot;SUB wrap INT_MIN-1&quot;,32&#x27;h402081b3,32&#x27;h80000000,32&#x27;h00000001,32&#x27;h7fffffff);
+    check(&quot;SLT signed -1 &lt; +1&quot;,32&#x27;h0020a1b3,32&#x27;hffffffff,32&#x27;h00000001,32&#x27;h00000001);
+    check(&quot;SLTU unsigned FFFFFFFF &lt; 1&quot;,32&#x27;h0020b1b3,32&#x27;hffffffff,32&#x27;h00000001,32&#x27;h00000000);
+    check(&quot;SLL shamt=0&quot;,32&#x27;h002091b3,32&#x27;h12345678,32&#x27;h00000000,32&#x27;h12345678);
+    check(&quot;SLL shamt=31&quot;,32&#x27;h002091b3,32&#x27;h00000001,32&#x27;h0000001f,32&#x27;h80000000);
+    check(&quot;SLL rs2=32 masks to 0&quot;,32&#x27;h002091b3,32&#x27;h12345678,32&#x27;h00000020,32&#x27;h12345678);
+    check(&quot;SRL rs2=63 masks to 31&quot;,32&#x27;h0020d1b3,32&#x27;h80000000,32&#x27;h0000003f,32&#x27;h00000001);
+    check(&quot;SRA negative shamt=31&quot;,32&#x27;h4020d1b3,32&#x27;h80000000,32&#x27;h0000001f,32&#x27;hffffffff);
+    check(&quot;SRA negative shamt=1&quot;,32&#x27;h4020d1b3,32&#x27;h80000000,32&#x27;h00000001,32&#x27;hc0000000);
+    // M extension
+    check(&quot;MUL low signed pattern&quot;,32&#x27;h022081b3,32&#x27;hffffffff,32&#x27;h00000002,32&#x27;hfffffffe);
+    check(&quot;MULH -1 * 2&quot;,32&#x27;h022091b3,32&#x27;hffffffff,32&#x27;h00000002,32&#x27;hffffffff);
+    check(&quot;MULHSU -1 * FFFFFFFF&quot;,32&#x27;h0220a1b3,32&#x27;hffffffff,32&#x27;hffffffff,32&#x27;hffffffff);
+    check(&quot;MULHU max*max&quot;,32&#x27;h0220b1b3,32&#x27;hffffffff,32&#x27;hffffffff,32&#x27;hfffffffe);
+    // unary bit-count
+    check(&quot;CLZ zero&quot;,32&#x27;h60009193,32&#x27;h00000000,32&#x27;h00000000,32&#x27;h00000020);
+    check(&quot;CLZ MSB&quot;,32&#x27;h60009193,32&#x27;h80000000,32&#x27;h00000000,32&#x27;h00000000);
+    check(&quot;CTZ zero&quot;,32&#x27;h60109193,32&#x27;h00000000,32&#x27;h00000000,32&#x27;h00000020);
+    check(&quot;CTZ bit31&quot;,32&#x27;h60109193,32&#x27;h80000000,32&#x27;h00000000,32&#x27;h0000001f);
+    check(&quot;CPOP zero&quot;,32&#x27;h60209193,32&#x27;h00000000,32&#x27;h00000000,32&#x27;h00000000);
+    check(&quot;CPOP all ones&quot;,32&#x27;h60209193,32&#x27;hffffffff,32&#x27;h00000000,32&#x27;h00000020);
+    // rotate / minmax / bit ops
+    check(&quot;ROL shamt=0&quot;,32&#x27;h602091b3,32&#x27;h89abcdef,32&#x27;h00000000,32&#x27;h89abcdef);
+    check(&quot;ROL shamt=31&quot;,32&#x27;h602091b3,32&#x27;h00000001,32&#x27;h0000001f,32&#x27;h80000000);
+    check(&quot;ROR shamt=0&quot;,32&#x27;h6020d1b3,32&#x27;h89abcdef,32&#x27;h00000000,32&#x27;h89abcdef);
+    check(&quot;ROR shamt=31&quot;,32&#x27;h6020d1b3,32&#x27;h00000001,32&#x27;h0000001f,32&#x27;h00000002);
+    check(&quot;MIN signed INT_MIN&quot;,32&#x27;h0a20c1b3,32&#x27;h80000000,32&#x27;h7fffffff,32&#x27;h80000000);
+    check(&quot;MAX signed&quot;,32&#x27;h0a20e1b3,32&#x27;hffffffff,32&#x27;h00000001,32&#x27;h00000001);
+    check(&quot;MINU unsigned&quot;,32&#x27;h0a20d1b3,32&#x27;hffffffff,32&#x27;h00000001,32&#x27;h00000001);
+    check(&quot;MAXU unsigned&quot;,32&#x27;h0a20f1b3,32&#x27;hffffffff,32&#x27;h00000001,32&#x27;hffffffff);
+    check(&quot;BSET bit31&quot;,32&#x27;h282091b3,32&#x27;h00000000,32&#x27;h0000001f,32&#x27;h80000000);
+    check(&quot;BCLR bit31&quot;,32&#x27;h482091b3,32&#x27;hffffffff,32&#x27;h0000001f,32&#x27;h7fffffff);
+    check(&quot;BEXT bit31&quot;,32&#x27;h4820d1b3,32&#x27;h80000000,32&#x27;h0000001f,32&#x27;h00000001);
+    // custom DSP
+    check(&quot;DOTP4 all +1&quot;,32&#x27;h0020818b,32&#x27;h01010101,32&#x27;h01010101,32&#x27;h00000004);
+    check(&quot;DOTP4 all -128&quot;,32&#x27;h0020818b,32&#x27;h80808080,32&#x27;h80808080,32&#x27;h00010000);
+    check(&quot;SADD8 positive saturation&quot;,32&#x27;h0020918b,32&#x27;h7f7f7f7f,32&#x27;h01010101,32&#x27;h7f7f7f7f);
+    check(&quot;SADD8 negative saturation&quot;,32&#x27;h0020918b,32&#x27;h80808080,32&#x27;hffffffff,32&#x27;h80808080);
+    check(&quot;SSUB8 positive saturation&quot;,32&#x27;h0020a18b,32&#x27;h7f7f7f7f,32&#x27;hffffffff,32&#x27;h7f7f7f7f);
+    check(&quot;SSUB8 negative saturation&quot;,32&#x27;h0020a18b,32&#x27;h80808080,32&#x27;h01010101,32&#x27;h80808080);
+    check(&quot;ABS zero&quot;,32&#x27;h0000b18b,32&#x27;h00000000,32&#x27;h00000000,32&#x27;h00000000);
+    check(&quot;ABS -1&quot;,32&#x27;h0000b18b,32&#x27;hffffffff,32&#x27;h00000000,32&#x27;h00000001);
+    check(&quot;ABS INT_MIN saturates&quot;,32&#x27;h0000b18b,32&#x27;h80000000,32&#x27;h00000000,32&#x27;h7fffffff);
+    check(&quot;CLIP8 +128&quot;,32&#x27;h0000c18b,32&#x27;h00000080,32&#x27;h00000000,32&#x27;h0000007f);
+    check(&quot;CLIP8 -129&quot;,32&#x27;h0000c18b,32&#x27;hffffff7f,32&#x27;h00000000,32&#x27;hffffff80);
+    check(&quot;CLIP8 -1&quot;,32&#x27;h0000c18b,32&#x27;hffffffff,32&#x27;h00000000,32&#x27;hffffffff);
+    $display(&quot;============================================&quot;);
+    $display(&quot;TOTAL=%0d PASS=%0d FAIL=%0d&quot;,total,pass,fail);
+    if(fail==0) $display(&quot;ALL ALU DEFENSE TESTS PASS&quot;); else $display(&quot;ALU DEFENSE HAS FAILURES&quot;);
+    $display(&quot;============================================&quot;); $finish;
+  end
+endmodule
+</pre></details>
+<details><summary>FPU_hidden_defense_tb.sv</summary><pre>`timescale 1ns/1ps
+`include &quot;../Src/FPU.sv&quot;
+module tb_FPU_hidden_defense;
+  logic clk,rst,enable; logic [1:0] instruction; logic [31:0] ai,bi; wire [31:0] co; wire valid;
+  integer total,pass,fail;
+  FPU dut(.clk(clk),.rst(rst),.enable(enable),.instruction(instruction),.ai(ai),.bi(bi),.co(co),.valid(valid));
+  initial begin clk=0; forever #5 clk=~clk; end
+  task check;
+    input [255:0] name; input [1:0] op; input [31:0] a,b,exp;
+    begin
+      @(negedge clk); instruction=op; ai=a; bi=b; enable=1;
+      @(posedge clk); #1;
+      if(valid!==1&#x27;b1) begin total=total+1; fail=fail+1; $display(&quot;[FAIL] %0s valid=%b expected=1&quot;,name,valid); end
+      else begin total=total+1; if(co===exp) begin pass=pass+1; $display(&quot;[PASS] %0s&quot;,name); end
+      else begin fail=fail+1; $display(&quot;[FAIL] %0s A=%h B=%h GOT=%h EXP=%h&quot;,name,a,b,co,exp); end end
+      @(negedge clk); enable=0;
+    end
+  endtask
+  initial begin
+    total=0;pass=0;fail=0; enable=0; instruction=0; ai=0;bi=0; rst=1;
+    repeat(2) @(posedge clk); @(negedge clk); rst=0;
+    $display(&quot;============================================&quot;); $display(&quot;       FPU HIDDEN-TEST DEFENSE&quot;); $display(&quot;============================================&quot;);
+    // ADD (2)
+    check(&quot;ADD 1.0 + 1.0&quot;,2,32&#x27;h3f800000,32&#x27;h3f800000,32&#x27;h40000000);
+    check(&quot;ADD cancellation 1 + -1&quot;,2,32&#x27;h3f800000,32&#x27;hbf800000,32&#x27;h00000000);
+    check(&quot;ADD +Inf + -Inf =&gt; NaN&quot;,2,32&#x27;h7f800000,32&#x27;hff800000,32&#x27;hffc00000);
+    check(&quot;ADD NaN canonical&quot;,2,32&#x27;h7fc00001,32&#x27;h3f800000,32&#x27;hffc00000);
+    check(&quot;ADD +0 + -0 =&gt; +0&quot;,2,32&#x27;h00000000,32&#x27;h80000000,32&#x27;h00000000);
+    check(&quot;ADD -0 + -0 =&gt; -0&quot;,2,32&#x27;h80000000,32&#x27;h80000000,32&#x27;h80000000);
+    check(&quot;ADD zero passthrough&quot;,2,32&#x27;h00000000,32&#x27;hbf800000,32&#x27;hbf800000);
+    check(&quot;ADD overflow =&gt; +Inf&quot;,2,32&#x27;h7f7fffff,32&#x27;h7f7fffff,32&#x27;h7f800000);
+    check(&quot;ADD smallest subnormals&quot;,2,32&#x27;h00000001,32&#x27;h00000001,32&#x27;h00000002);
+    check(&quot;ADD tie-even keep even&quot;,2,32&#x27;h3f800000,32&#x27;h33800000,32&#x27;h3f800000);
+    check(&quot;ADD tie-even round odd up&quot;,2,32&#x27;h3f800001,32&#x27;h33800000,32&#x27;h3f800002);
+    // SUB (3)
+    check(&quot;SUB 1.0 - 1.0&quot;,3,32&#x27;h3f800000,32&#x27;h3f800000,32&#x27;h00000000);
+    check(&quot;SUB 1.0 - -1.0&quot;,3,32&#x27;h3f800000,32&#x27;hbf800000,32&#x27;h40000000);
+    check(&quot;SUB +Inf - +Inf =&gt; NaN&quot;,3,32&#x27;h7f800000,32&#x27;h7f800000,32&#x27;hffc00000);
+    check(&quot;SUB +Inf - -Inf =&gt; +Inf&quot;,3,32&#x27;h7f800000,32&#x27;hff800000,32&#x27;h7f800000);
+    check(&quot;SUB +0 - +0 =&gt; +0&quot;,3,32&#x27;h00000000,32&#x27;h00000000,32&#x27;h00000000);
+    check(&quot;SUB -0 - +0 =&gt; -0&quot;,3,32&#x27;h80000000,32&#x27;h00000000,32&#x27;h80000000);
+    // MIN (0) / MAX (1)
+    check(&quot;MIN +0,-0 =&gt; -0&quot;,0,32&#x27;h00000000,32&#x27;h80000000,32&#x27;h80000000);
+    check(&quot;MAX +0,-0 =&gt; +0&quot;,1,32&#x27;h00000000,32&#x27;h80000000,32&#x27;h00000000);
+    check(&quot;MIN -2,+1&quot;,0,32&#x27;hc0000000,32&#x27;h3f800000,32&#x27;hc0000000);
+    check(&quot;MAX -2,+1&quot;,1,32&#x27;hc0000000,32&#x27;h3f800000,32&#x27;h3f800000);
+    check(&quot;MIN two negatives&quot;,0,32&#x27;hc0400000,32&#x27;hc0000000,32&#x27;hc0400000);
+    check(&quot;MAX two negatives&quot;,1,32&#x27;hc0400000,32&#x27;hc0000000,32&#x27;hc0000000);
+    check(&quot;MIN NaN canonical&quot;,0,32&#x27;h7fc12345,32&#x27;h3f800000,32&#x27;hffc00000);
+    check(&quot;MAX NaN canonical&quot;,1,32&#x27;h3f800000,32&#x27;hffc12345,32&#x27;hffc00000);
+    // protocol: valid should follow enable on next sampled clock
+    @(negedge clk); enable=0; ai=32&#x27;h3f800000; bi=32&#x27;h3f800000; instruction=2;
+    @(posedge clk); #1; total=total+1; if(valid===0) begin pass=pass+1;$display(&quot;[PASS] valid low when enable low&quot;);end else begin fail=fail+1;$display(&quot;[FAIL] valid low when enable low&quot;);end
+    @(negedge clk); rst=1; @(posedge clk); #1; total=total+1; if(valid===0 &amp;&amp; co===0) begin pass=pass+1;$display(&quot;[PASS] reset clears valid/co&quot;);end else begin fail=fail+1;$display(&quot;[FAIL] reset valid=%b co=%h&quot;,valid,co);end rst=0;
+    $display(&quot;============================================&quot;); $display(&quot;TOTAL=%0d PASS=%0d FAIL=%0d&quot;,total,pass,fail);
+    if(fail==0) $display(&quot;ALL FPU DEFENSE TESTS PASS&quot;); else $display(&quot;FPU DEFENSE HAS FAILURES - inspect first FAIL before editing RTL&quot;);
+    $display(&quot;============================================&quot;); $finish;
+  end
+endmodule
+</pre></details>
+<details><summary>Superlint.tcl</summary><pre>clear -all
+analyze -sv ../Src/ALU.sv ../Src/FPU.sv ../Src/HW1_lint_top.sv
+elaborate -top HW1_lint_top
+clock clk
+reset rst
+check_superlint -extract
+</pre></details>
+</section>
+
+<section class="card" id="verify"><h2>6. 已完成驗證結果：從功能模擬到本機交叉預檢</h2>
+<h3>6.1 ModelSim — 功能正確性基準</h3>
+<table><tr><th>模組</th><th>測試</th><th>結果</th></tr>
+<tr><td>ALU</td><td>Provided</td><td class="ok">Instruction 0～30 ALL PASS</td></tr>
+<tr><td>ALU</td><td>Defense</td><td class="ok">44 / 44 PASS</td></tr>
+<tr><td>FPU</td><td>Provided</td><td class="ok">TOTAL=2000 PASS=2000 FAIL=0</td></tr>
+<tr><td>FPU</td><td>Defense</td><td class="ok">27 / 27 PASS</td></tr></table>
+<pre>ALU：Simulation PASS!!  / Instruction 0 ~ 30 ALL PASS
+FPU：TOTAL=2000 PASS=2000 FAIL=0
+ALU Defense：TOTAL=44 PASS=44 FAIL=0
+FPU Defense：TOTAL=27 PASS=27 FAIL=0</pre>
+<h3>6.2 Yosys</h3>
+<p>ALU parsing / hierarchy / synthesis 完成，CHECK = 0 problems；另記錄 i/cnt 相關 3 個 latch warnings。FPU 在 fp_addsub runtime function elaboration 遇到 Yosys frontend constant-argument limitation，因此不以此判定 FPU 功能錯誤。</p>
+<h3>6.3 Verilator</h3>
+<p>ALU module lint 記錄 6 個 width/unused warnings；FPU 記錄 4 個 width warnings。HW1_lint_top 三檔整合可完整 elaboration；使用 -Wno-fatal 後成功跑至 Verilation Report，保留 10 warnings，未出現真正 fatal error。</p>
+<figure><img src="assets/slide_20.jpg" alt="投影片 Data transfer：reset 後 enable 拉高並輸入資料"><figcaption>投影片 Data transfer：reset 後 enable 拉高並輸入資料（作業投影片第 20 頁）</figcaption></figure>
+<figure><img src="assets/slide_21.jpg" alt="投影片 Data transfer：valid 拉高後與 golden result 比對"><figcaption>投影片 Data transfer：valid 拉高後與 golden result 比對（作業投影片第 21 頁）</figcaption></figure>
+</section>
+
+<section class="card" id="flow"><h2>7. 從拿到作業到現在：完整流程圖</h2>
+<div class="flow">
+<div class="node done">① 讀 HW1<br>拆規格</div><div class="arrow">→</div>
+<div class="node done">② ALU.sv<br>31 instructions</div><div class="arrow">→</div>
+<div class="node done">③ FPU.sv<br>IEEE-754</div><div class="arrow">→</div>
+<div class="node done">④ ModelSim<br>Provided PASS</div><div class="arrow">→</div>
+<div class="node done">⑤ Defense<br>71/71</div><div class="arrow">→</div>
+<div class="node done">⑥ Yosys<br>Cross-check</div><div class="arrow">→</div>
+<div class="node done">⑦ Verilator<br>Lint/Elab</div><div class="arrow">→</div>
+<div class="node todo">⑧ VCS<br>SoC Lab</div><div class="arrow">→</div>
+<div class="node todo">⑨ JasperGold<br>Superlint</div><div class="arrow">→</div>
+<div class="node todo">⑩ Report<br>tar / Moodle</div>
+</div>
+<div class="timeline">
+<div class="step"><b>Step 1 — 規格：</b>依投影片整理 ALU 31 instructions 與 FPU IEEE-754 要求。</div>
+<div class="step"><b>Step 2 — RTL：</b>完成 ALU.sv、FPU.sv；再建立 lint wrapper。</div>
+<div class="step"><b>Step 3 — Provided simulation：</b>ModelSim 編譯 0 error / 0 warning，ALU/FPU 官方 patterns 通過。</div>
+<div class="step"><b>Step 4 — Defense：</b>加入 shift、signedness、saturation、NaN/Inf/±0/subnormal/tie-even 等邊界案例。</div>
+<div class="step"><b>Step 5 — Local cross-check：</b>Yosys + Verilator，將功能、synthesis、lint 三種問題分開判讀。</div>
+<div class="step"><b>Step 6 — 現在：</b>鎖定 RTL，準備移到 SoC Lab 執行課程指定 VCS / JasperGold。</div>
+</div></section>
+
+<section class="card" id="todo"><h2>8. 尚未完成的地方與下一步</h2>
+<table><tr><th>順序</th><th>工作</th><th>要做什麼</th><th>完成判準</th></tr>
+<tr><td>1</td><td>VCS ALU</td><td><code>vcs -R -full64 -sverilog ALU_tb.sv -debug_access+all +define+FSDB</code></td><td>正式 SoC Lab simulation PASS</td></tr>
+<tr><td>2</td><td>VCS FPU</td><td>以課程指定 FPU command 執行</td><td>2000 patterns 在 VCS 亦 PASS</td></tr>
+<tr><td>3</td><td>JasperGold Superlint</td><td><code>jg -superlint superlint.tcl</code>，比對 Yosys/Verilator warnings</td><td>取得正式 lint / coverage 結果</td></tr>
+<tr><td>4</td><td>必要修正 + regression</td><td>只有 JasperGold 證實需要時才最小化修改</td><td>修改後 ModelSim + VCS 全部重跑 PASS</td></tr>
+<tr><td>5</td><td>Final Report</td><td>補 VCS、Superlint 真實截圖與結果</td><td>輸出 StudentID.pdf</td></tr>
+<tr><td>6</td><td>Final hierarchy</td><td>只保留老師要求檔案，避免 work/log/本機輔助檔混入</td><td>hierarchy 與 Moodle 規範一致</td></tr>
+<tr><td>7</td><td>.tar</td><td><code>tar -cvf StudentID_HW1.tar StudentID_HW1</code> 並用 <code>tar -tf</code> 檢查</td><td>可正常解包、重新 compile/simulate</td></tr></table>
+<div class="note warning"><b>特別注意：</b>老師投影片的 hierarchy 頁使用 HW1_StudentID 命名，而後面的壓縮指令/範例使用 StudentID_HW1。最終打包前應以 Moodle、TA 最新公告或提供模板確認實際命名，避免格式扣分。</div>
+<figure><img src="assets/slide_25.jpg" alt="評分：ALU 40%、FPU 40%、Report 20%；Superlint coverage 規定"><figcaption>評分：ALU 40%、FPU 40%、Report 20%；Superlint coverage 規定（作業投影片第 25 頁）</figcaption></figure>
+</section>
+
+<section class="card" id="appendix"><h2>9. 原完成 HTML：Local Verification Record（內插保存）</h2>
+<p>以下將你先前完成的 HTML 原始內容以可展開形式內插到本整合報告中，方便保留原始驗證紀錄；上方主體則已重新整理成「題目—程式—結果—流程—待辦」的報告結構。</p>
+<details><summary>展開原 HTML 原始碼</summary><pre>&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;zh-Hant&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width,initial-scale=1&quot;&gt;
+&lt;title&gt;VSD HW1 本機驗證：ModelSim / Yosys / Verilator 完整流程與結果分析&lt;/title&gt;
+&lt;style&gt;
+:root{--bg:#f5f7fb;--card:#fff;--ink:#172033;--muted:#667085;--line:#dbe2ea;--ok:#067647;--warn:#b54708;--bad:#b42318;--blue:#175cd3;--code:#101828}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:&quot;Noto Sans TC&quot;,&quot;Microsoft JhengHei&quot;,Arial,sans-serif;line-height:1.75}
+header{background:linear-gradient(135deg,#101828,#344054);color:#fff;padding:42px 20px}
+.wrap{max-width:1120px;margin:auto}.kicker{opacity:.75;letter-spacing:.08em}.title{font-size:32px;font-weight:800;margin:5px 0}.sub{opacity:.88}
+main{padding:24px 16px 60px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;margin:18px 0;box-shadow:0 3px 14px #1018280a}
+h2{margin-top:0;border-bottom:2px solid #e8eef8;padding-bottom:9px} h3{margin-top:26px}.ok{color:var(--ok);font-weight:700}.warn{color:var(--warn);font-weight:700}.bad{color:var(--bad);font-weight:700}
+code{font-family:Consolas,monospace} pre{background:var(--code);color:#e6edf3;padding:16px;border-radius:11px;overflow:auto;white-space:pre-wrap;line-height:1.5}
+table{border-collapse:collapse;width:100%;margin:14px 0} th,td{border:1px solid var(--line);padding:10px;vertical-align:top} th{background:#f0f4fa;text-align:left}
+.note{border-left:5px solid var(--blue);background:#eff6ff;padding:12px 16px;border-radius:8px}.warning{border-left-color:#f79009;background:#fffaeb}.success{border-left-color:#12b76a;background:#ecfdf3}
+.flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;padding:20px 5px}
+.node{min-width:145px;text-align:center;padding:14px 12px;border-radius:12px;border:2px solid #84adff;background:#eff4ff;font-weight:700}
+.node.done{border-color:#6ce9a6;background:#ecfdf3}.node.wait{border-color:#fec84b;background:#fffaeb}.arrow{font-size:26px;color:#667085}
+.small{font-size:.92em;color:var(--muted)} .toc a{color:#175cd3;text-decoration:none}.toc li{margin:4px 0}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#ecfdf3;color:#067647;font-size:.85em;font-weight:700}
+footer{text-align:center;color:#667085;padding:22px}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;header&gt;&lt;div class=&quot;wrap&quot;&gt;&lt;div class=&quot;kicker&quot;&gt;VSD HW1 VERIFICATION RECORD&lt;/div&gt;&lt;div class=&quot;title&quot;&gt;ModelSim → Yosys → Verilator：完整測試流程、指令與結果解析&lt;/div&gt;
+&lt;div class=&quot;sub&quot;&gt;目前狀態：Windows 本機預驗證完成；正式 VCS / JasperGold Superlint 待回 SoC Lab 執行。RTL 暫不修改。&lt;/div&gt;&lt;/div&gt;&lt;/header&gt;
+&lt;main class=&quot;wrap&quot;&gt;
+
+&lt;section class=&quot;card&quot; id=&quot;flow&quot;&gt;
+&lt;h2&gt;0. 整體測試驗證流程圖&lt;/h2&gt;
+&lt;div class=&quot;flow&quot;&gt;
+ &lt;div class=&quot;node done&quot;&gt;① ModelSim&lt;br&gt;功能模擬&lt;br&gt;PASS&lt;/div&gt;&lt;div class=&quot;arrow&quot;&gt;→&lt;/div&gt;
+ &lt;div class=&quot;node done&quot;&gt;② Yosys&lt;br&gt;合成/結構預檢&lt;br&gt;完成&lt;/div&gt;&lt;div class=&quot;arrow&quot;&gt;→&lt;/div&gt;
+ &lt;div class=&quot;node done&quot;&gt;③ Verilator&lt;br&gt;Lint/Elaboration&lt;br&gt;完成&lt;/div&gt;&lt;div class=&quot;arrow&quot;&gt;→&lt;/div&gt;
+ &lt;div class=&quot;node wait&quot;&gt;④ VCS&lt;br&gt;正式模擬&lt;br&gt;待 SoC Lab&lt;/div&gt;&lt;div class=&quot;arrow&quot;&gt;→&lt;/div&gt;
+ &lt;div class=&quot;node wait&quot;&gt;⑤ JasperGold&lt;br&gt;Superlint&lt;br&gt;待 SoC Lab&lt;/div&gt;&lt;div class=&quot;arrow&quot;&gt;→&lt;/div&gt;
+ &lt;div class=&quot;node wait&quot;&gt;⑥ Report / hierarchy&lt;br&gt;.tar / submission&lt;/div&gt;
+&lt;/div&gt;
+&lt;pre&gt;功能正確性
+   │
+   ├─ ModelSim：Provided + Hidden Defense
+   │
+   ├─ Yosys：RTL parsing / hierarchy / synthesis / check
+   │
+   ├─ Verilator：ALU / FPU / HW1_lint_top 靜態 lint + elaboration
+   │
+   └─ 回學校後：VCS → JasperGold Superlint → 必要時修 RTL → Regression
+                                                     ↓
+                                          Report → hierarchy → .tar&lt;/pre&gt;
+&lt;div class=&quot;note success&quot;&gt;&lt;b&gt;核心原則：&lt;/b&gt;ModelSim 已有完整功能測試通過；Yosys、Verilator 是本機「額外交叉預檢」，不能取代課程指定的 VCS 與 JasperGold。現在不因單一工具 warning 隨意修改已通過 regression 的 ALU.sv / FPU.sv。&lt;/div&gt;
+&lt;/section&gt;
+
+&lt;section class=&quot;card toc&quot;&gt;&lt;h2&gt;1. 文件導覽&lt;/h2&gt;
+&lt;ol&gt;&lt;li&gt;&lt;a href=&quot;#baseline&quot;&gt;ModelSim 功能驗證基準&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;#env&quot;&gt;OSS CAD Suite / Yosys 環境&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;#yosys-alu&quot;&gt;Yosys：ALU&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;#yosys-fpu&quot;&gt;Yosys：FPU 與 fp_addsub&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;#verilator-env&quot;&gt;Verilator 啟動問題與修正&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;#verilator-alu&quot;&gt;Verilator：ALU lint&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;#verilator-fpu&quot;&gt;Verilator：FPU lint&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;#wrapper&quot;&gt;HW1_lint_top 整合 lint&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;#summary&quot;&gt;總結與後續正式流程&lt;/a&gt;&lt;/li&gt;&lt;/ol&gt;&lt;/section&gt;
+
+&lt;section class=&quot;card&quot; id=&quot;baseline&quot;&gt;
+&lt;h2&gt;2. ModelSim：功能驗證基準&lt;/h2&gt;
+&lt;p&gt;在進入 Yosys / Verilator 前，HW1 已先以 ModelSim 完成功能驗證。這是目前判斷 RTL 功能是否正確的重要基準。&lt;/p&gt;
+&lt;table&gt;&lt;tr&gt;&lt;th&gt;模組&lt;/th&gt;&lt;th&gt;測試&lt;/th&gt;&lt;th&gt;結果&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;ALU&lt;/td&gt;&lt;td&gt;Provided tests&lt;/td&gt;&lt;td class=&quot;ok&quot;&gt;ALL PASS&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;ALU&lt;/td&gt;&lt;td&gt;Hidden Defense&lt;/td&gt;&lt;td class=&quot;ok&quot;&gt;44 / 44 PASS&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;FPU&lt;/td&gt;&lt;td&gt;Provided tests&lt;/td&gt;&lt;td class=&quot;ok&quot;&gt;2000 / 2000 PASS&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;FPU&lt;/td&gt;&lt;td&gt;Hidden Defense&lt;/td&gt;&lt;td class=&quot;ok&quot;&gt;27 / 27 PASS&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;p&gt;&lt;b&gt;解析：&lt;/b&gt;因此後續 Yosys 或 Verilator 若出現工具支援限制或 lint warning，不能直接推論成「功能錯誤」。要區分 simulation correctness、synthesizability、lint/style 三種不同問題。&lt;/p&gt;
+&lt;/section&gt;
+
+&lt;section class=&quot;card&quot; id=&quot;env&quot;&gt;&lt;h2&gt;3. Windows 本機 OSS CAD Suite / Yosys 環境&lt;/h2&gt;
+&lt;p&gt;專案工作目錄：&lt;/p&gt;&lt;pre&gt;E:\StudentID_HW1\0917\StudentID_HW1&lt;/pre&gt;
+&lt;p&gt;OSS CAD Suite：&lt;/p&gt;&lt;pre&gt;E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite&lt;/pre&gt;
+&lt;p&gt;每個新的 PowerShell session 先初始化：&lt;/p&gt;
+&lt;pre&gt;Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite\environment.ps1&lt;/pre&gt;
+&lt;p&gt;確認 Yosys：&lt;/p&gt;&lt;pre&gt;where.exe yosys
+yosys -V&lt;/pre&gt;
+&lt;p&gt;實測版本：&lt;/p&gt;&lt;pre&gt;Yosys 0.69+24 (git sha1 d0e71cfb7-dirty ...)&lt;/pre&gt;
+&lt;/section&gt;
+
+&lt;section class=&quot;card&quot; id=&quot;yosys-alu&quot;&gt;&lt;h2&gt;4. Yosys：ALU parsing → hierarchy → synthesis → check&lt;/h2&gt;
+&lt;h3&gt;4.1 先做 SystemVerilog parsing 與 hierarchy&lt;/h3&gt;
+&lt;pre&gt;yosys -p &quot;read_verilog -sv Src/ALU.sv; hierarchy -check -top ALU&quot;&lt;/pre&gt;
+&lt;p class=&quot;ok&quot;&gt;結果：PASS。ALU 可被 Yosys 正常解析，top module 正確。&lt;/p&gt;
+&lt;h3&gt;4.2 完整 synthesis + stat&lt;/h3&gt;
+&lt;pre&gt;yosys -p &quot;read_verilog -sv Src/ALU.sv; hierarchy -check -top ALU; synth -top ALU; stat&quot;&lt;/pre&gt;
+&lt;p&gt;重要結果：&lt;/p&gt;
+&lt;pre&gt;Checking module ALU...
+Found and reported 0 problems.
+
+Warnings: 3 unique messages, 3 total&lt;/pre&gt;
+&lt;p&gt;3 個 warning 為：&lt;/p&gt;
+&lt;pre&gt;Latch inferred for signal `\ALU.\i&#x27;
+Latch inferred for signal `\ALU.\cnt [5:0]&#x27;
+Latch inferred for signal `\ALU.\cnt [31:6]&#x27;&lt;/pre&gt;
+&lt;p&gt;&lt;b&gt;解析：&lt;/b&gt;Yosys 的 synthesis 本身完成，而且最後 CHECK 為 0 problems。warning 集中在程序內部的 &lt;code&gt;i&lt;/code&gt; / &lt;code&gt;cnt&lt;/code&gt;，並非直接指出 &lt;code&gt;result_o&lt;/code&gt; latch。之後 Verilator 也沒有報同樣 latch warning，因此先記錄、待 JasperGold 正式判讀，不在此時修改 ALU。&lt;/p&gt;
+&lt;/section&gt;
+
+&lt;section class=&quot;card&quot; id=&quot;yosys-fpu&quot;&gt;&lt;h2&gt;5. Yosys：FPU parsing 與 fp_addsub 限制&lt;/h2&gt;
+&lt;h3&gt;5.1 FPU hierarchy 預檢&lt;/h3&gt;
+&lt;pre&gt;yosys -p &quot;read_verilog -sv Src/FPU.sv; hierarchy -check -top FPU&quot;&lt;/pre&gt;
+&lt;p&gt;結果：&lt;/p&gt;&lt;pre&gt;Src/FPU.sv:126: ERROR: Function \fp_addsub can only be called with constant arguments.&lt;/pre&gt;
+&lt;p&gt;第 126/127 行的呼叫為：&lt;/p&gt;
+&lt;pre&gt;2&#x27;d2: next_result = fp_addsub(ai,bi,1&#x27;b0);
+2&#x27;d3: next_result = fp_addsub(ai,bi,1&#x27;b1);&lt;/pre&gt;
+&lt;p&gt;進一步檢查 function：&lt;/p&gt;
+&lt;pre&gt;Select-String -Path Src\FPU.sv -Pattern &quot;function.*fp_addsub&quot; -Context 0,80&lt;/pre&gt;
+&lt;p&gt;其中可見 runtime-dependent normalization：&lt;/p&gt;
+&lt;pre&gt;while((mr[26]==0) &amp;&amp; (mr!=0) &amp;&amp; (er&gt;1)) begin
+    mr=mr&amp;lt;&amp;lt;1;
+    er=er-1;
+end&lt;/pre&gt;
+&lt;h3&gt;5.2 AST 交叉確認&lt;/h3&gt;
+&lt;pre&gt;yosys -p &quot;read_verilog -sv -dump_ast1 Src/FPU.sv&quot; 2&amp;gt;&amp;amp;1 | Select-String -Pattern &quot;fp_addsub|while|ERROR&quot; -Context 2,2&lt;/pre&gt;
+&lt;p&gt;AST 可辨識 &lt;code&gt;AST_FUNCTION fp_addsub&lt;/code&gt;、&lt;code&gt;AST_WHILE&lt;/code&gt;，並在以 runtime &lt;code&gt;ai/bi&lt;/code&gt; 呼叫 function 時報 constant-argument error。&lt;/p&gt;
+&lt;div class=&quot;note warning&quot;&gt;&lt;b&gt;結論：&lt;/b&gt;這裡應記錄為 Yosys frontend/elaboration 對此 function procedural constructs 的限制；AST 顯示 while 與此限制高度相關，但不應宣稱已證明「唯一原因」就是 while。由於 ModelSim FPU 全部通過，且後續 Verilator 能完整解析 FPU，因此沒有依據為了 Yosys 而修改 FPU。&lt;/div&gt;
+&lt;/section&gt;
+
+&lt;section class=&quot;card&quot; id=&quot;verilator-env&quot;&gt;&lt;h2&gt;6. Verilator：啟動問題與環境修正&lt;/h2&gt;
+&lt;p&gt;先確認：&lt;/p&gt;&lt;pre&gt;verilator --version
+where.exe verilator&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;where.exe&lt;/code&gt; 找到：&lt;/p&gt;&lt;pre&gt;E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite\bin\verilator&lt;/pre&gt;
+&lt;p&gt;檢查後發現它是 Perl wrapper：&lt;/p&gt;&lt;pre&gt;Get-Content (where.exe verilator) -First 5
+# 第一行：
+#!/usr/bin/env perl&lt;/pre&gt;
+&lt;p&gt;但 Windows session 無 Perl：&lt;/p&gt;&lt;pre&gt;where.exe perl
+# 找不到&lt;/pre&gt;
+&lt;p&gt;搜尋實際 binary：&lt;/p&gt;&lt;pre&gt;Get-ChildItem E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite\bin\*verilator*&lt;/pre&gt;
+&lt;p&gt;找到 &lt;code&gt;verilator_bin.exe&lt;/code&gt;，版本：&lt;/p&gt;
+&lt;pre&gt;verilator_bin.exe --version
+Verilator 5.053 devel rev v5.052-80-g0bad0faca (mod)&lt;/pre&gt;
+&lt;h3&gt;6.1 修正 VERILATOR_ROOT&lt;/h3&gt;
+&lt;p&gt;第一次 lint 找不到內建檔案 &lt;code&gt;verilated_std.sv&lt;/code&gt;。先定位：&lt;/p&gt;
+&lt;pre&gt;Get-ChildItem E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite -Recurse -Filter verilated_std.sv | Select-Object -ExpandProperty FullName&lt;/pre&gt;
+&lt;p&gt;實際位置：&lt;/p&gt;&lt;pre&gt;E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite\share\verilator\include\verilated_std.sv&lt;/pre&gt;
+&lt;p&gt;設定：&lt;/p&gt;&lt;pre&gt;$env:VERILATOR_ROOT=&quot;E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite\share\verilator&quot;
+echo $env:VERILATOR_ROOT&lt;/pre&gt;
+&lt;p class=&quot;ok&quot;&gt;設定後 Verilator 可以正常進入真正的 RTL lint。&lt;/p&gt;
+&lt;/section&gt;
+
+&lt;section class=&quot;card&quot; id=&quot;verilator-alu&quot;&gt;&lt;h2&gt;7. Verilator：ALU lint&lt;/h2&gt;
+&lt;pre&gt;verilator_bin.exe --lint-only -Wall --top-module ALU Src/ALU.sv&lt;/pre&gt;
+&lt;table&gt;&lt;tr&gt;&lt;th&gt;類型&lt;/th&gt;&lt;th&gt;位置&lt;/th&gt;&lt;th&gt;內容&lt;/th&gt;&lt;th&gt;解析&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;WIDTHEXPAND&lt;/td&gt;&lt;td&gt;ALU.sv:22&lt;/td&gt;&lt;td&gt;&lt;code&gt;shamt = src_B_i[4:0]&lt;/code&gt;&lt;/td&gt;&lt;td&gt;5-bit RHS 指派給較寬的 shamt&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;WIDTHEXPAND&lt;/td&gt;&lt;td&gt;ALU.sv:36&lt;/td&gt;&lt;td&gt;signed compare → result_o&lt;/td&gt;&lt;td&gt;比較結果 1 bit 擴展至 32 bit&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;WIDTHEXPAND&lt;/td&gt;&lt;td&gt;ALU.sv:37&lt;/td&gt;&lt;td&gt;unsigned compare → result_o&lt;/td&gt;&lt;td&gt;比較結果 1 bit 擴展至 32 bit&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;UNUSEDSIGNAL&lt;/td&gt;&lt;td&gt;ALU.sv:2&lt;/td&gt;&lt;td&gt;instruction_i 部分 bits&lt;/td&gt;&lt;td&gt;部分 instruction fields 未被 ALU 使用&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;UNUSEDSIGNAL&lt;/td&gt;&lt;td&gt;ALU.sv:12&lt;/td&gt;&lt;td&gt;prod_ss[31:0]&lt;/td&gt;&lt;td&gt;低 32 bits 未使用&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;UNUSEDSIGNAL&lt;/td&gt;&lt;td&gt;ALU.sv:13&lt;/td&gt;&lt;td&gt;prod_su[31:0]&lt;/td&gt;&lt;td&gt;低 32 bits 未使用&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;p&gt;第一次結尾：&lt;/p&gt;&lt;pre&gt;%Error: Exiting due to 6 warning(s)&lt;/pre&gt;
+&lt;p&gt;&lt;b&gt;注意：&lt;/b&gt;這不是 6 個功能性 error，而是 Verilator 將 warning 視為 fatal exit。真正內容是 6 warnings。更重要的是，Verilator 沒有重現 Yosys 的 &lt;code&gt;i/cnt&lt;/code&gt; latch warnings，因此必須等 JasperGold 再交叉判讀。&lt;/p&gt;
+&lt;/section&gt;
+
+&lt;section class=&quot;card&quot; id=&quot;verilator-fpu&quot;&gt;&lt;h2&gt;8. Verilator：FPU lint&lt;/h2&gt;
+&lt;pre&gt;verilator_bin.exe --lint-only -Wall --top-module FPU Src/FPU.sv&lt;/pre&gt;
+&lt;table&gt;&lt;tr&gt;&lt;th&gt;位置&lt;/th&gt;&lt;th&gt;Warning&lt;/th&gt;&lt;th&gt;原因&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;FPU.sv:69&lt;/td&gt;&lt;td&gt;WIDTHEXPAND&lt;/td&gt;&lt;td&gt;&lt;code&gt;exa = (ea==0) ? 1 : ea&lt;/code&gt;：8-bit ea 與 integer/32-bit context&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;FPU.sv:70&lt;/td&gt;&lt;td&gt;WIDTHEXPAND&lt;/td&gt;&lt;td&gt;&lt;code&gt;exb = (eb==0) ? 1 : eb&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;FPU.sv:76&lt;/td&gt;&lt;td&gt;WIDTHEXPAND&lt;/td&gt;&lt;td&gt;&lt;code&gt;mb = (mb!=0)&lt;/code&gt;：1-bit comparison result → 27-bit mb&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;FPU.sv:84&lt;/td&gt;&lt;td&gt;WIDTHEXPAND&lt;/td&gt;&lt;td&gt;&lt;code&gt;ma = (ma!=0)&lt;/code&gt;：1-bit comparison result → 27-bit ma&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;p&gt;第一次結尾：&lt;/p&gt;&lt;pre&gt;%Error: Exiting due to 4 warning(s)&lt;/pre&gt;
+&lt;p&gt;&lt;b&gt;關鍵解析：&lt;/b&gt;Verilator 能完整解析 FPU，包括 &lt;code&gt;fp_addsub&lt;/code&gt; 與其 procedural while；因此 Yosys 的 constant-argument error 並非跨工具共同的 SystemVerilog syntax/elaboration failure。這是重要的交叉驗證。&lt;/p&gt;
+&lt;/section&gt;
+
+&lt;section class=&quot;card&quot; id=&quot;wrapper&quot;&gt;&lt;h2&gt;9. 正式 wrapper：HW1_lint_top 整合 lint&lt;/h2&gt;
+&lt;p&gt;正式 JasperGold Tcl 的架構是同時 analyze 三個 RTL，再以 &lt;code&gt;HW1_lint_top&lt;/code&gt; elaboration。因此本機用 Verilator 做相同 hierarchy 的預檢：&lt;/p&gt;
+&lt;pre&gt;verilator_bin.exe --lint-only -Wall --top-module HW1_lint_top Src/ALU.sv Src/FPU.sv Src/HW1_lint_top.sv&lt;/pre&gt;
+&lt;p&gt;得到：&lt;/p&gt;&lt;pre&gt;HW1_lint_top
+├── u_alu : ALU
+│   ├── WIDTHEXPAND × 3
+│   └── UNUSEDSIGNAL × 3
+└── u_fpu : FPU
+    └── WIDTHEXPAND × 4
+
+Total warnings = 10&lt;/pre&gt;
+&lt;p&gt;沒有出現新的 wrapper port mismatch、missing module、multiple-driver 或 syntax 類問題。&lt;/p&gt;
+&lt;h3&gt;9.1 讓 warnings 保留，但不要 fatal exit&lt;/h3&gt;
+&lt;pre&gt;verilator_bin.exe --lint-only -Wall -Wno-fatal --top-module HW1_lint_top Src/ALU.sv Src/FPU.sv Src/HW1_lint_top.sv&lt;/pre&gt;
+&lt;p&gt;最終完整跑到：&lt;/p&gt;
+&lt;pre&gt;- V e r i l a t i o n   R e p o r t: Verilator 5.053 devel rev v5.052-80-g0bad0faca (mod)
+- Verilator: Built from 0.099 MB sources in 5 modules, into 0.364 MB in 3 C++ files needing 0.000 MB
+- Verilator: Walltime 0.038 s (elab=0.003, cvt=0.024, bld=0.000); cpu 0.000 s on 1 threads; allocated 18.973 MB&lt;/pre&gt;
+&lt;div class=&quot;note success&quot;&gt;&lt;b&gt;最終判讀：&lt;/b&gt;使用 &lt;code&gt;-Wno-fatal&lt;/code&gt; 後，10 個 warning 仍完整顯示，但流程成功跑到 Verilation Report，沒有真正的 &lt;code&gt;%Error&lt;/code&gt;。因此三檔 wrapper hierarchy 的 Verilator lint/elaboration 可視為完成。&lt;/div&gt;
+&lt;/section&gt;
+
+&lt;section class=&quot;card&quot; id=&quot;summary&quot;&gt;&lt;h2&gt;10. 本機驗證總結&lt;/h2&gt;
+&lt;table&gt;&lt;tr&gt;&lt;th&gt;工具 / 階段&lt;/th&gt;&lt;th&gt;ALU&lt;/th&gt;&lt;th&gt;FPU&lt;/th&gt;&lt;th&gt;判讀&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;ModelSim&lt;/td&gt;&lt;td class=&quot;ok&quot;&gt;Provided PASS；Hidden 44/44&lt;/td&gt;&lt;td class=&quot;ok&quot;&gt;2000/2000；Hidden 27/27&lt;/td&gt;&lt;td&gt;功能 regression 通過&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;Yosys parsing/hierarchy&lt;/td&gt;&lt;td class=&quot;ok&quot;&gt;PASS&lt;/td&gt;&lt;td class=&quot;warn&quot;&gt;fp_addsub frontend limitation&lt;/td&gt;&lt;td&gt;FPU 不因此判為功能錯誤&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;Yosys synthesis/check&lt;/td&gt;&lt;td class=&quot;ok&quot;&gt;Synthesis PASS；CHECK 0 problems&lt;/td&gt;&lt;td&gt;未進行 synth&lt;/td&gt;&lt;td&gt;ALU 有 i/cnt 三個 latch warnings&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;Verilator module lint&lt;/td&gt;&lt;td class=&quot;warn&quot;&gt;6 warnings&lt;/td&gt;&lt;td class=&quot;warn&quot;&gt;4 warnings&lt;/td&gt;&lt;td&gt;無獨立 syntax/elaboration failure&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;Verilator HW1_lint_top&lt;/td&gt;&lt;td colspan=&quot;2&quot; class=&quot;ok&quot;&gt;完整 elaboration；10 warnings；-Wno-fatal 後跑至 Verilation Report&lt;/td&gt;&lt;td&gt;wrapper 整合無新增問題類型&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+
+&lt;h3&gt;10.1 現在是否要修改 RTL？&lt;/h3&gt;
+&lt;p&gt;&lt;b&gt;目前不建議。&lt;/b&gt;原因是 ModelSim 功能 regression 已全部通過；Yosys 與 Verilator 對部分項目的判讀不同；真正課程要求的 VCS / JasperGold 尚未執行。最安全做法是先鎖定目前 RTL，等 JasperGold Superlint 的正式訊息再決定是否修正 width、unused 或 latch 類問題。&lt;/p&gt;
+
+&lt;h3&gt;10.2 回 SoC Lab 後的正式流程&lt;/h3&gt;
+&lt;pre&gt;目前 RTL 鎖定
+   ↓
+VCS：ALU compile / simulation
+   ↓
+VCS：FPU compile / simulation
+   ↓
+保存 VCS log / result
+   ↓
+JasperGold Superlint
+   ↓
+analyze -sv ../Src/ALU.sv ../Src/FPU.sv ../Src/HW1_lint_top.sv
+elaborate -top HW1_lint_top
+clock clk
+reset rst
+check_superlint -extract
+   ↓
+逐項比對：
+  Yosys i/cnt latch warnings
+  Verilator ALU 6 warnings
+  Verilator FPU 4 warnings
+   ↓
+若 JasperGold 證實需修正 → 最小化修改 RTL → 全部 regression 重跑
+   ↓
+Report → final hierarchy → .tar → 解包確認 → submission&lt;/pre&gt;
+
+&lt;div class=&quot;note&quot;&gt;&lt;b&gt;重要：&lt;/b&gt;Yosys / Verilator 的結果應寫成「local pre-verification / cross-check」。最終是否符合 HW1 lint 要求，仍以課程指定 VCS 與 JasperGold Superlint 結果為準。&lt;/div&gt;
+&lt;/section&gt;
+
+&lt;section class=&quot;card&quot;&gt;&lt;h2&gt;11. 可直接放入報告的摘要&lt;/h2&gt;
+&lt;p&gt;本次 HW1 先以 ModelSim 完成 ALU 與 FPU 功能驗證，ALU provided tests 與 44/44 hidden defense 全部通過，FPU provided tests 2000/2000 與 27/27 hidden defense 全部通過。其後使用 OSS CAD Suite 的 Yosys 進行本機 synthesis/structural cross-check：ALU 可正常 parsing、hierarchy 與 synthesis，最終 CHECK 為 0 problems，但產生 3 個與程序變數 i/cnt 有關的 latch warnings；FPU 則在 fp_addsub 的 elaboration 遇到 Yosys frontend constant-argument limitation，因此未進一步 synthesis。為避免單一工具限制造成誤判，再使用 Verilator 5.053 進行獨立 lint。ALU 產生 6 個 width/unused warnings，FPU 產生 4 個 width warnings，而正式 wrapper HW1_lint_top 可完整 elaboration，使用 -Wno-fatal 後成功執行至 Verilation Report，總計保留 10 個 warnings 且無真正 fatal error。基於 ModelSim regression 全部通過以及不同靜態工具之間的差異，目前暫不修改 RTL，待 SoC Lab 的 VCS 與 JasperGold Superlint 正式驗證後，再決定是否需要最小化修正並重跑完整 regression。&lt;/p&gt;
+&lt;/section&gt;
+
+&lt;/main&gt;&lt;footer&gt;VSD HW1 Local Verification Record · Generated 2026-09-17&lt;/footer&gt;
+&lt;/body&gt;&lt;/html&gt;</pre></details>
+</section>
+
+</main><footer>VSD HW1 Integrated Progress Report · 2026-09-17</footer></body></html>

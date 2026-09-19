@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NLDM.html — NLDM（Non-Linear Delay Model）完整教學</title>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#64748b;
+  --blue:#2563eb;--teal:#0f766e;--green:#059669;--orange:#d97706;
+  --red:#dc2626;--purple:#7c3aed;--line:#dbe3ec;--code:#0f172a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;
+  line-height:1.82
+}
+header{
+  background:linear-gradient(135deg,#1e3a8a,#0f766e 60%,#115e59);
+  color:#fff;padding:52px 24px 44px
+}
+header .inner,nav .bar,.wrap{max-width:1180px;margin:auto}
+header h1{margin:0 0 10px;font-size:2.18rem}
+header p{margin:5px 0;max-width:1040px;opacity:.96}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tag{
+  padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.26);font-size:.88rem
+}
+nav{
+  position:sticky;top:0;z-index:20;background:rgba(245,247,251,.95);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px)
+}
+nav .bar{padding:8px 20px;display:flex;gap:10px;overflow:auto;white-space:nowrap}
+nav a{color:#0f766e;text-decoration:none;padding:5px 9px;border-radius:8px;font-size:.9rem}
+nav a:hover{background:#e2e8f0}
+.wrap{padding:28px 20px 80px}
+.card{
+  background:var(--card);border-radius:18px;padding:26px;margin:22px 0;
+  box-shadow:0 8px 28px rgba(15,23,42,.07)
+}
+h2{margin:0 0 16px;color:#134e4a;border-left:6px solid #14b8a6;padding-left:12px}
+h3{color:#1d4ed8;margin-top:26px}
+h4{color:#7c3aed;margin:18px 0 8px}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{
+  background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;
+  overflow:auto;line-height:1.55
+}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}
+th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{
+  padding:14px 16px;border-radius:10px;margin:16px 0
+}
+.note{background:#fff7ed;border-left:5px solid #f59e0b}
+.tip{background:#eff6ff;border-left:5px solid #3b82f6}
+.warn{background:#fef2f2;border-left:5px solid #ef4444}
+.key{background:#ecfdf5;border-left:5px solid #10b981}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mini{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px}
+.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:24px 0}
+.box{
+  min-width:155px;text-align:center;padding:14px 16px;border:2px solid #67e8f9;
+  background:#ecfeff;border-radius:13px;font-weight:700
+}
+.box small{display:block;color:#475569;font-weight:500;margin-top:5px}
+.arrow{font-size:1.5rem;color:#64748b}
+.toc ol{columns:2;column-gap:34px}
+.toc li{margin:7px 0;break-inside:avoid}
+.toc a{color:#0f766e;text-decoration:none}
+.quiz{
+  border:1px dashed #94a3b8;border-radius:14px;padding:14px 16px;
+  margin:12px 0;background:#fff
+}
+.quiz summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+.eq{font-family:"Cambria Math","Times New Roman",serif;font-size:1.06rem;background:#f8fafc;border:1px solid var(--line);padding:12px 14px;border-radius:10px;overflow:auto}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+@media(max-width:800px){header h1{font-size:1.7rem}.toc ol{columns:1}}
+</style>
+</head>
+<body>
+
+<header><div class="inner">
+<h1>NLDM（Non-Linear Delay Model）完整教學</h1>
+<p>詳細說明 Standard Cell timing model 中最重要的概念之一：為什麼 cell delay 不是固定值、Input Slew 與 Output Load 如何共同決定 delay、2D Lookup Table 怎麼看，以及 STA 如何使用這些資料。</p>
+<p>本頁以課程「Non-Linear Delay Model」為核心，並加入 INV、NAND、MUX、Buffer、DFF、critical path、cell sizing、table interpolation 等大量例子。</p>
+<div class="tags">
+<span class="tag">NLDM</span><span class="tag">Input Slew</span><span class="tag">Output Load</span>
+<span class="tag">2D Lookup Table</span><span class="tag">Cell Delay</span><span class="tag">Transition</span>
+<span class="tag">Liberty .lib</span><span class="tag">STA</span>
+</div>
+</div></header>
+
+<nav><div class="bar">
+<a href="#overview">總覽</a><a href="#why">為何 Non-Linear</a><a href="#axes">兩個 Index</a>
+<a href="#table">2D Table</a><a href="#slew">Input Slew</a><a href="#load">Output Load</a>
+<a href="#interp">Interpolation</a><a href="#liberty">Liberty</a><a href="#examples">大量例子</a>
+<a href="#sta">STA</a><a href="#pitfalls">常見誤解</a>
+</div></nav>
+
+<main class="wrap">
+
+<section class="card toc">
+<h2>目錄</h2>
+<ol>
+<li><a href="#overview">NLDM 是什麼？</a></li>
+<li><a href="#why">為什麼 Delay 是 Non-Linear？</a></li>
+<li><a href="#axes">兩個主要 Index</a></li>
+<li><a href="#table">2D Lookup Table 怎麼讀？</a></li>
+<li><a href="#slew">Input Slew 詳解</a></li>
+<li><a href="#load">Output Load 詳解</a></li>
+<li><a href="#rise-fall">Rise / Fall 為什麼分開？</a></li>
+<li><a href="#interp">Interpolation 概念</a></li>
+<li><a href="#liberty">在 .lib 裡長什麼樣？</a></li>
+<li><a href="#examples">大量例子</a></li>
+<li><a href="#sta">STA 如何逐級使用 NLDM？</a></li>
+<li><a href="#sizing">Cell Sizing 與 Timing Optimization</a></li>
+<li><a href="#limits">NLDM 的限制</a></li>
+<li><a href="#pitfalls">常見誤解與考試重點</a></li>
+</ol>
+</section>
+
+<section class="card" id="overview">
+<h2>1. NLDM 是什麼？</h2>
+
+<p>
+NLDM = <b>Non-Linear Delay Model</b>。
+課程明確指出：cell delay 不是只存成單一常數，而是以
+<b>2D lookup table</b> 的形式儲存，其兩個 index 是：
+</p>
+
+<div class="grid2">
+<div class="mini"><h3 style="margin-top:0">Index 1</h3><p><b>Input Slew</b><br>也就是 Input Transition Time。</p></div>
+<div class="mini"><h3 style="margin-top:0">Index 2</h3><p><b>Output Load Capacitance</b><br>也就是這顆 cell 輸出端所看到的負載。</p></div>
+</div>
+
+<div class="flow">
+<div class="box">Input Slew</div>
+<div class="arrow">+</div>
+<div class="box">Output Load</div>
+<div class="arrow">→</div>
+<div class="box">查 NLDM Table</div>
+<div class="arrow">→</div>
+<div class="box">Cell Delay</div>
+</div>
+
+<div class="key">
+<b>一句話：</b>NLDM 就是「用 Input Slew 與 Output Load 兩個條件，查表得到 Standard Cell Delay」。
+</div>
+</section>
+
+<section class="card" id="why">
+<h2>2. 為什麼叫 Non-Linear Delay Model？</h2>
+
+<p>
+如果 delay 永遠只是：
+</p>
+
+<div class="eq">Delay = 常數</div>
+
+<p>
+就不需要 lookup table。但真實 CMOS cell 的 delay 會隨輸入邊緣速度、輸出負載、
+PVT 等條件改變，而且變化通常不能簡單用單一線性公式完整描述。
+</p>
+
+<h3>概念比較</h3>
+
+<table>
+<tr><th>模型</th><th>想法</th><th>問題</th></tr>
+<tr><td>固定 Delay</td><td>每顆 INV 都是 30 ps</td><td>忽略 slew / load</td></tr>
+<tr><td>簡單線性模型</td><td>delay = a + b×load</td><td>無法完整表達複雜行為</td></tr>
+<tr><td><b>NLDM</b></td><td>對不同 slew/load 建立表格</td><td>更貼近 characterization data</td></tr>
+</table>
+
+<div class="note">
+課程只明確說明 delay 以 Input Slew × Output Load 的 2D lookup table 表示；
+「與簡單線性模型比較」是為理解 Non-Linear 一詞而加入的教學延伸。
+</div>
+</section>
+
+<section class="card" id="axes">
+<h2>3. NLDM 的兩個 Index</h2>
+
+<h3>3.1 Input Slew</h3>
+<p>
+代表訊號輸入這顆 cell 時，上升或下降邊緣有多快。
+</p>
+
+<pre><code>Fast slew:
+____/‾‾‾‾
+
+Slow slew:
+______/‾‾‾</code></pre>
+
+<h3>3.2 Output Load Capacitance</h3>
+<p>
+代表輸出端需要驅動多少 capacitance。
+可能包含下一級 gate input capacitance，以及 interconnect parasitic capacitance。
+</p>
+
+<pre><code>Small load:
+INV1 ───→ INV2
+
+Large load:
+            → INV2
+INV1 ───────→ NAND
+            → MUX
+            → DFF</code></pre>
+
+<div class="key">
+Input Slew 是「輸入怎麼進來」；Output Load 是「輸出要拖多重」。
+</div>
+</section>
+
+<section class="card" id="table">
+<h2>4. 2D Lookup Table 怎麼讀？</h2>
+
+<p>下面是一張<b>教學用假設資料表</b>：</p>
+
+<table>
+<tr><th>Input Slew ↓ / Load →</th><th>2 fF</th><th>10 fF</th><th>30 fF</th><th>60 fF</th></tr>
+<tr><td>10 ps</td><td>18 ps</td><td>24 ps</td><td>37 ps</td><td>55 ps</td></tr>
+<tr><td>30 ps</td><td>23 ps</td><td>30 ps</td><td>44 ps</td><td>64 ps</td></tr>
+<tr><td>60 ps</td><td>31 ps</td><td>39 ps</td><td>54 ps</td><td>75 ps</td></tr>
+<tr><td>100 ps</td><td>43 ps</td><td>52 ps</td><td>68 ps</td><td>92 ps</td></tr>
+</table>
+
+<div class="warn">
+上表數值是為解釋 NLDM 而自訂的示意值，不是課程投影片的實際 cell 數據。
+</div>
+
+<h3>例：Input Slew = 30 ps，Load = 30 fF</h3>
+<p>
+直接找 row = 30 ps、column = 30 fF：
+</p>
+<div class="eq">Cell Delay = 44 ps</div>
+
+<h3>例：Input Slew = 100 ps，Load = 60 fF</h3>
+<div class="eq">Cell Delay = 92 ps</div>
+
+<p>
+你可以直接看出：在這個示意表中，slew 越慢、load 越大，delay 越大。
+</p>
+</section>
+
+<section class="card" id="slew">
+<h2>5. Input Slew 為什麼會影響 Delay？</h2>
+
+<p>
+如果 input transition 很慢，MOS transistor 的導通狀態也會比較緩慢地變化，
+因此輸出充放電行為會受到影響。
+</p>
+
+<h3>例 1：同樣 Load，不同 Slew</h3>
+
+<table>
+<tr><th>Input Slew</th><th>Output Load</th><th>示意 Delay</th></tr>
+<tr><td>10 ps</td><td>30 fF</td><td>37 ps</td></tr>
+<tr><td>30 ps</td><td>30 fF</td><td>44 ps</td></tr>
+<tr><td>60 ps</td><td>30 fF</td><td>54 ps</td></tr>
+<tr><td>100 ps</td><td>30 fF</td><td>68 ps</td></tr>
+</table>
+
+<p>
+Load 都固定 30 fF，只有 input slew 變慢，delay 也跟著改變。
+</p>
+
+<div class="tip">
+這就是為什麼 STA 不只看「這顆 cell 是 INV_X1」；
+它還必須知道「這次進入 INV_X1 的 input slew 是多少」。
+</div>
+</section>
+
+<section class="card" id="load">
+<h2>6. Output Load 為什麼會影響 Delay？</h2>
+
+<p>
+輸出端本質上要對 capacitance 充電或放電。
+負載越大，需要搬運的 charge 越多，因此 cell response 通常會變慢。
+</p>
+
+<h3>例 2：同樣 Slew，不同 Load</h3>
+
+<table>
+<tr><th>Input Slew</th><th>Output Load</th><th>示意 Delay</th></tr>
+<tr><td>30 ps</td><td>2 fF</td><td>23 ps</td></tr>
+<tr><td>30 ps</td><td>10 fF</td><td>30 ps</td></tr>
+<tr><td>30 ps</td><td>30 fF</td><td>44 ps</td></tr>
+<tr><td>30 ps</td><td>60 fF</td><td>64 ps</td></tr>
+</table>
+
+<h3>Fanout 概念</h3>
+<pre><code>INV_X1 → 1 gate
+    load small
+
+INV_X1 → 8 gates
+    load larger</code></pre>
+
+<p>
+因此 high-fanout net 往往會有較大的 capacitive load。
+</p>
+</section>
+
+<section class="card" id="rise-fall">
+<h2>7. Rise Delay / Fall Delay 為什麼通常分開？</h2>
+
+<p class="note">
+本節是標準 cell timing model 的延伸說明；課程片段沒有逐項列出 cell_rise / cell_fall，
+但它與課程介紹的 cell delay / slew characterization 一致。
+</p>
+
+<p>
+以 inverter 為例：
+</p>
+
+<table>
+<tr><th>Input</th><th>Output</th><th>主要輸出行為</th></tr>
+<tr><td>0 → 1</td><td>1 → 0</td><td>Output falling</td></tr>
+<tr><td>1 → 0</td><td>0 → 1</td><td>Output rising</td></tr>
+</table>
+
+<p>
+PMOS 與 NMOS network 的特性可能不同，所以 output rise 與 output fall
+通常會各自有 timing table。
+</p>
+
+<pre><code>cell_rise(...)
+cell_fall(...)
+rise_transition(...)
+fall_transition(...)</code></pre>
+</section>
+
+<section class="card" id="interp">
+<h2>8. 如果 Slew / Load 不剛好在表格格點上？</h2>
+
+<p class="note">
+Interpolation 是理解 lookup table 實際使用方式的延伸說明；
+課程頁面明確支持的是 2D lookup table 與兩個 index，本頁不把 interpolation 細節視為投影片原文。
+</p>
+
+<p>
+假設 table 只有：
+</p>
+
+<pre><code>Input Slew : 30 ps, 60 ps
+Load       : 10 fF, 30 fF</code></pre>
+
+<p>
+但現在實際條件是：
+</p>
+
+<pre><code>Input Slew = 45 ps
+Load       = 20 fF</code></pre>
+
+<p>
+它位於四個已知 table points 中間，因此 EDA tool 會依 timing model 規則，
+利用附近的 table values 推估對應 delay。
+</p>
+
+<h3>四個附近點</h3>
+
+<table>
+<tr><th></th><th>10 fF</th><th>30 fF</th></tr>
+<tr><td>30 ps</td><td>D11</td><td>D12</td></tr>
+<tr><td>60 ps</td><td>D21</td><td>D22</td></tr>
+</table>
+
+<p>可把概念想成「二維內插」。</p>
+
+<div class="eq">
+先沿一個方向估值，再沿另一個方向估值 → 得到中間條件的 delay
+</div>
+</section>
+
+<section class="card" id="liberty">
+<h2>9. NLDM 在 Liberty .lib 裡可能長什麼樣？</h2>
+
+<p>
+課程指出 <code>.lib/.db</code> 是 Timing &amp; Power View，
+其中包含 propagation delay、setup/hold、dynamic/leakage power，並使用 NLDM / CCS 等模型。
+</p>
+
+<h3>示意 Liberty 結構</h3>
+
+<pre><code>cell (INV_X1) {
+    pin (A) {
+        direction : input;
+    }
+
+    pin (ZN) {
+        direction : output;
+        function : "!A";
+
+        timing() {
+            related_pin : "A";
+
+            cell_rise(delay_template) {
+                index_1("0.01, 0.03, 0.06, 0.10");
+                index_2("0.002, 0.010, 0.030, 0.060");
+
+                values(
+                    "0.018, 0.024, 0.037, 0.055",
+                    "0.023, 0.030, 0.044, 0.064",
+                    "0.031, 0.039, 0.054, 0.075",
+                    "0.043, 0.052, 0.068, 0.092"
+                );
+            }
+        }
+    }
+}</code></pre>
+
+<div class="warn">
+這段 Liberty 是教學示意，不是課程提供的實際 cell library 內容。
+</div>
+</section>
+
+<section class="card" id="examples">
+<h2>10. 大量 NLDM 例子</h2>
+
+<h3>例 1：INV_X1，小 Slew、小 Load</h3>
+<pre><code>Slew = 10 ps
+Load = 2 fF
+→ 查表
+→ Delay ≈ 18 ps  （示意）</code></pre>
+
+<h3>例 2：INV_X1，小 Slew、大 Load</h3>
+<pre><code>Slew = 10 ps
+Load = 60 fF
+→ Delay ≈ 55 ps</code></pre>
+
+<p>只增加 load，delay 就明顯上升。</p>
+
+<h3>例 3：INV_X1，慢 Slew、小 Load</h3>
+<pre><code>Slew = 100 ps
+Load = 2 fF
+→ Delay ≈ 43 ps</code></pre>
+
+<p>即使 load 很小，input slew 太慢仍會使 delay 變大。</p>
+
+<h3>例 4：最差組合</h3>
+<pre><code>Slew = 100 ps
+Load = 60 fF
+→ Delay ≈ 92 ps</code></pre>
+
+<p>Slow input + large load 通常是不利 timing 的組合。</p>
+
+<h3>例 5：Buffer Chain</h3>
+<pre><code>INV1 → INV2 → INV3</code></pre>
+
+<p>
+INV1 的 output slew 會成為 INV2 的 input slew；
+INV2 的 output slew 又會成為 INV3 的 input slew。
+因此 slew 會逐級傳遞。
+</p>
+
+<h3>例 6：下一級輸入 capacitance 形成 Load</h3>
+<pre><code>INV1 ─→ NAND2
+        ↑
+   NAND2 input capacitance</code></pre>
+
+<p>
+NAND2 input pin capacitance 會成為 INV1 output load 的一部分。
+</p>
+
+<h3>例 7：High Fanout Control Signal</h3>
+<pre><code>enable → FF1
+       → FF2
+       → FF3
+       → FF4
+       → ...
+       → FF20</code></pre>
+
+<p>
+enable net 驅動很多 inputs，load 增加，driver delay / output transition 可能惡化。
+</p>
+
+<h3>例 8：Cell Upsizing</h3>
+<pre><code>INV_X1  timing too slow
+    ↓
+INV_X2
+    ↓
+INV_X4</code></pre>
+
+<p>
+更強 drive 的 cell 可能降低大 load 下的 delay，但通常會增加 area / power / input capacitance。
+</p>
+
+<h3>例 9：Upsizing 也可能讓前級更重</h3>
+<pre><code>Stage1 → INV_X1
+          ↓ replace
+Stage1 → INV_X4</code></pre>
+
+<p>
+INV_X4 的 input capacitance 可能更大，因此雖然它自己能更快驅動後級，
+卻可能讓 Stage1 的 output load 增加。
+</p>
+
+<div class="key">
+這就是 timing optimization 為什麼不能只看單一 cell，而要看整條 path。
+</div>
+
+<h3>例 10：NAND2 不同 Input Slew</h3>
+<pre><code>A transition: 15 ps
+B held at enabling value
+Load: 20 fF
+
+vs.
+
+A transition: 80 ps
+B held at enabling value
+Load: 20 fF</code></pre>
+
+<p>
+即使 cell 與 load 相同，不同 input slew 也會對 delay 造成不同結果。
+</p>
+
+<h3>例 11：MUX Data Path</h3>
+<pre><code>A ----\
+       MUX2 ---- Y
+B ----/
+       S</code></pre>
+
+<p>
+MUX 的 data input / select input 可以形成不同 timing arcs；每條 arc 都可能有自己的 characterized table。
+</p>
+
+<h3>例 12：DFF Clock-to-Q</h3>
+<pre><code>CLK ↑
+   ↓
+DFF ---- Q
+        ↑
+      Load</code></pre>
+
+<p>
+Sequential cell 的 output timing 同樣會受到 output load 影響；課程的 .lib/.db 內容也包含 setup/hold timing。
+</p>
+
+<h3>例 13：Critical Path</h3>
+<pre><code>FF1 → NAND2 → AOI → INV → MUX → FF2</code></pre>
+
+<p>
+STA 會逐級計算：
+</p>
+
+<pre><code>FF1 Q slew
+→ NAND2 input slew
+→ NAND2 查表得到 delay + output slew
+→ AOI input slew
+→ AOI 查表
+→ INV 查表
+→ MUX 查表
+→ arrival time at FF2</code></pre>
+
+<h3>例 14：Wire Capacitance 增加</h3>
+<pre><code>Before routing:
+Driver → short net → Load
+
+After routing:
+Driver ───────────── long wire ─────→ Load</code></pre>
+
+<p>
+實體線路的 parasitic capacitance 增加後，effective output load 改變，
+timing analysis 也必須重新計算。
+</p>
+
+<h3>例 15：Same Logic, Different PVT</h3>
+<pre><code>INV_X1 at Corner A
+INV_X1 at Corner B
+INV_X1 at Corner C</code></pre>
+
+<p>
+每個 PVT corner 都可能有不同 characterization data，因此同一顆 cell 的 NLDM table 也會依 library corner 不同。
+</p>
+</section>
+
+<section class="card" id="sta">
+<h2>11. STA 如何逐級使用 NLDM？</h2>
+
+<p>
+課程說明 NLDM 的 delay table 由 Input Slew 與 Output Load 索引。
+因此在一條 timing path 中，分析不是「每顆 cell 加固定 delay」，
+而是逐級傳播 arrival time 與 slew。
+</p>
+
+<h3>概念流程</h3>
+
+<div class="flow">
+<div class="box">Stage 1 Input Slew</div>
+<div class="arrow">→</div>
+<div class="box">查 Stage 1 NLDM</div>
+<div class="arrow">→</div>
+<div class="box">Delay + Output Slew</div>
+<div class="arrow">→</div>
+<div class="box">Stage 2 Input Slew</div>
+<div class="arrow">→</div>
+<div class="box">繼續查表</div>
+</div>
+
+<h3>簡化數值例子</h3>
+<pre><code>FF Q arrival = 100 ps
+
+NAND delay = 40 ps
+→ arrival = 140 ps
+
+INV delay = 25 ps
+→ arrival = 165 ps
+
+MUX delay = 55 ps
+→ arrival = 220 ps</code></pre>
+
+<div class="note">
+上面數字為示意。實際每一級 delay 會依該級 input slew 與 output load 查對應 library table。
+</div>
+</section>
+
+<section class="card" id="sizing">
+<h2>12. NLDM 與 Cell Sizing / Timing Optimization</h2>
+
+<p>
+因為不同 drive strength 的 cells 有不同 timing tables，
+synthesis / optimization tool 可以比較：
+</p>
+
+<table>
+<tr><th>Cell</th><th>Drive</th><th>Area</th><th>Input Cap</th><th>對大 Load 的能力</th></tr>
+<tr><td>INV_X1</td><td>弱</td><td>小</td><td>小</td><td>較弱</td></tr>
+<tr><td>INV_X2</td><td>中</td><td>中</td><td>中</td><td>較好</td></tr>
+<tr><td>INV_X4</td><td>強</td><td>大</td><td>大</td><td>更好</td></tr>
+</table>
+
+<p>
+課程 Standard Cell Library 的概念也指出，library 會有不同 drive-strength variants，
+讓工具在 area、delay、load capacitance 之間取捨。
+</p>
+
+<h3>Optimization 思考</h3>
+<pre><code>如果某級 delay 太大：
+1. 換強一點的 cell？
+2. 插 buffer？
+3. 減少 fanout？
+4. 改變 logic structure？
+5. 重新 placement / routing？</code></pre>
+</section>
+
+<section class="card" id="limits">
+<h2>13. NLDM 的限制</h2>
+
+<p class="note">
+本節是延伸理解。課程投影片同頁只說明 NLDM 的 2D lookup-table 形式，
+而 `.lib/.db` 頁面也同時提到 NLDM / CCS models。
+</p>
+
+<p>
+NLDM 的主要優點是簡單、查表快、容易被 STA 使用。
+但它把複雜 waveform behavior 濃縮成 input slew 與 output load 等參數，
+因此對非常進階的波形效應，其他模型可能提供更細緻描述。
+</p>
+
+<div class="grid2">
+<div class="mini">
+<h3 style="margin-top:0">NLDM 優點</h3>
+<p>查表快速、資料結構直觀、適合大規模 STA。</p>
+</div>
+<div class="mini">
+<h3 style="margin-top:0">較進階模型</h3>
+<p>課程的 library-format 頁面同時提到 CCS，表示 timing/power library 並不只限 NLDM。</p>
+</div>
+</div>
+</section>
+
+<section class="card" id="pitfalls">
+<h2>14. 常見誤解與考試重點</h2>
+
+<h3>誤解 1：NLDM = 一顆 cell 一個 delay</h3>
+<p>錯。課程明確說是 2D lookup table。</p>
+
+<h3>誤解 2：NLDM 只看 Output Load</h3>
+<p>錯。還要看 Input Slew。</p>
+
+<h3>誤解 3：Input Slew 就是 Clock Frequency</h3>
+<p>錯。Slew 是單次訊號 edge 的 transition time，不是週期或頻率。</p>
+
+<h3>誤解 4：Output Load 只等於下一顆 gate 數量</h3>
+<p>不完整。真正關心的是等效 capacitance；不同 cells 的 pin capacitance 不同，interconnect 也會貢獻 parasitic capacitance。</p>
+
+<h3>誤解 5：每一級 timing 可以完全獨立算</h3>
+<p>錯。上一級 output slew 會成為下一級 input slew，因此 stage 之間彼此相依。</p>
+
+<h3>誤解 6：NLDM Table 數字是 RTL 模擬產生的</h3>
+<p>錯。課程指出 cell characterization 來自大量 transistor-level SPICE simulations。</p>
+</section>
+
+<section class="card">
+<h2>15. 自我測驗</h2>
+
+<details class="quiz"><summary>Q1：NLDM 全名？</summary>
+<p>Non-Linear Delay Model。</p></details>
+
+<details class="quiz"><summary>Q2：NLDM 兩個主要 table index？</summary>
+<p>Input Slew（Transition Time）與 Output Load Capacitance。</p></details>
+
+<details class="quiz"><summary>Q3：Input Slew 變慢時，為什麼不能仍使用相同 delay？</summary>
+<p>因為 transistor 的驅動建立過程改變，characterized cell response 也會不同。</p></details>
+
+<details class="quiz"><summary>Q4：Output Load 增大時，為什麼 delay 常增加？</summary>
+<p>因為輸出端需要對更大的 capacitance 充放電。</p></details>
+
+<details class="quiz"><summary>Q5：NLDM data 主要放在哪一類 library view？</summary>
+<p>Timing &amp; Power View，也就是課程所列的 `.lib/.db`。</p></details>
+
+<details class="quiz"><summary>Q6：上一級 output slew 與下一級有何關係？</summary>
+<p>上一級 output slew 會成為下一級的 input slew，是 STA 逐級 propagation 的重要資訊。</p></details>
+</section>
+
+<section class="card">
+<h2>16. 一頁記憶版</h2>
+
+<table>
+<tr><th>關鍵字</th><th>一句話記憶</th></tr>
+<tr><td>NLDM</td><td>Non-Linear Delay Model</td></tr>
+<tr><td>Index 1</td><td>Input Slew / Transition Time</td></tr>
+<tr><td>Index 2</td><td>Output Load Capacitance</td></tr>
+<tr><td>Table Output</td><td>Cell Delay（以及相關 transition model）</td></tr>
+<tr><td>來源</td><td>Cell Characterization / transistor-level SPICE</td></tr>
+<tr><td>Library</td><td>.lib / .db Timing &amp; Power View</td></tr>
+<tr><td>用途</td><td>Synthesis、STA、Timing Optimization</td></tr>
+</table>
+
+<div class="key">
+<b>最後一句：</b><br>
+NLDM 最重要的不是背名字，而是記住：
+<b>「同一顆 Standard Cell 的 delay 不是固定值，而是由 Input Slew 與 Output Load 共同決定。」</b>
+</div>
+</section>
+
+<div class="footer">NLDM.html — VLSI System Design / Standard Cell Timing Model 詳細教學</div>
+</main>
+</body>
+</html>

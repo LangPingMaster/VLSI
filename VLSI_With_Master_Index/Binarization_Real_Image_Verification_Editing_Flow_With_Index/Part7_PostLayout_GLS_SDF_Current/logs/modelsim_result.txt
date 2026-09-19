@@ -1,0 +1,8 @@
+ModelSim-Altera Starter Edition 10.5b
+SKY130 required cells: 12/12 compiled
+DFRTP UDP: PASS
+6_final.v + tb_postlayout.sv: Errors 0, Warnings 0
+SDF parser: Loading instances from 6_final.sdf
+Fatal: SDF files require Intel FPGA Edition primitive library
+Retry with -L altera_ver -L lpm_ver -L altera_mf_ver -L sgate_ver: same fatal.
+Conclusion: timing GLS blocked by this ModelSim environment; no Timing GLS PASS claimed.

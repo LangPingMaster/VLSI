@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Part 3 — Yosys Synthesis 與 Gate-Level Verification 完整操作紀錄</title>
+<style>
+:root{
+  --bg:#0b1020; --panel:#11182b; --panel2:#161f36; --text:#e9eefc;
+  --muted:#aebbd4; --accent:#62d0ff; --ok:#76e6a7; --warn:#ffd166;
+  --err:#ff7b7b; --line:#2b3859; --code:#0a0f1c;
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#09101f 0%,#10182a 100%);color:var(--text);
+font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",sans-serif;line-height:1.75}
+.container{max-width:1180px;margin:0 auto;padding:32px 22px 70px}
+.hero{background:linear-gradient(135deg,#13223b,#172b4a);border:1px solid #29466f;border-radius:22px;padding:34px;margin-bottom:24px;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+h1{font-size:2rem;margin:0 0 10px} h2{margin-top:36px;border-left:5px solid var(--accent);padding-left:13px}
+h3{margin-top:26px;color:#bfeaff} p{margin:.6em 0}
+.badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.badge{padding:7px 11px;border-radius:999px;background:#0c1730;border:1px solid #365986;color:#cdeaff}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin:18px 0}
+.note{border-left:4px solid var(--accent);background:#0e1a31;padding:14px 16px;border-radius:8px}
+.ok{border-left-color:var(--ok)} .warn{border-left-color:var(--warn)} .err{border-left-color:var(--err)}
+code{font-family:Consolas,Monaco,monospace;background:#121a2a;padding:2px 5px;border-radius:5px}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--code);border:1px solid #23314d;border-radius:12px;padding:16px;overflow:auto;color:#d9f0ff;font-size:.94rem}
+table{width:100%;border-collapse:collapse;margin:16px 0;background:#0f1728}
+th,td{border:1px solid #2a3856;padding:10px 12px;text-align:left;vertical-align:top}
+th{background:#17233b;color:#cfe9ff}.small{font-size:.9rem;color:var(--muted)}
+.flow{display:flex;flex-direction:column;align-items:center;gap:8px;margin:22px auto;max-width:760px}
+.node{width:min(100%,680px);padding:13px 18px;border-radius:12px;text-align:center;background:#13213b;border:1px solid #31527e;font-weight:600}
+.arrow{font-size:1.4rem;color:var(--accent)}
+.success{background:#10291f;border-color:#2f8a5a;color:#c8ffe0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.two{grid-template-columns:1fr}}
+.toc a{color:#aee5ff;text-decoration:none}.toc li{margin:5px 0}
+hr{border:0;border-top:1px solid var(--line);margin:30px 0}
+.kbd{display:inline-block;border:1px solid #40506d;border-bottom-width:2px;border-radius:5px;padding:0 6px;background:#182236}
+</style>
+</head>
+<body>
+<div class="container">
+  <section class="hero">
+    <h1>Part 3 — Yosys Synthesis 與 Gate-Level Verification 完整操作紀錄</h1>
+    <p>本頁完整整理從 <b>OSS CAD Suite 安裝、PowerShell 環境設定、Yosys 合成、netlist 檢查、Gate-Level Simulation、Python Golden Model 比對，到最終 PASS</b> 的所有操作步驟、指令、檔案與結果。</p>
+    <div class="badges">
+      <span class="badge">256 × 256 image</span>
+      <span class="badge">65,536 pixels</span>
+      <span class="badge">Yosys actual synthesis</span>
+      <span class="badge">Icarus Verilog GLS</span>
+      <span class="badge">Mismatch = 0</span>
+      <span class="badge">Accuracy = 100.00%</span>
+      <span class="badge">PASS</span>
+    </div>
+  </section>
+
+  <div class="card toc">
+    <b>目錄</b>
+    <ol>
+      <li><a href="#goal">Part 3 目標與最終流程</a></li>
+      <li><a href="#install">OSS CAD Suite 安裝與版本選擇</a></li>
+      <li><a href="#env">PowerShell 環境設定</a></li>
+      <li><a href="#files">Part 3 所有檔案說明</a></li>
+      <li><a href="#rtl">RTL：design.sv</a></li>
+      <li><a href="#yosys">Yosys synthesis.ys 與實際合成</a></li>
+      <li><a href="#outputs">Yosys 產出檔案</a></li>
+      <li><a href="#tb">Actual Yosys Netlist Testbench</a></li>
+      <li><a href="#gls">Icarus Gate-Level Simulation</a></li>
+      <li><a href="#compare">Golden Model 比對</a></li>
+      <li><a href="#result">最終結果</a></li>
+      <li><a href="#trouble">實際遇到的問題與修正</a></li>
+      <li><a href="#rerun">之後重新執行的最短指令流程</a></li>
+    </ol>
+  </div>
+
+  <h2 id="goal">1. Part 3 目標與最終流程</h2>
+  <div class="card">
+    <p>Part 3 的核心不是只做 RTL simulation，而是把 Part 2 的 RTL 真正交給 Yosys 合成，再把 Yosys 產生的 netlist 拿去模擬，最後與 Python Golden Model 做逐 pixel 比較。</p>
+    <div class="flow">
+      <div class="node">design.sv<br><span class="small">原始 RTL：8-bit pixel ≥ threshold</span></div>
+      <div class="arrow">↓</div>
+      <div class="node">Yosys Synthesis<br><span class="small">yosys -s synthesis.ys</span></div>
+      <div class="arrow">↓</div>
+      <div class="node">binarization_yosys.v + binarization_yosys.json</div>
+      <div class="arrow">↓</div>
+      <div class="node">Icarus Verilog compile<br><span class="small">binarization_yosys.v + testbench_yosys.sv</span></div>
+      <div class="arrow">↓</div>
+      <div class="node">vvp simv_yosys</div>
+      <div class="arrow">↓</div>
+      <div class="node">yosys_binary.txt<br><span class="small">65,536 個 gate-level pixel outputs</span></div>
+      <div class="arrow">↓</div>
+      <div class="node">compare_yosys.py<br><span class="small">vs ../data/golden_binary.txt</span></div>
+      <div class="arrow">↓</div>
+      <div class="node success">Mismatch = 0　｜　Accuracy = 100.00%　｜　PASS</div>
+    </div>
+  </div>
+
+  <h2 id="install">2. OSS CAD Suite 安裝與版本選擇</h2>
+  <div class="card">
+    <h3>2.1 一開始下載錯誤的版本</h3>
+    <p>最初資料夾名稱為：</p>
+    <pre>oss-cad-suite-darwin-arm64-20260914</pre>
+    <p>這是 <b>macOS Apple Silicon</b> 版本，不適合 Windows PowerShell。</p>
+
+    <h3>2.2 正確版本</h3>
+    <pre>oss-cad-suite-windows-x64-20260914</pre>
+    <p>實際使用的 OSS CAD Suite 路徑：</p>
+    <pre>D:\userdata\Downloads\oss-cad-suite-windows-x64-20260914\oss-cad-suite</pre>
+
+    <div class="note warn">
+      <b>版本辨識：</b><br>
+      <code>darwin-arm64</code> = macOS ARM64<br>
+      <code>windows-x64</code> = Windows 64-bit，這才是本次需要的版本。
+    </div>
+  </div>
+
+  <h2 id="env">3. PowerShell 環境設定</h2>
+  <div class="card">
+    <h3>3.1 不要使用不存在的路徑</h3>
+    <p>曾嘗試：</p>
+    <pre>cd D:\oss-cad-suite</pre>
+    <p>因為該路徑不存在，所以會得到：</p>
+    <pre>找不到 'D:\oss-cad-suite' 路徑，因為它不存在。</pre>
+
+    <h3>3.2 進入正確 OSS CAD Suite 路徑</h3>
+    <pre>cd "D:\userdata\Downloads\oss-cad-suite-windows-x64-20260914\oss-cad-suite"</pre>
+
+    <h3>3.3 PowerShell Execution Policy</h3>
+    <p>執行 <code>environment.ps1</code> 時曾遇到「未經數位簽署」錯誤，因此只針對目前 PowerShell process 暫時放行：</p>
+    <pre>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass</pre>
+    <p>此設定只在目前 PowerShell 視窗有效，關閉視窗後失效。</p>
+
+    <h3>3.4 載入 OSS CAD Suite 環境</h3>
+    <pre>. .\environment.ps1</pre>
+    <p>成功後 PowerShell prompt 顯示：</p>
+    <pre>[OSS CAD Suite] PS ...></pre>
+
+    <h3>3.5 若只想先測 PATH</h3>
+    <pre>$env:PATH = "$PWD\bin;$env:PATH"
+Get-Command yosys</pre>
+    <p>當時成功找到：</p>
+    <pre>Application  yosys.exe  ...  D:\userdata\Downloads\oss-cad-suite-windows-x64-20260914\oss-cad-suite\bin\yosys.exe</pre>
+  </div>
+
+  <h2 id="files">4. Part 3 所有檔案名稱與用途</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>檔案</th><th>來源 / 階段</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>design.sv</code></td><td>原始</td><td>Part 3 的 RTL 設計，輸入 pixel 與 threshold，比較後在 clock 正緣更新 pix_out。</td></tr>
+        <tr><td><code>synthesis.ys</code></td><td>原始</td><td>Yosys synthesis script。讀入 RTL、指定 top、執行 proc/opt/fsm/memory/techmap/abc，最後輸出 Verilog 與 JSON。</td></tr>
+        <tr><td><code>yosys_commands.txt</code></td><td>原始</td><td>Yosys 相關指令參考。</td></tr>
+        <tr><td><code>generic_cells.v</code></td><td>原始 reference flow</td><td>先前教學用 structural gate simulation 所使用的 generic cell 定義。</td></tr>
+        <tr><td><code>binarization_gate_reference.v</code></td><td>原始 reference flow</td><td>人工/教學用 structural reference netlist，不是 Yosys actual output。</td></tr>
+        <tr><td><code>testbench_gate.sv</code></td><td>原始 reference flow</td><td>模擬 <code>binarization_gate_reference</code>。</td></tr>
+        <tr><td><code>compare_gate.py</code></td><td>原始 reference flow</td><td>比較 reference gate output 與 Golden Model。</td></tr>
+        <tr><td><code>run_part3.ps1</code></td><td>原始</td><td>Windows reference flow 自動執行腳本。</td></tr>
+        <tr><td><code>run_part3.sh</code></td><td>原始</td><td>Linux/macOS shell reference flow 自動執行腳本。</td></tr>
+        <tr><td><code>gray.hex</code></td><td>輸入資料</td><td>256×256 grayscale image 的 65,536 個 8-bit pixel。</td></tr>
+        <tr><td><code>gate_binary.txt</code></td><td>reference gate simulation 產出</td><td>先前 structural reference gate simulation 的 pixel 輸出。</td></tr>
+        <tr><td><code>simv_gate</code></td><td>reference gate compile 產出</td><td>Icarus Verilog 對 reference gate flow 產生的 simulation executable。</td></tr>
+        <tr><td><code>binarization_yosys.v</code></td><td><b>Actual Yosys synthesis 產出</b></td><td>真正由 <code>design.sv</code> 經 Yosys 合成後寫出的 Verilog netlist。</td></tr>
+        <tr><td><code>binarization_yosys.json</code></td><td><b>Actual Yosys synthesis 產出</b></td><td>Yosys JSON netlist/database，可看到 module、ports、cells、nets。</td></tr>
+        <tr><td><code>testbench_yosys.sv</code></td><td>新增</td><td>專門 instantiate <code>binarization</code>，對 actual Yosys netlist 做 65,536-pixel simulation。</td></tr>
+        <tr><td><code>simv_yosys</code></td><td>新增產出</td><td>Icarus Verilog 編譯 actual Yosys netlist 後產生的 simulation executable。</td></tr>
+        <tr><td><code>yosys_binary.txt</code></td><td>新增產出</td><td>actual Yosys netlist simulation 產出的 65,536 個 binary pixels。</td></tr>
+        <tr><td><code>compare_yosys.py</code></td><td>新增</td><td>比較 <code>yosys_binary.txt</code> 與 <code>../data/golden_binary.txt</code>。</td></tr>
+        <tr><td><code>../data/golden_binary.txt</code></td><td>Part 2 Golden Model</td><td>Python 依 threshold=128 產生的 Golden binary output。</td></tr>
+        <tr><td><code>../images/sample_binary_yosys.png</code></td><td>compare_yosys.py 產出</td><td>把 Yosys simulation 的 65,536 pixels 重建成 256×256 binary image。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="rtl">5. RTL：design.sv</h2>
+  <div class="card">
+<pre>`timescale 1ns/1ps
+module binarization (
+    input  wire       clk,
+    input  wire       rst_n,
+    input  wire [7:0] pix_in,
+    input  wire [7:0] threshold,
+    output reg        pix_out
+);
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        pix_out &lt;= 1'b0;
+    else if (pix_in &gt;= threshold)
+        pix_out &lt;= 1'b1;
+    else
+        pix_out &lt;= 1'b0;
+end
+endmodule</pre>
+    <p><b>功能：</b>每個 clock 正緣判斷 <code>pix_in &gt;= threshold</code>。本次 image verification 的 threshold 固定為 <code>128</code>。</p>
+  </div>
+
+  <h2 id="yosys">6. synthesis.ys 與 Actual Yosys Synthesis</h2>
+  <div class="card">
+    <h3>6.1 synthesis.ys</h3>
+<pre># Part 3 - Yosys synthesis
+# Input:  design.sv
+# Output: binarization_yosys.v, binarization_yosys.json
+
+read_verilog -sv design.sv
+hierarchy -check -top binarization
+
+proc
+opt
+fsm
+opt
+memory
+opt
+techmap
+opt
+
+abc -g AND,OR,XOR,XNOR,NAND,NOR,MUX
+
+clean
+stat
+
+write_verilog -noattr binarization_yosys.v
+write_json binarization_yosys.json</pre>
+
+    <h3>6.2 進入 Part 3 code 目錄</h3>
+<pre>cd "D:\userdata\Downloads\0914\Part3_Synthesis_GateLevel_Verification\Part3_Synthesis_GateLevel_Verification\code"</pre>
+
+    <h3>6.3 執行 Yosys</h3>
+<pre>yosys -s synthesis.ys</pre>
+
+    <h3>6.4 檢查輸出</h3>
+<pre>Get-ChildItem binarization_yosys.*</pre>
+    <p>成功後得到：</p>
+<pre>binarization_yosys.v
+binarization_yosys.json</pre>
+  </div>
+
+  <h2 id="outputs">7. Yosys 產出內容</h2>
+  <div class="card">
+    <h3>7.1 查看 Verilog netlist</h3>
+<pre>Get-Content .\binarization_yosys.v</pre>
+
+    <p>本次輸出的 <code>binarization_yosys.v</code> 是 simulation-friendly Verilog。組合邏輯已被展開成大量 <code>assign</code>，例如：</p>
+<pre>assign _01_ = ~pix_in[0];
+assign _09_ = ~(_03_ &amp; threshold[7]);
+assign _19_ = pix_in[1] | _05_;
+...
+assign _00_ = _09_ &amp; _39_;</pre>
+
+    <p>而原本的 registered output 仍以 sequential always block 表示：</p>
+<pre>always @(posedge clk, negedge rst_n)
+  if (!rst_n) pix_out &lt;= 1'h0;
+  else pix_out &lt;= _00_;</pre>
+
+    <div class="note ok">
+      這表示本次 <code>binarization_yosys.v</code> 不需要額外加入 <code>simcells.v</code>，可直接交給 Icarus Verilog 模擬。
+    </div>
+
+    <h3>7.2 JSON 的意義</h3>
+    <p><code>binarization_yosys.json</code> 保留了 Yosys 對此設計的 module、port、cell 與 net 結構。內部可看到 <code>$_NOT_</code>、<code>$_NAND_</code>、<code>$_AND_</code>、<code>$_OR_</code> 與 DFF 等 synthesis cell 表示。</p>
+  </div>
+
+  <h2 id="tb">8. testbench_yosys.sv：Actual Netlist Testbench</h2>
+  <div class="card">
+<pre>`timescale 1ns/1ps
+
+module tb_binarization_yosys;
+
+localparam N = 65536;
+
+reg clk;
+reg rst_n;
+reg [7:0] pix_in;
+reg [7:0] threshold;
+wire pix_out;
+
+reg [7:0] img_mem [0:N-1];
+
+integer i;
+integer fout;
+
+binarization dut (
+    .clk(clk),
+    .rst_n(rst_n),
+    .pix_in(pix_in),
+    .threshold(threshold),
+    .pix_out(pix_out)
+);
+
+initial clk = 0;
+always #5 clk = ~clk;
+
+initial begin
+    $readmemh("gray.hex", img_mem);
+
+    fout = $fopen("yosys_binary.txt", "w");
+
+    threshold = 8'd128;
+    rst_n = 0;
+    pix_in = 0;
+
+    #12;
+    rst_n = 1;
+
+    for (i = 0; i &lt; N; i = i + 1) begin
+        @(negedge clk);
+        pix_in = img_mem[i];
+
+        @(posedge clk);
+        #1;
+
+        $fwrite(fout, "%0d\n", pix_out);
+    end
+
+    $fclose(fout);
+
+    $display("Yosys Netlist: Processed %0d pixels. Done.", N);
+
+    #10;
+    $finish;
+end
+
+endmodule</pre>
+
+    <p><b>時序：</b>每個 pixel 在 <code>negedge clk</code> 放入，下一個 <code>posedge clk</code> 後等待 <code>#1</code> 再讀取 registered <code>pix_out</code>，確保取到更新後的輸出。</p>
+  </div>
+
+  <h2 id="gls">9. Icarus Verilog Gate-Level Simulation</h2>
+  <div class="card">
+    <h3>9.1 Compile</h3>
+<pre>iverilog -g2012 -o simv_yosys binarization_yosys.v testbench_yosys.sv</pre>
+    <p>成功時不會有 error message，並產生：</p>
+<pre>simv_yosys</pre>
+
+    <h3>9.2 Run</h3>
+<pre>vvp simv_yosys</pre>
+
+    <h3>9.3 實際執行結果</h3>
+<pre>Yosys Netlist: Processed 65536 pixels. Done.
+testbench_yosys.sv:57: $finish called at 655386000 (1ps)</pre>
+
+    <p>代表 <b>65,536 個 pixels 全部跑完</b>，simulation 正常到達 <code>$finish</code>。</p>
+
+    <h3>9.4 產生檔案</h3>
+<pre>yosys_binary.txt</pre>
+    <p>當時檔案資訊：</p>
+<pre>Length: 196608 bytes
+LastWriteTime: 2026/9/15 上午 01:24</pre>
+  </div>
+
+  <h2 id="compare">10. Python Golden Model 比對</h2>
+  <div class="card">
+    <h3>10.1 compare_yosys.py</h3>
+<pre>from PIL import Image
+import numpy as np
+
+golden = np.loadtxt("../data/golden_binary.txt", dtype=np.uint8)
+yosys = np.loadtxt("yosys_binary.txt", dtype=np.uint8)
+
+if yosys.size != golden.size:
+    raise SystemExit(
+        f"size mismatch: Yosys={yosys.size}, Golden={golden.size}"
+    )
+
+mismatch = int(np.count_nonzero(yosys != golden))
+accuracy = (1 - mismatch / golden.size) * 100
+
+img = (yosys.reshape(256, 256) * 255).astype(np.uint8)
+Image.fromarray(img, mode="L").save("../images/sample_binary_yosys.png")
+
+print("Total pixels:", golden.size)
+print("Mismatch pixels:", mismatch)
+print("Accuracy: %.2f%%" % accuracy)
+
+if mismatch == 0:
+    print("PASS")
+else:
+    print("FAIL")</pre>
+
+    <h3>10.2 執行</h3>
+<pre>python compare_yosys.py</pre>
+
+    <h3>10.3 實際結果</h3>
+<pre>Total pixels: 65536
+Mismatch pixels: 0
+Accuracy: 100.00%
+PASS</pre>
+  </div>
+
+  <h2 id="result">11. 最終結果</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>檢查項目</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr><td>輸入影像大小</td><td>256 × 256</td></tr>
+        <tr><td>總 pixel 數</td><td>65,536</td></tr>
+        <tr><td>Threshold</td><td>128</td></tr>
+        <tr><td>Yosys synthesis</td><td>✅ 成功</td></tr>
+        <tr><td>binarization_yosys.v</td><td>✅ 成功產出</td></tr>
+        <tr><td>binarization_yosys.json</td><td>✅ 成功產出</td></tr>
+        <tr><td>Actual synthesized netlist compile</td><td>✅ 成功</td></tr>
+        <tr><td>Actual synthesized netlist simulation</td><td>✅ 65,536 pixels 完整執行</td></tr>
+        <tr><td>Golden vs Yosys mismatch</td><td><b>0</b></td></tr>
+        <tr><td>Accuracy</td><td><b>100.00%</b></td></tr>
+        <tr><td>Final status</td><td><b style="color:#76e6a7">PASS</b></td></tr>
+      </tbody>
+    </table>
+
+    <div class="flow">
+      <div class="node">RTL behavior</div><div class="arrow">=</div>
+      <div class="node">Yosys synthesized netlist behavior</div><div class="arrow">=</div>
+      <div class="node">Python Golden Model</div><div class="arrow">↓</div>
+      <div class="node success">65,536 / 65,536 pixels correct</div>
+    </div>
+  </div>
+
+  <h2 id="trouble">12. 實際遇到的問題與修正</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>問題</th><th>原因</th><th>修正</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>cd D:\oss-cad-suite</code> 找不到路徑</td>
+          <td>實際 OSS CAD Suite 並不在 D:\ 根目錄。</td>
+          <td>使用真正路徑：<br><code>D:\userdata\Downloads\oss-cad-suite-windows-x64-20260914\oss-cad-suite</code></td>
+        </tr>
+        <tr>
+          <td>一開始下載 <code>darwin-arm64</code></td>
+          <td>這是 macOS ARM64 版本。</td>
+          <td>改下載 <code>windows-x64</code>。</td>
+        </tr>
+        <tr>
+          <td><code>environment.ps1</code> 未經數位簽署</td>
+          <td>PowerShell Execution Policy 阻擋。</td>
+          <td><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass</code></td>
+        </tr>
+        <tr>
+          <td><code>yosys</code> 無法辨識</td>
+          <td>PowerShell 尚未載入 OSS CAD Suite 環境。</td>
+          <td><code>. .\environment.ps1</code>，或暫時加入 <code>$PWD\bin</code> 到 PATH。</td>
+        </tr>
+        <tr>
+          <td><code>testbench_yosys.sv:1: syntax error</code></td>
+          <td>testbench 第一行誤留 PowerShell here-string 的 <code>@'</code>。</td>
+          <td>刪除檔案開頭的 <code>@'</code>，並確認檔尾沒有 <code>'@</code>。檔案第一行應直接是 <code>`timescale 1ns/1ps</code>。</td>
+        </tr>
+        <tr>
+          <td><code>compare_yosys.py: No such file or directory</code></td>
+          <td>新 comparison script 尚未建立。</td>
+          <td>建立 <code>compare_yosys.py</code> 後再執行。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="rerun">13. 之後重新執行的最短完整流程</h2>
+  <div class="card">
+    <h3>A. 每次新開 PowerShell</h3>
+<pre>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+cd "D:\userdata\Downloads\oss-cad-suite-windows-x64-20260914\oss-cad-suite"
+
+. .\environment.ps1</pre>
+
+    <h3>B. 進入 Part 3 code</h3>
+<pre>cd "D:\userdata\Downloads\0914\Part3_Synthesis_GateLevel_Verification\Part3_Synthesis_GateLevel_Verification\code"</pre>
+
+    <h3>C. Actual Yosys synthesis</h3>
+<pre>yosys -s synthesis.ys</pre>
+
+    <h3>D. Compile actual synthesized netlist</h3>
+<pre>iverilog -g2012 -o simv_yosys binarization_yosys.v testbench_yosys.sv</pre>
+
+    <h3>E. Simulation</h3>
+<pre>vvp simv_yosys</pre>
+
+    <h3>F. Golden compare</h3>
+<pre>python compare_yosys.py</pre>
+
+    <h3>G. 預期最終結果</h3>
+<pre>Total pixels: 65536
+Mismatch pixels: 0
+Accuracy: 100.00%
+PASS</pre>
+  </div>
+
+  <h2>14. Reference Gate Flow 與 Actual Yosys Flow 的差別</h2>
+  <div class="card two">
+    <div>
+      <h3>Reference Structural Flow</h3>
+      <pre>binarization_gate_reference.v
++ generic_cells.v
++ testbench_gate.sv
+→ simv_gate
+→ gate_binary.txt
+→ compare_gate.py</pre>
+      <p>用途：教學、先驗證 structural gate concept。</p>
+    </div>
+    <div>
+      <h3>Actual Yosys Flow</h3>
+      <pre>design.sv
+→ Yosys synthesis
+→ binarization_yosys.v
++ testbench_yosys.sv
+→ simv_yosys
+→ yosys_binary.txt
+→ compare_yosys.py</pre>
+      <p><b>用途：真正驗證 Yosys synthesized netlist。</b></p>
+    </div>
+  </div>
+
+  <div class="note ok" style="margin-top:30px">
+    <b>Part 3 最終結論：</b>
+    RTL <code>design.sv</code> 經 Yosys synthesis 後產生的 <code>binarization_yosys.v</code>，在 256×256、共 65,536 個 pixels 的 Gate-Level/Netlist Simulation 中，與 Python Golden Model 逐 pixel 比對結果為 <b>0 mismatches、100.00% accuracy、PASS</b>。
+  </div>
+
+  <h2 id="oss-install-table">15. oss-cad-suite-windows-x64-20260914.tgz：下載、安裝與執行完整表格</h2>
+  <div class="card">
+    <p>以下表格整理 Windows 版本 <code>oss-cad-suite-windows-x64-20260914.tgz</code> 從下載、解壓縮、PowerShell 環境設定，到最後成功執行 Yosys synthesis 的完整流程。</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>步驟</th>
+          <th>操作內容</th>
+          <th>指令 / 檔案</th>
+          <th>預期結果 / 注意事項</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>開啟 OSS CAD Suite 官方 Releases 頁面</td>
+          <td><code>https://github.com/YosysHQ/oss-cad-suite-build/releases</code></td>
+          <td>進入最新 release 的 Assets 區域。</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>選擇 Windows x64 版本</td>
+          <td><code>oss-cad-suite-windows-x64-20260914.tgz</code></td>
+          <td>
+            必須選 <code>windows-x64</code>。<br>
+            不要選 <code>darwin-arm64</code>、<code>darwin-x64</code>、<code>linux-x64</code>。
+          </td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>下載壓縮檔</td>
+          <td><code>oss-cad-suite-windows-x64-20260914.tgz</code></td>
+          <td>下載完成後通常位於 Windows 的 <code>Downloads</code> 資料夾。</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>解壓縮 <code>.tgz</code></td>
+          <td>
+            可使用 7-Zip / WinRAR。<br>
+            第一次解開 <code>.tgz</code> 後通常會得到 <code>.tar</code>，再解一次。
+          </td>
+          <td>最後應得到一個 <code>oss-cad-suite</code> 資料夾。</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>確認解壓縮後的資料夾</td>
+          <td><code>D:\userdata\Downloads\oss-cad-suite-windows-x64-20260914\oss-cad-suite</code></td>
+          <td>此路徑為本次實際使用的 OSS CAD Suite 根目錄。</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>開啟 PowerShell 並進入 OSS CAD Suite 根目錄</td>
+          <td><pre>cd "D:\userdata\Downloads\oss-cad-suite-windows-x64-20260914\oss-cad-suite"</pre></td>
+          <td>不要使用不存在的 <code>D:\oss-cad-suite</code>。</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>若 PowerShell 阻擋 unsigned script，暫時解除目前 process 的限制</td>
+          <td><pre>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass</pre></td>
+          <td>只影響目前 PowerShell 視窗，關閉後失效，不會永久修改整台電腦。</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>載入 OSS CAD Suite PowerShell 環境</td>
+          <td><pre>. .\environment.ps1</pre></td>
+          <td>
+            注意前面是「點 + 空白 + 路徑」。<br>
+            成功後 PowerShell prompt 會顯示 <code>[OSS CAD Suite]</code>。
+          </td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>確認 PowerShell 找得到 Yosys</td>
+          <td><pre>Get-Command yosys</pre></td>
+          <td>應看到 <code>yosys.exe</code>，來源位於 OSS CAD Suite 的 <code>bin</code> 目錄。</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td>若尚未載入環境，可暫時手動加入 PATH</td>
+          <td><pre>$env:PATH = "$PWD\bin;$env:PATH"</pre></td>
+          <td>這只是目前 PowerShell session 的暫時 PATH 設定。</td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td>進入 Part 3 的 code 資料夾</td>
+          <td><pre>cd "D:\userdata\Downloads\0914\Part3_Synthesis_GateLevel_Verification\Part3_Synthesis_GateLevel_Verification\code"</pre></td>
+          <td>此資料夾內應包含 <code>design.sv</code> 與 <code>synthesis.ys</code>。</td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td>執行 Actual Yosys Synthesis</td>
+          <td><pre>yosys -s synthesis.ys</pre></td>
+          <td>Yosys 會讀入 <code>design.sv</code> 並執行 synthesis script。</td>
+        </tr>
+        <tr>
+          <td>13</td>
+          <td>確認 synthesis 產出</td>
+          <td><pre>Get-ChildItem binarization_yosys.*</pre></td>
+          <td>
+            應產生：<br>
+            <code>binarization_yosys.v</code><br>
+            <code>binarization_yosys.json</code>
+          </td>
+        </tr>
+        <tr>
+          <td>14</td>
+          <td>查看 synthesized Verilog netlist</td>
+          <td><pre>Get-Content .\binarization_yosys.v</pre></td>
+          <td>可看到 Yosys 展開後的 combinational logic 與 sequential logic。</td>
+        </tr>
+        <tr>
+          <td>15</td>
+          <td>編譯 synthesized netlist 與 testbench</td>
+          <td><pre>iverilog -g2012 -o simv_yosys binarization_yosys.v testbench_yosys.sv</pre></td>
+          <td>成功時通常不會顯示錯誤訊息，並產生 <code>simv_yosys</code>。</td>
+        </tr>
+        <tr>
+          <td>16</td>
+          <td>執行 Gate-Level / Netlist Simulation</td>
+          <td><pre>vvp simv_yosys</pre></td>
+          <td>本次實際輸出：<br><code>Yosys Netlist: Processed 65536 pixels. Done.</code></td>
+        </tr>
+        <tr>
+          <td>17</td>
+          <td>確認 simulation 產生 pixel output</td>
+          <td><code>yosys_binary.txt</code></td>
+          <td>內容為 65,536 個 binary pixel outputs。</td>
+        </tr>
+        <tr>
+          <td>18</td>
+          <td>執行 Python Golden Model 比對</td>
+          <td><pre>python compare_yosys.py</pre></td>
+          <td>比較 <code>yosys_binary.txt</code> 與 <code>../data/golden_binary.txt</code>。</td>
+        </tr>
+        <tr>
+          <td>19</td>
+          <td>確認最終結果</td>
+          <td><pre>Total pixels: 65536
+Mismatch pixels: 0
+Accuracy: 100.00%
+PASS</pre></td>
+          <td><b style="color:#76e6a7">Actual Yosys Synthesis + Netlist Simulation + Golden Compare 全部成功。</b></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note ok">
+      <b>最短重跑流程：</b>
+      <pre>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+cd "D:\userdata\Downloads\oss-cad-suite-windows-x64-20260914\oss-cad-suite"
+. .\environment.ps1
+
+cd "D:\userdata\Downloads\0914\Part3_Synthesis_GateLevel_Verification\Part3_Synthesis_GateLevel_Verification\code"
+
+yosys -s synthesis.ys
+iverilog -g2012 -o simv_yosys binarization_yosys.v testbench_yosys.sv
+vvp simv_yosys
+python compare_yosys.py</pre>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

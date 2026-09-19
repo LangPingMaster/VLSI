@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VSD HW1 本機驗證：ModelSim / Yosys / Verilator 完整流程與結果分析</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--ink:#172033;--muted:#667085;--line:#dbe2ea;--ok:#067647;--warn:#b54708;--bad:#b42318;--blue:#175cd3;--code:#101828}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;line-height:1.75}
+header{background:linear-gradient(135deg,#101828,#344054);color:#fff;padding:42px 20px}
+.wrap{max-width:1120px;margin:auto}.kicker{opacity:.75;letter-spacing:.08em}.title{font-size:32px;font-weight:800;margin:5px 0}.sub{opacity:.88}
+main{padding:24px 16px 60px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;margin:18px 0;box-shadow:0 3px 14px #1018280a}
+h2{margin-top:0;border-bottom:2px solid #e8eef8;padding-bottom:9px} h3{margin-top:26px}.ok{color:var(--ok);font-weight:700}.warn{color:var(--warn);font-weight:700}.bad{color:var(--bad);font-weight:700}
+code{font-family:Consolas,monospace} pre{background:var(--code);color:#e6edf3;padding:16px;border-radius:11px;overflow:auto;white-space:pre-wrap;line-height:1.5}
+table{border-collapse:collapse;width:100%;margin:14px 0} th,td{border:1px solid var(--line);padding:10px;vertical-align:top} th{background:#f0f4fa;text-align:left}
+.note{border-left:5px solid var(--blue);background:#eff6ff;padding:12px 16px;border-radius:8px}.warning{border-left-color:#f79009;background:#fffaeb}.success{border-left-color:#12b76a;background:#ecfdf3}
+.flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;padding:20px 5px}
+.node{min-width:145px;text-align:center;padding:14px 12px;border-radius:12px;border:2px solid #84adff;background:#eff4ff;font-weight:700}
+.node.done{border-color:#6ce9a6;background:#ecfdf3}.node.wait{border-color:#fec84b;background:#fffaeb}.arrow{font-size:26px;color:#667085}
+.small{font-size:.92em;color:var(--muted)} .toc a{color:#175cd3;text-decoration:none}.toc li{margin:4px 0}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#ecfdf3;color:#067647;font-size:.85em;font-weight:700}
+footer{text-align:center;color:#667085;padding:22px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="kicker">VSD HW1 VERIFICATION RECORD</div><div class="title">ModelSim → Yosys → Verilator：完整測試流程、指令與結果解析</div>
+<div class="sub">目前狀態：Windows 本機預驗證完成；正式 VCS / JasperGold Superlint 待回 SoC Lab 執行。RTL 暫不修改。</div></div></header>
+<main class="wrap">
+
+<section class="card" id="flow">
+<h2>0. 整體測試驗證流程圖</h2>
+<div class="flow">
+ <div class="node done">① ModelSim<br>功能模擬<br>PASS</div><div class="arrow">→</div>
+ <div class="node done">② Yosys<br>合成/結構預檢<br>完成</div><div class="arrow">→</div>
+ <div class="node done">③ Verilator<br>Lint/Elaboration<br>完成</div><div class="arrow">→</div>
+ <div class="node wait">④ VCS<br>正式模擬<br>待 SoC Lab</div><div class="arrow">→</div>
+ <div class="node wait">⑤ JasperGold<br>Superlint<br>待 SoC Lab</div><div class="arrow">→</div>
+ <div class="node wait">⑥ Report / hierarchy<br>.tar / submission</div>
+</div>
+<pre>功能正確性
+   │
+   ├─ ModelSim：Provided + Hidden Defense
+   │
+   ├─ Yosys：RTL parsing / hierarchy / synthesis / check
+   │
+   ├─ Verilator：ALU / FPU / HW1_lint_top 靜態 lint + elaboration
+   │
+   └─ 回學校後：VCS → JasperGold Superlint → 必要時修 RTL → Regression
+                                                     ↓
+                                          Report → hierarchy → .tar</pre>
+<div class="note success"><b>核心原則：</b>ModelSim 已有完整功能測試通過；Yosys、Verilator 是本機「額外交叉預檢」，不能取代課程指定的 VCS 與 JasperGold。現在不因單一工具 warning 隨意修改已通過 regression 的 ALU.sv / FPU.sv。</div>
+</section>
+
+<section class="card toc"><h2>1. 文件導覽</h2>
+<ol><li><a href="#baseline">ModelSim 功能驗證基準</a></li><li><a href="#env">OSS CAD Suite / Yosys 環境</a></li><li><a href="#yosys-alu">Yosys：ALU</a></li><li><a href="#yosys-fpu">Yosys：FPU 與 fp_addsub</a></li><li><a href="#verilator-env">Verilator 啟動問題與修正</a></li><li><a href="#verilator-alu">Verilator：ALU lint</a></li><li><a href="#verilator-fpu">Verilator：FPU lint</a></li><li><a href="#wrapper">HW1_lint_top 整合 lint</a></li><li><a href="#summary">總結與後續正式流程</a></li></ol></section>
+
+<section class="card" id="baseline">
+<h2>2. ModelSim：功能驗證基準</h2>
+<p>在進入 Yosys / Verilator 前，HW1 已先以 ModelSim 完成功能驗證。這是目前判斷 RTL 功能是否正確的重要基準。</p>
+<table><tr><th>模組</th><th>測試</th><th>結果</th></tr>
+<tr><td>ALU</td><td>Provided tests</td><td class="ok">ALL PASS</td></tr>
+<tr><td>ALU</td><td>Hidden Defense</td><td class="ok">44 / 44 PASS</td></tr>
+<tr><td>FPU</td><td>Provided tests</td><td class="ok">2000 / 2000 PASS</td></tr>
+<tr><td>FPU</td><td>Hidden Defense</td><td class="ok">27 / 27 PASS</td></tr></table>
+<p><b>解析：</b>因此後續 Yosys 或 Verilator 若出現工具支援限制或 lint warning，不能直接推論成「功能錯誤」。要區分 simulation correctness、synthesizability、lint/style 三種不同問題。</p>
+</section>
+
+<section class="card" id="env"><h2>3. Windows 本機 OSS CAD Suite / Yosys 環境</h2>
+<p>專案工作目錄：</p><pre>E:\StudentID_HW1\0917\StudentID_HW1</pre>
+<p>OSS CAD Suite：</p><pre>E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite</pre>
+<p>每個新的 PowerShell session 先初始化：</p>
+<pre>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite\environment.ps1</pre>
+<p>確認 Yosys：</p><pre>where.exe yosys
+yosys -V</pre>
+<p>實測版本：</p><pre>Yosys 0.69+24 (git sha1 d0e71cfb7-dirty ...)</pre>
+</section>
+
+<section class="card" id="yosys-alu"><h2>4. Yosys：ALU parsing → hierarchy → synthesis → check</h2>
+<h3>4.1 先做 SystemVerilog parsing 與 hierarchy</h3>
+<pre>yosys -p "read_verilog -sv Src/ALU.sv; hierarchy -check -top ALU"</pre>
+<p class="ok">結果：PASS。ALU 可被 Yosys 正常解析，top module 正確。</p>
+<h3>4.2 完整 synthesis + stat</h3>
+<pre>yosys -p "read_verilog -sv Src/ALU.sv; hierarchy -check -top ALU; synth -top ALU; stat"</pre>
+<p>重要結果：</p>
+<pre>Checking module ALU...
+Found and reported 0 problems.
+
+Warnings: 3 unique messages, 3 total</pre>
+<p>3 個 warning 為：</p>
+<pre>Latch inferred for signal `\ALU.\i'
+Latch inferred for signal `\ALU.\cnt [5:0]'
+Latch inferred for signal `\ALU.\cnt [31:6]'</pre>
+<p><b>解析：</b>Yosys 的 synthesis 本身完成，而且最後 CHECK 為 0 problems。warning 集中在程序內部的 <code>i</code> / <code>cnt</code>，並非直接指出 <code>result_o</code> latch。之後 Verilator 也沒有報同樣 latch warning，因此先記錄、待 JasperGold 正式判讀，不在此時修改 ALU。</p>
+</section>
+
+<section class="card" id="yosys-fpu"><h2>5. Yosys：FPU parsing 與 fp_addsub 限制</h2>
+<h3>5.1 FPU hierarchy 預檢</h3>
+<pre>yosys -p "read_verilog -sv Src/FPU.sv; hierarchy -check -top FPU"</pre>
+<p>結果：</p><pre>Src/FPU.sv:126: ERROR: Function \fp_addsub can only be called with constant arguments.</pre>
+<p>第 126/127 行的呼叫為：</p>
+<pre>2'd2: next_result = fp_addsub(ai,bi,1'b0);
+2'd3: next_result = fp_addsub(ai,bi,1'b1);</pre>
+<p>進一步檢查 function：</p>
+<pre>Select-String -Path Src\FPU.sv -Pattern "function.*fp_addsub" -Context 0,80</pre>
+<p>其中可見 runtime-dependent normalization：</p>
+<pre>while((mr[26]==0) && (mr!=0) && (er>1)) begin
+    mr=mr&lt;&lt;1;
+    er=er-1;
+end</pre>
+<h3>5.2 AST 交叉確認</h3>
+<pre>yosys -p "read_verilog -sv -dump_ast1 Src/FPU.sv" 2&gt;&amp;1 | Select-String -Pattern "fp_addsub|while|ERROR" -Context 2,2</pre>
+<p>AST 可辨識 <code>AST_FUNCTION fp_addsub</code>、<code>AST_WHILE</code>，並在以 runtime <code>ai/bi</code> 呼叫 function 時報 constant-argument error。</p>
+<div class="note warning"><b>結論：</b>這裡應記錄為 Yosys frontend/elaboration 對此 function procedural constructs 的限制；AST 顯示 while 與此限制高度相關，但不應宣稱已證明「唯一原因」就是 while。由於 ModelSim FPU 全部通過，且後續 Verilator 能完整解析 FPU，因此沒有依據為了 Yosys 而修改 FPU。</div>
+</section>
+
+<section class="card" id="verilator-env"><h2>6. Verilator：啟動問題與環境修正</h2>
+<p>先確認：</p><pre>verilator --version
+where.exe verilator</pre>
+<p><code>where.exe</code> 找到：</p><pre>E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite\bin\verilator</pre>
+<p>檢查後發現它是 Perl wrapper：</p><pre>Get-Content (where.exe verilator) -First 5
+# 第一行：
+#!/usr/bin/env perl</pre>
+<p>但 Windows session 無 Perl：</p><pre>where.exe perl
+# 找不到</pre>
+<p>搜尋實際 binary：</p><pre>Get-ChildItem E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite\bin\*verilator*</pre>
+<p>找到 <code>verilator_bin.exe</code>，版本：</p>
+<pre>verilator_bin.exe --version
+Verilator 5.053 devel rev v5.052-80-g0bad0faca (mod)</pre>
+<h3>6.1 修正 VERILATOR_ROOT</h3>
+<p>第一次 lint 找不到內建檔案 <code>verilated_std.sv</code>。先定位：</p>
+<pre>Get-ChildItem E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite -Recurse -Filter verilated_std.sv | Select-Object -ExpandProperty FullName</pre>
+<p>實際位置：</p><pre>E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite\share\verilator\include\verilated_std.sv</pre>
+<p>設定：</p><pre>$env:VERILATOR_ROOT="E:\oss-cad-suite-windows-x64-20260914\oss-cad-suite\share\verilator"
+echo $env:VERILATOR_ROOT</pre>
+<p class="ok">設定後 Verilator 可以正常進入真正的 RTL lint。</p>
+</section>
+
+<section class="card" id="verilator-alu"><h2>7. Verilator：ALU lint</h2>
+<pre>verilator_bin.exe --lint-only -Wall --top-module ALU Src/ALU.sv</pre>
+<table><tr><th>類型</th><th>位置</th><th>內容</th><th>解析</th></tr>
+<tr><td>WIDTHEXPAND</td><td>ALU.sv:22</td><td><code>shamt = src_B_i[4:0]</code></td><td>5-bit RHS 指派給較寬的 shamt</td></tr>
+<tr><td>WIDTHEXPAND</td><td>ALU.sv:36</td><td>signed compare → result_o</td><td>比較結果 1 bit 擴展至 32 bit</td></tr>
+<tr><td>WIDTHEXPAND</td><td>ALU.sv:37</td><td>unsigned compare → result_o</td><td>比較結果 1 bit 擴展至 32 bit</td></tr>
+<tr><td>UNUSEDSIGNAL</td><td>ALU.sv:2</td><td>instruction_i 部分 bits</td><td>部分 instruction fields 未被 ALU 使用</td></tr>
+<tr><td>UNUSEDSIGNAL</td><td>ALU.sv:12</td><td>prod_ss[31:0]</td><td>低 32 bits 未使用</td></tr>
+<tr><td>UNUSEDSIGNAL</td><td>ALU.sv:13</td><td>prod_su[31:0]</td><td>低 32 bits 未使用</td></tr></table>
+<p>第一次結尾：</p><pre>%Error: Exiting due to 6 warning(s)</pre>
+<p><b>注意：</b>這不是 6 個功能性 error，而是 Verilator 將 warning 視為 fatal exit。真正內容是 6 warnings。更重要的是，Verilator 沒有重現 Yosys 的 <code>i/cnt</code> latch warnings，因此必須等 JasperGold 再交叉判讀。</p>
+</section>
+
+<section class="card" id="verilator-fpu"><h2>8. Verilator：FPU lint</h2>
+<pre>verilator_bin.exe --lint-only -Wall --top-module FPU Src/FPU.sv</pre>
+<table><tr><th>位置</th><th>Warning</th><th>原因</th></tr>
+<tr><td>FPU.sv:69</td><td>WIDTHEXPAND</td><td><code>exa = (ea==0) ? 1 : ea</code>：8-bit ea 與 integer/32-bit context</td></tr>
+<tr><td>FPU.sv:70</td><td>WIDTHEXPAND</td><td><code>exb = (eb==0) ? 1 : eb</code></td></tr>
+<tr><td>FPU.sv:76</td><td>WIDTHEXPAND</td><td><code>mb = (mb!=0)</code>：1-bit comparison result → 27-bit mb</td></tr>
+<tr><td>FPU.sv:84</td><td>WIDTHEXPAND</td><td><code>ma = (ma!=0)</code>：1-bit comparison result → 27-bit ma</td></tr></table>
+<p>第一次結尾：</p><pre>%Error: Exiting due to 4 warning(s)</pre>
+<p><b>關鍵解析：</b>Verilator 能完整解析 FPU，包括 <code>fp_addsub</code> 與其 procedural while；因此 Yosys 的 constant-argument error 並非跨工具共同的 SystemVerilog syntax/elaboration failure。這是重要的交叉驗證。</p>
+</section>
+
+<section class="card" id="wrapper"><h2>9. 正式 wrapper：HW1_lint_top 整合 lint</h2>
+<p>正式 JasperGold Tcl 的架構是同時 analyze 三個 RTL，再以 <code>HW1_lint_top</code> elaboration。因此本機用 Verilator 做相同 hierarchy 的預檢：</p>
+<pre>verilator_bin.exe --lint-only -Wall --top-module HW1_lint_top Src/ALU.sv Src/FPU.sv Src/HW1_lint_top.sv</pre>
+<p>得到：</p><pre>HW1_lint_top
+├── u_alu : ALU
+│   ├── WIDTHEXPAND × 3
+│   └── UNUSEDSIGNAL × 3
+└── u_fpu : FPU
+    └── WIDTHEXPAND × 4
+
+Total warnings = 10</pre>
+<p>沒有出現新的 wrapper port mismatch、missing module、multiple-driver 或 syntax 類問題。</p>
+<h3>9.1 讓 warnings 保留，但不要 fatal exit</h3>
+<pre>verilator_bin.exe --lint-only -Wall -Wno-fatal --top-module HW1_lint_top Src/ALU.sv Src/FPU.sv Src/HW1_lint_top.sv</pre>
+<p>最終完整跑到：</p>
+<pre>- V e r i l a t i o n   R e p o r t: Verilator 5.053 devel rev v5.052-80-g0bad0faca (mod)
+- Verilator: Built from 0.099 MB sources in 5 modules, into 0.364 MB in 3 C++ files needing 0.000 MB
+- Verilator: Walltime 0.038 s (elab=0.003, cvt=0.024, bld=0.000); cpu 0.000 s on 1 threads; allocated 18.973 MB</pre>
+<div class="note success"><b>最終判讀：</b>使用 <code>-Wno-fatal</code> 後，10 個 warning 仍完整顯示，但流程成功跑到 Verilation Report，沒有真正的 <code>%Error</code>。因此三檔 wrapper hierarchy 的 Verilator lint/elaboration 可視為完成。</div>
+</section>
+
+<section class="card" id="summary"><h2>10. 本機驗證總結</h2>
+<table><tr><th>工具 / 階段</th><th>ALU</th><th>FPU</th><th>判讀</th></tr>
+<tr><td>ModelSim</td><td class="ok">Provided PASS；Hidden 44/44</td><td class="ok">2000/2000；Hidden 27/27</td><td>功能 regression 通過</td></tr>
+<tr><td>Yosys parsing/hierarchy</td><td class="ok">PASS</td><td class="warn">fp_addsub frontend limitation</td><td>FPU 不因此判為功能錯誤</td></tr>
+<tr><td>Yosys synthesis/check</td><td class="ok">Synthesis PASS；CHECK 0 problems</td><td>未進行 synth</td><td>ALU 有 i/cnt 三個 latch warnings</td></tr>
+<tr><td>Verilator module lint</td><td class="warn">6 warnings</td><td class="warn">4 warnings</td><td>無獨立 syntax/elaboration failure</td></tr>
+<tr><td>Verilator HW1_lint_top</td><td colspan="2" class="ok">完整 elaboration；10 warnings；-Wno-fatal 後跑至 Verilation Report</td><td>wrapper 整合無新增問題類型</td></tr></table>
+
+<h3>10.1 現在是否要修改 RTL？</h3>
+<p><b>目前不建議。</b>原因是 ModelSim 功能 regression 已全部通過；Yosys 與 Verilator 對部分項目的判讀不同；真正課程要求的 VCS / JasperGold 尚未執行。最安全做法是先鎖定目前 RTL，等 JasperGold Superlint 的正式訊息再決定是否修正 width、unused 或 latch 類問題。</p>
+
+<h3>10.2 回 SoC Lab 後的正式流程</h3>
+<pre>目前 RTL 鎖定
+   ↓
+VCS：ALU compile / simulation
+   ↓
+VCS：FPU compile / simulation
+   ↓
+保存 VCS log / result
+   ↓
+JasperGold Superlint
+   ↓
+analyze -sv ../Src/ALU.sv ../Src/FPU.sv ../Src/HW1_lint_top.sv
+elaborate -top HW1_lint_top
+clock clk
+reset rst
+check_superlint -extract
+   ↓
+逐項比對：
+  Yosys i/cnt latch warnings
+  Verilator ALU 6 warnings
+  Verilator FPU 4 warnings
+   ↓
+若 JasperGold 證實需修正 → 最小化修改 RTL → 全部 regression 重跑
+   ↓
+Report → final hierarchy → .tar → 解包確認 → submission</pre>
+
+<div class="note"><b>重要：</b>Yosys / Verilator 的結果應寫成「local pre-verification / cross-check」。最終是否符合 HW1 lint 要求，仍以課程指定 VCS 與 JasperGold Superlint 結果為準。</div>
+</section>
+
+<section class="card"><h2>11. 可直接放入報告的摘要</h2>
+<p>本次 HW1 先以 ModelSim 完成 ALU 與 FPU 功能驗證，ALU provided tests 與 44/44 hidden defense 全部通過，FPU provided tests 2000/2000 與 27/27 hidden defense 全部通過。其後使用 OSS CAD Suite 的 Yosys 進行本機 synthesis/structural cross-check：ALU 可正常 parsing、hierarchy 與 synthesis，最終 CHECK 為 0 problems，但產生 3 個與程序變數 i/cnt 有關的 latch warnings；FPU 則在 fp_addsub 的 elaboration 遇到 Yosys frontend constant-argument limitation，因此未進一步 synthesis。為避免單一工具限制造成誤判，再使用 Verilator 5.053 進行獨立 lint。ALU 產生 6 個 width/unused warnings，FPU 產生 4 個 width warnings，而正式 wrapper HW1_lint_top 可完整 elaboration，使用 -Wno-fatal 後成功執行至 Verilation Report，總計保留 10 個 warnings 且無真正 fatal error。基於 ModelSim regression 全部通過以及不同靜態工具之間的差異，目前暫不修改 RTL，待 SoC Lab 的 VCS 與 JasperGold Superlint 正式驗證後，再決定是否需要最小化修正並重跑完整 regression。</p>
+</section>
+
+</main><footer>VSD HW1 Local Verification Record · Generated 2026-09-17</footer>
+</body></html>

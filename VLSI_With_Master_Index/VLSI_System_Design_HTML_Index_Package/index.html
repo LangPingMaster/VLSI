@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VLSI System Design 2026｜网页总索引</title>
+<style>
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#07111f;color:#eaf2ff;line-height:1.75}
+.hero{padding:72px 22px 52px;background:
+radial-gradient(circle at 15% 10%,#1d4ed8 0,transparent 30%),
+radial-gradient(circle at 88% 18%,#7c3aed 0,transparent 28%),
+linear-gradient(135deg,#06101d,#0b1730 55%,#07101d)}
+.wrap{max-width:1240px;margin:auto}
+.badge{display:inline-flex;gap:8px;align-items:center;border:1px solid #ffffff33;background:#ffffff10;padding:7px 13px;border-radius:999px;color:#bae6fd}
+h1{font-size:clamp(2.3rem,6vw,5rem);line-height:1.05;margin:.28em 0 .18em}
+.hero p{max-width:900px;color:#cbd5e1;font-size:1.08rem}
+.flow{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:26px}
+.flow span{padding:9px 12px;border-radius:10px;background:#ffffff10;border:1px solid #ffffff1f}
+.flow b{color:#67e8f9}
+main{max-width:1240px;margin:auto;padding:30px 22px 80px}
+.intro{background:#0d1b2e;border:1px solid #28415f;border-radius:18px;padding:24px;margin-bottom:25px}
+.intro h2{margin:0 0 8px;color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.card{position:relative;overflow:hidden;background:linear-gradient(145deg,#0f1c2e,#0a1627);border:1px solid #28415f;border-radius:20px;padding:22px;box-shadow:0 14px 38px #00000022}
+.card:before{content:"";position:absolute;inset:0 0 auto;height:5px;background:linear-gradient(90deg,var(--c1),var(--c2))}
+.top{display:flex;justify-content:space-between;align-items:center}
+.icon{width:64px;height:64px;display:grid;place-items:center;font-size:34px;border-radius:18px;background:linear-gradient(135deg,var(--c1),var(--c2));box-shadow:0 10px 24px #0004}
+.num{font-weight:900;font-size:2rem;color:#ffffff22}
+h3{font-size:1.35rem;margin:18px 0 8px}
+.desc{color:#c3d2e5;min-height:84px}
+.tip{background:#081321;border-left:4px solid var(--c1);border-radius:9px;padding:11px 13px;color:#b9cce2;font-size:.94rem}
+.go{margin-top:18px;min-height:92px;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:18px;border-radius:16px;text-decoration:none;color:white;background:
+linear-gradient(115deg,var(--c1),var(--c2));box-shadow:0 10px 24px #0004;transition:.2s transform,.2s filter}
+.go:before{content:"";width:48px;height:48px;flex:0 0 48px;border-radius:14px;background:
+linear-gradient(45deg,#ffffff2b,#ffffff08),repeating-linear-gradient(135deg,#fff3 0 5px,transparent 5px 10px)}
+.go span{margin-right:auto;font-size:.82rem;opacity:.82} .go b{font-size:1.02rem}
+.go:hover{transform:translateY(-3px);filter:brightness(1.08)}
+.file{margin-top:10px;color:#71849c;font-family:Consolas,monospace;font-size:.75rem;word-break:break-all}
+footer{text-align:center;color:#7f91a9;padding:30px}
+@media(max-width:640px){.desc{min-height:0}.go span{display:none}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap">
+  <div class="badge">NCKU EE · VLSI System Design · Fall 2026</div>
+  <h1>网页总索引<br>INDEX</h1>
+  <p>把目前这组 VLSI System Design HTML 教材与 HW1 实作网页集中成一个入口。每个子页都有内容说明、阅读重点，以及可直接点击的彩色图片式按钮；ZIP 解压后只要打开 <b>index.html</b> 即可使用。</p>
+  <div class="flow"><span>课程全貌</span><b>→</b><span>Digital IC</span><b>→</b><span>Linux / Workstation</span><b>→</b><span>Behavioral RTL</span><b>→</b><span>HW1</span><b>→</b><span>Simulation</span><b>→</b><span>Synthesis / Lint</span></div>
+</div></header>
+<main>
+<section class="intro">
+<h2>如何使用这份索引</h2>
+<p>建议第一次依照上方学习流程阅读；之后可把本页当成快速入口。所有链接都使用相对路径，所以整个资料夹可以离线搬移。请不要只复制 index.html；要保留 ZIP 解压后的全部 HTML 文件。</p>
+</section>
+<section class="grid">
+
+    <article class="card" style="--c1:#9333ea;--c2:#4f46e5">
+      <div class="top">
+        <div class="icon">🔧</div>
+        <div class="num">01</div>
+      </div>
+      <h3>Behavioral Modeling &amp; Synthesis</h3>
+      <p class="desc">以圖解與逐步說明整理 Behavioral Modeling、continuous/procedural assignment、blocking/non-blocking 與 synthesis coding style。</p>
+      <div class="tip"><b>阅读重点：</b>這是從 Verilog 語法跨到「可合成 RTL」的重要核心頁面。</div>
+      <a class="go" href="Behavioral_Modeling_Synthesis_with_PNG_and_step_explanation.html"><span>彩色图片按钮</span><b>打开网页 →</b></a>
+      <div class="file">Behavioral_Modeling_Synthesis_with_PNG_and_step_explanation.html</div>
+    </article>
+    <article class="card" style="--c1:#db2777;--c2:#f97316">
+      <div class="top">
+        <div class="icon">🗺️</div>
+        <div class="num">02</div>
+      </div>
+      <h3>HW1 開發流程圖解</h3>
+      <p class="desc">把 HW1 從規格、RTL、Testbench、模擬、除錯到驗證整理成視覺化開發流程，適合當 HW1 導航頁。</p>
+      <div class="tip"><b>阅读重点：</b>先看這頁掌握全流程，再進入 ALU/FPU、ModelSim、Yosys 與 lint 的細節。</div>
+      <a class="go" href="HW1_開發流程PNG置頂_完整圖解.html"><span>彩色图片按钮</span><b>打开网页 →</b></a>
+      <div class="file">HW1_開發流程PNG置頂_完整圖解.html</div>
+    </article>
+    <article class="card" style="--c1:#0891b2;--c2:#2563eb">
+      <div class="top">
+        <div class="icon">⌨️</div>
+        <div class="num">03</div>
+      </div>
+      <h3>Linux / Unix 指令</h3>
+      <p class="desc">Linux/Unix 常用命令的詳細整理，包含目錄、檔案、權限與工作站操作所需的命令列基礎。</p>
+      <div class="tip"><b>阅读重点：</b>建議搭配 Workstation 教學一起讀，之後操作 EDA 工具會更順。</div>
+      <a class="go" href="Linux_Unix_Instructions_detailed.html"><span>彩色图片按钮</span><b>打开网页 →</b></a>
+      <div class="file">Linux_Unix_Instructions_detailed.html</div>
+    </article>
+    <article class="card" style="--c1:#7c3aed;--c2:#ec4899">
+      <div class="top">
+        <div class="icon">🧩</div>
+        <div class="num">04</div>
+      </div>
+      <h3>Digital IC Design Basics</h3>
+      <p class="desc">數位 IC 設計基礎的互動式完整詳解，協助理解 IC 產業、HDL、EDA 與數位設計的基本概念。</p>
+      <div class="tip"><b>阅读重点：</b>適合先建立「RTL 到晶片」的基本觀念，再進入 Verilog 行為模型與合成。</div>
+      <a class="go" href="VLSI_Digital_IC_Design_Basics.html"><span>彩色图片按钮</span><b>打开网页 →</b></a>
+      <div class="file">VLSI_Digital_IC_Design_Basics.html</div>
+    </article>
+    <article class="card" style="--c1:#2563eb;--c2:#06b6d4">
+      <div class="top">
+        <div class="icon">🧭</div>
+        <div class="num">05</div>
+      </div>
+      <h3>課程總覽 × 專題整合</h3>
+      <p class="desc">整合 VLSI System Design 的課程定位、數位 IC 設計脈絡與大學專題學習方向，適合作為整套教材的第一站。</p>
+      <div class="tip"><b>阅读重点：</b>先建立全貌，再依序進入 Digital IC basics、Behavioral Modeling、工具環境與 HW1。</div>
+      <a class="go" href="VLSI_System_Design_課程_大學專題整合.html"><span>彩色图片按钮</span><b>打开网页 →</b></a>
+      <div class="file">VLSI_System_Design_課程_大學專題整合.html</div>
+    </article>
+    <article class="card" style="--c1:#f97316;--c2:#ef4444">
+      <div class="top">
+        <div class="icon">📱</div>
+        <div class="num">06</div>
+      </div>
+      <h3>iPhone × VLSI 實作流程</h3>
+      <p class="desc">以 iPhone 系統為例，把電子系統、SoC、標準元件與 VLSI 實作流程串在一起，強化系統到晶片的層級觀念。</p>
+      <div class="tip"><b>阅读重点：</b>用具體產品理解抽象 VLSI 流程，適合作為課程總覽與 Digital IC basics 的延伸。</div>
+      <a class="go" href="VLSI_iPhone_完整技術實作流程.html"><span>彩色图片按钮</span><b>打开网页 →</b></a>
+      <div class="file">VLSI_iPhone_完整技術實作流程.html</div>
+    </article>
+    <article class="card" style="--c1:#ea580c;--c2:#eab308">
+      <div class="top">
+        <div class="icon">⚙️</div>
+        <div class="num">07</div>
+      </div>
+      <h3>ALU Yosys 合成完整流程</h3>
+      <p class="desc">從全新 PowerShell、OSS CAD Suite、Yosys 讀檔與 hierarchy，一路做到 synthesis、netlist 與 post-synthesis functional verification。</p>
+      <div class="tip"><b>阅读重点：</b>重點是把「RTL 功能通過」進一步驗證成「可合成、合成後功能仍正確」。</div>
+      <a class="go" href="VSD_HW1_ALU_Yosys_Full_Flow_From_New_PowerShell.html"><span>彩色图片按钮</span><b>打开网页 →</b></a>
+      <div class="file">VSD_HW1_ALU_Yosys_Full_Flow_From_New_PowerShell.html</div>
+    </article>
+    <article class="card" style="--c1:#dc2626;--c2:#7c3aed">
+      <div class="top">
+        <div class="icon">🛡️</div>
+        <div class="num">08</div>
+      </div>
+      <h3>本機完整驗證與結果分析</h3>
+      <p class="desc">整合 ModelSim、Yosys、Verilator 的本機交叉驗證流程，清楚區分功能模擬、可合成性與 lint/static checking。</p>
+      <div class="tip"><b>阅读重点：</b>適合作為送進 VCS / JasperGold Superlint 前的最後本機檢查清單。</div>
+      <a class="go" href="VSD_HW1_Local_Verification_完整測試流程與結果分析.html"><span>彩色图片按钮</span><b>打开网页 →</b></a>
+      <div class="file">VSD_HW1_Local_Verification_完整測試流程與結果分析.html</div>
+    </article>
+    <article class="card" style="--c1:#059669;--c2:#0ea5e9">
+      <div class="top">
+        <div class="icon">〰️</div>
+        <div class="num">09</div>
+      </div>
+      <h3>HW1 ModelSim 模擬</h3>
+      <p class="desc">整理 ALU/FPU 的 ModelSim 編譯、模擬命令、波形與 PASS 結果，並逐項解釋 transcript 的意義。</p>
+      <div class="tip"><b>阅读重点：</b>重點是功能正確性：compile → vsim → run → waveform/result。</div>
+      <a class="go" href="VSD_HW1_ModelSim.html"><span>彩色图片按钮</span><b>打开网页 →</b></a>
+      <div class="file">VSD_HW1_ModelSim.html</div>
+    </article>
+    <article class="card" style="--c1:#0f766e;--c2:#22c55e">
+      <div class="top">
+        <div class="icon">🌐</div>
+        <div class="num">10</div>
+      </div>
+      <h3>HW1 Online 編輯與測試</h3>
+      <p class="desc">把線上編輯、編譯與驗證流程整理成可操作手冊，並提供編譯器入口按鈕與實作提示。</p>
+      <div class="tip"><b>阅读重点：</b>適合需要快速修改 RTL、交叉測試或不在實驗室環境時使用。</div>
+      <a class="go" href="VSD_HW1_Online_Editing_Manual_with_Compiler_Buttons.html"><span>彩色图片按钮</span><b>打开网页 →</b></a>
+      <div class="file">VSD_HW1_Online_Editing_Manual_with_Compiler_Buttons.html</div>
+    </article>
+    <article class="card" style="--c1:#2563eb;--c2:#7c3aed">
+      <div class="top">
+        <div class="icon">🧮</div>
+        <div class="num">11</div>
+      </div>
+      <h3>HW1 ALU &amp; FPU 完整實驗</h3>
+      <p class="desc">集中說明 HW1 的 ALU、FPU 規格、RTL 設計、simulation、synthesis 與 lint 驗證，是作業內容的主文件。</p>
+      <div class="tip"><b>阅读重点：</b>適合用來理解「做什麼、怎麼驗證、結果代表什麼」。</div>
+      <a class="go" href="VSD_HW1_complete_experiment_report.html"><span>彩色图片按钮</span><b>打开网页 →</b></a>
+      <div class="file">VSD_HW1_complete_experiment_report.html</div>
+    </article>
+    <article class="card" style="--c1:#16a34a;--c2:#14b8a6">
+      <div class="top">
+        <div class="icon">🖥️</div>
+        <div class="num">12</div>
+      </div>
+      <h3>Workstation / SoC Lab</h3>
+      <p class="desc">從 Windows 連入實驗室 Linux Workstation 的完整教學，涵蓋遠端登入、GUI/X11、檔案傳輸與基本操作。</p>
+      <div class="tip"><b>阅读重点：</b>正式跑 VCS、Verdi、Superlint 前，先把實驗室工作站連線環境建立好。</div>
+      <a class="go" href="workstationEE_building_2026.html"><span>彩色图片按钮</span><b>打开网页 →</b></a>
+      <div class="file">workstationEE_building_2026.html</div>
+    </article>
+</section>
+</main>
+<footer>VLSI System Design 2026 · Local HTML Learning Hub · 共 12 个子网页</footer>
+</body></html>

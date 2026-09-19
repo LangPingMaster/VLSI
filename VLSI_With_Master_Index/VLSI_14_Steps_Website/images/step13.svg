@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="360" viewBox="0 0 600 360">
+    <defs>
+      <linearGradient id="bg" x1="0" x2="1"><stop offset="0" stop-color="#eff6ff"/><stop offset="1" stop-color="#ecfdf5"/></linearGradient>
+      <style>
+        .a{fill:#dbeafe;stroke:#2563eb;stroke-width:4}
+        .b{fill:#ccfbf1;stroke:#0f766e;stroke-width:4}
+        .c{fill:#ede9fe;stroke:#7c3aed;stroke-width:4}
+        .line{fill:none;stroke:#334155;stroke-width:6;stroke-linecap:round}
+        .wave{fill:none;stroke:#2563eb;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
+        .pin{stroke:#334155;stroke-width:5}
+        .grid{stroke:#64748b;stroke-width:2}
+        .big{font:700 28px Arial;fill:#1f2937}
+        .giant{font:700 84px Arial;fill:#1f2937}
+        .title{font:700 30px Arial;fill:#0f172a}
+        .sub{font:18px Arial;fill:#475569}
+        .num{font:700 42px Arial;fill:#ffffff}
+      </style>
+    </defs>
+    <rect width="600" height="360" rx="24" fill="url(#bg)"/>
+    <circle cx="55" cy="52" r="34" fill="#0f766e"/>
+    <text x="55" y="66" text-anchor="middle" class="num">13</text>
+    
+        <rect x="120" y="90" width="360" height="180" rx="12" class="a"/>
+        <line x1="120" y1="135" x2="480" y2="135" class="grid"/><line x1="120" y1="180" x2="480" y2="180" class="grid"/><line x1="120" y1="225" x2="480" y2="225" class="grid"/><line x1="210" y1="90" x2="210" y2="270" class="grid"/><line x1="300" y1="90" x2="300" y2="270" class="grid"/><line x1="390" y1="90" x2="390" y2="270" class="grid"/>
+    <rect x="30" y="292" width="540" height="46" rx="12" fill="#ffffff" opacity="0.9"/>
+    <text x="300" y="318" text-anchor="middle" class="title">NLDM</text>
+    </svg>

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SynthesizableVerilog.html — Synthesizable Verilog 子集完整教學</title>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#64748b;
+  --blue:#2563eb;--teal:#0f766e;--green:#059669;--orange:#d97706;
+  --red:#dc2626;--purple:#7c3aed;--line:#dbe3ec;--code:#0f172a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;line-height:1.82}
+header{background:linear-gradient(135deg,#1e3a8a,#0f766e 60%,#115e59);color:#fff;padding:52px 24px 44px}
+header .inner{max-width:1180px;margin:auto}
+header h1{margin:0 0 10px;font-size:2.2rem}
+header p{margin:5px 0;max-width:1000px;opacity:.96}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tag{padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);font-size:.88rem}
+nav{position:sticky;top:0;z-index:20;background:rgba(245,247,251,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+nav .bar{max-width:1180px;margin:auto;padding:8px 20px;display:flex;gap:10px;overflow:auto;white-space:nowrap}
+nav a{color:#0f766e;text-decoration:none;padding:5px 9px;border-radius:8px;font-size:.9rem}
+nav a:hover{background:#e2e8f0}
+.wrap{max-width:1180px;margin:auto;padding:28px 20px 80px}
+.card{background:var(--card);border-radius:18px;padding:26px;margin:22px 0;box-shadow:0 8px 28px rgba(15,23,42,.07)}
+h2{margin:0 0 16px;color:#134e4a;border-left:6px solid #14b8a6;padding-left:12px}
+h3{color:#1d4ed8;margin-top:26px}
+h4{color:#7c3aed;margin:18px 0 8px}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;overflow:auto;line-height:1.55;position:relative}
+.copy-btn{float:right;border:0;border-radius:8px;padding:6px 10px;background:#334155;color:#fff;cursor:pointer;font-size:.8rem}
+.copy-btn:hover{background:#475569}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}
+th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{padding:14px 16px;border-radius:10px;margin:16px 0}
+.note{background:#fff7ed;border-left:5px solid #f59e0b}
+.tip{background:#eff6ff;border-left:5px solid #3b82f6}
+.warn{background:#fef2f2;border-left:5px solid #ef4444}
+.key{background:#ecfdf5;border-left:5px solid #10b981}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mini{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px}
+.toc ol{columns:2;column-gap:34px}
+.toc li{margin:7px 0;break-inside:avoid}
+.toc a{color:#0f766e;text-decoration:none}
+.quiz{border:1px dashed #94a3b8;border-radius:14px;padding:14px 16px;margin:12px 0;background:#fff}
+.quiz summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+.ok{color:#047857;font-weight:700}.bad{color:#b91c1c;font-weight:700}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+@media(max-width:800px){header h1{font-size:1.7rem}.toc ol{columns:1}}
+</style>
+</head>
+<body>
+
+<header><div class="inner">
+<h1>Synthesizable Verilog 子集完整教學</h1>
+<p>本頁依課程「Language Constructs commonly supported by Synthesis Tools」整理：哪些 Verilog 結構通常可被 synthesis tool 接受，如何對應硬體，以及常見可合成與純模擬寫法的差別。</p>
+<p>重點不是「Verilog 能不能模擬」，而是「這段描述能不能被轉成實際硬體」。</p>
+<div class="tags">
+<span class="tag">module / port</span><span class="tag">wire / reg</span><span class="tag">assign</span>
+<span class="tag">operators</span><span class="tag">if / case</span><span class="tag">for</span>
+<span class="tag">task / function</span><span class="tag">RTL synthesis</span>
+</div>
+</div></header>
+
+<nav><div class="bar">
+<a href="#overview">總覽</a><a href="#supported1">Supported I</a><a href="#supported2">Supported II</a>
+<a href="#comb">組合邏輯</a><a href="#seq">時序邏輯</a><a href="#examples">大量例子</a>
+<a href="#nonsynth">不可直接合成概念</a><a href="#rules">實務規則</a><a href="#quiz">自我測驗</a>
+</div></nav>
+
+<main class="wrap">
+
+<section class="card toc">
+<h2>目錄</h2>
+<ol>
+<li><a href="#overview">什麼叫 Synthesizable Verilog？</a></li>
+<li><a href="#supported1">課程支援子集 I</a></li>
+<li><a href="#supported2">課程支援子集 II</a></li>
+<li><a href="#ports">Module / Ports / Parameters</a></li>
+<li><a href="#types">wire / reg / integer</a></li>
+<li><a href="#assign">Continuous Assignment</a></li>
+<li><a href="#operators">Operators</a></li>
+<li><a href="#procedural">Procedural Blocks</a></li>
+<li><a href="#flow">if / case / for</a></li>
+<li><a href="#tasks">Tasks / Functions</a></li>
+<li><a href="#comb">Combinational RTL</a></li>
+<li><a href="#seq">Sequential RTL</a></li>
+<li><a href="#examples">大量可合成範例</a></li>
+<li><a href="#nonsynth">純模擬 vs 可合成</a></li>
+<li><a href="#rules">實務 Coding Rules</a></li>
+</ol>
+</section>
+
+<section class="card" id="overview">
+<h2>1. 什麼叫 Synthesizable Verilog？</h2>
+<p>
+Verilog 語法很多，但不是每一種語法都一定能轉成 gates、flip-flops、muxes、adders 等真實硬體。
+<b>Synthesizable Verilog</b> 指的是 synthesis tool 能理解並轉換成硬體結構的 Verilog 子集。
+</p>
+<div class="grid2">
+<div class="mini"><h3 style="margin-top:0">Simulation</h3><p>只要 simulator 能執行即可，允許很多測試、時間控制與模擬專用行為。</p></div>
+<div class="mini"><h3 style="margin-top:0">Synthesis</h3><p>描述必須可以對應成有限、明確、可實作的數位硬體。</p></div>
+</div>
+<div class="key"><b>一句話：</b>能模擬 ≠ 一定能合成；能合成的 RTL 必須能對應成真實硬體。</div>
+</section>
+
+<section class="card" id="supported1">
+<h2>2. 課程列出的常見可合成 Constructs（I）</h2>
+<table>
+<tr><th>類別</th><th>課程列出的內容</th><th>典型用途</th></tr>
+<tr><td>Module</td><td>module declaration</td><td>設計階層</td></tr>
+<tr><td>Ports</td><td>input / output / inout</td><td>模組介面</td></tr>
+<tr><td>Port Binding</td><td>by name / by position</td><td>module instantiation</td></tr>
+<tr><td>Parameters</td><td>local parameter declaration</td><td>常數、state encoding、寬度</td></tr>
+<tr><td>Nets</td><td>wire, tri, wand, wor, supply0, supply1</td><td>連線</td></tr>
+<tr><td>Variables</td><td>reg, integer</td><td>procedural assignments / loop index</td></tr>
+<tr><td>Constants</td><td>binary / decimal / octal / hex</td><td>數值表示</td></tr>
+<tr><td>Vectors</td><td>scalar / vector nets、sub-range on RHS</td><td>bus / slicing</td></tr>
+<tr><td>Instantiation</td><td>module / macro_module / primitive</td><td>階層式硬體</td></tr>
+</table>
+</section>
+
+<section class="card" id="supported2">
+<h2>3. 課程列出的常見可合成 Constructs（II）</h2>
+<table>
+<tr><th>類別</th><th>課程列出的內容</th></tr>
+<tr><td>Dataflow</td><td>Continuous assignments</td></tr>
+<tr><td>Operators</td><td>Shift、Conditional、Concatenation</td></tr>
+<tr><td>Operators</td><td>Arithmetic、bitwise、reduction、logical、relational</td></tr>
+<tr><td>Procedural</td><td>Procedure block assignments、begin...end</td></tr>
+<tr><td>Selection</td><td>case、casex、casez、default</td></tr>
+<tr><td>Branching</td><td>if、if...else、if...else...if</td></tr>
+<tr><td>Control</td><td>disable（procedure block）</td></tr>
+<tr><td>Loop</td><td>for loop</td></tr>
+<tr><td>Task</td><td>task...endtask，課程特別註明 no timing or event control</td></tr>
+<tr><td>Function</td><td>function...endfunction</td></tr>
+</table>
+</section>
+
+<section class="card" id="ports">
+<h2>4. Module / Port / Parameter</h2>
+
+<h3>4.1 基本可合成模組</h3>
+<pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>module and2(
+    input  a,
+    input  b,
+    output y
+);
+    assign y = a & b;
+endmodule</code></pre>
+
+<h3>4.2 Named Port Binding</h3>
+<pre><code>and2 U0(
+    .a(in1),
+    .b(in2),
+    .y(out)
+);</code></pre>
+
+<h3>4.3 Positional Port Binding</h3>
+<pre><code>and2 U0(in1, in2, out);</code></pre>
+
+<h3>4.4 localparam</h3>
+<pre><code>localparam IDLE = 2'b00;
+localparam RUN  = 2'b01;
+localparam DONE = 2'b10;</code></pre>
+
+<div class="tip">Named port binding 可讀性通常更好，尤其 port 數量多時較不容易接錯。</div>
+</section>
+
+<section class="card" id="types">
+<h2>5. wire / reg / integer</h2>
+
+<h3>5.1 wire</h3>
+<pre><code>wire y;
+assign y = a & b;</code></pre>
+
+<h3>5.2 reg</h3>
+<pre><code>reg y;
+always @(*) begin
+    y = a & b;
+end</code></pre>
+
+<h3>5.3 integer 作為 for loop index</h3>
+<pre><code>integer i;
+
+always @(*) begin
+    count = 0;
+    for (i = 0; i < 8; i = i + 1)
+        count = count + data[i];
+end</code></pre>
+</section>
+
+<section class="card" id="assign">
+<h2>6. Continuous Assignment</h2>
+
+<p>Continuous assignment 是課程明確列出的 synthesis-supported construct。</p>
+
+<h3>AND</h3><pre><code>assign y = a & b;</code></pre>
+<h3>MUX</h3><pre><code>assign y = sel ? b : a;</code></pre>
+<h3>Adder</h3><pre><code>assign {cout, sum} = a + b;</code></pre>
+<h3>Comparator</h3><pre><code>assign eq = (a == b);</code></pre>
+<h3>Shift</h3><pre><code>assign y = a << 2;</code></pre>
+<h3>Concatenation</h3><pre><code>assign y = {a[3:0], b[3:0]};</code></pre>
+</section>
+
+<section class="card" id="operators">
+<h2>7. 常見可合成 Operators</h2>
+
+<div class="grid3">
+<div class="mini"><h3 style="margin-top:0">Arithmetic</h3><p><code>+ - * / %</code></p></div>
+<div class="mini"><h3 style="margin-top:0">Bitwise</h3><p><code>~ & | ^</code></p></div>
+<div class="mini"><h3 style="margin-top:0">Logical</h3><p><code>! && ||</code></p></div>
+<div class="mini"><h3 style="margin-top:0">Relational</h3><p><code>&gt; &gt;= &lt; &lt;=</code></p></div>
+<div class="mini"><h3 style="margin-top:0">Reduction</h3><p><code>& &nbsp; | &nbsp; ^</code></p></div>
+<div class="mini"><h3 style="margin-top:0">Shift</h3><p><code>&lt;&lt; &gt;&gt;</code></p></div>
+</div>
+
+<div class="note">雖然課程列出 arithmetic operators 為常見支援項目，但不同 operator 的硬體成本差很多；例如乘除法通常比簡單 AND/OR 更昂貴。</div>
+</section>
+
+<section class="card" id="procedural">
+<h2>8. Procedural Blocks</h2>
+
+<h3>8.1 Combinational</h3>
+<pre><code>always @(*) begin
+    y = (a & b) | c;
+end</code></pre>
+
+<h3>8.2 Sequential</h3>
+<pre><code>always @(posedge clk) begin
+    q <= d;
+end</code></pre>
+
+<h3>8.3 Resettable Register</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        q <= 0;
+    else
+        q <= d;
+end</code></pre>
+</section>
+
+<section class="card" id="flow">
+<h2>9. if / case / for</h2>
+
+<h3>if → MUX / Priority Logic</h3>
+<pre><code>always @(*) begin
+    if (sel)
+        y = b;
+    else
+        y = a;
+end</code></pre>
+
+<h3>case → Multi-way Selection</h3>
+<pre><code>always @(*) begin
+    case(op)
+        2'b00: y = a + b;
+        2'b01: y = a - b;
+        2'b10: y = a & b;
+        default: y = a | b;
+    endcase
+end</code></pre>
+
+<h3>for → Repeated Hardware</h3>
+<pre><code>integer i;
+always @(*) begin
+    parity = 0;
+    for (i = 0; i < 8; i = i + 1)
+        parity = parity ^ data[i];
+end</code></pre>
+
+<div class="key">for loop 在可合成 RTL 中通常代表「展開重複硬體」，不是讓 CPU 逐次執行。</div>
+</section>
+
+<section class="card" id="tasks">
+<h2>10. Task 與 Function</h2>
+
+<p>課程將 task 與 function 列為常見 synthesis-supported constructs；其中 task 特別註明 <b>no timing or event control</b>。</p>
+
+<h3>10.1 Function：Parity</h3>
+<pre><code>function parity8;
+    input [7:0] data;
+    begin
+        parity8 = ^data;
+    end
+endfunction
+
+assign p = parity8(din);</code></pre>
+
+<h3>10.2 Function：Max</h3>
+<pre><code>function [7:0] max8;
+    input [7:0] a, b;
+    begin
+        if (a > b)
+            max8 = a;
+        else
+            max8 = b;
+    end
+endfunction</code></pre>
+
+<h3>10.3 Task：無 timing control 的組合運算</h3>
+<pre><code>task calc;
+    input  [7:0] a, b;
+    output [7:0] sum;
+    begin
+        sum = a + b;
+    end
+endtask</code></pre>
+
+<div class="warn">依課程條件，可合成 task 不應包含像 <code>#10</code>、<code>@(posedge clk)</code> 這類 timing / event control。</div>
+</section>
+
+<section class="card" id="comb">
+<h2>11. 可合成 Combinational RTL 的典型形式</h2>
+
+<h3>11.1 MUX</h3>
+<pre><code>always @(*) begin
+    case(sel)
+        2'b00: y = a;
+        2'b01: y = b;
+        2'b10: y = c;
+        default: y = d;
+    endcase
+end</code></pre>
+
+<h3>11.2 ALU</h3>
+<pre><code>always @(*) begin
+    case(op)
+        3'b000: result = a + b;
+        3'b001: result = a - b;
+        3'b010: result = a & b;
+        3'b011: result = a | b;
+        3'b100: result = a ^ b;
+        default: result = 0;
+    endcase
+end</code></pre>
+
+<h3>11.3 Priority Encoder</h3>
+<pre><code>always @(*) begin
+    if      (req[3]) code = 2'd3;
+    else if (req[2]) code = 2'd2;
+    else if (req[1]) code = 2'd1;
+    else             code = 2'd0;
+end</code></pre>
+
+<div class="tip">Combinational procedural block 要讓所有可能路徑都有明確輸出，避免不小心推導 latch。</div>
+</section>
+
+<section class="card" id="seq">
+<h2>12. 可合成 Sequential RTL 的典型形式</h2>
+
+<h3>12.1 DFF</h3>
+<pre><code>always @(posedge clk)
+    q <= d;</code></pre>
+
+<h3>12.2 Register Enable</h3>
+<pre><code>always @(posedge clk) begin
+    if (en)
+        q <= d;
+end</code></pre>
+
+<h3>12.3 Counter</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        count <= 0;
+    else if (en)
+        count <= count + 1'b1;
+end</code></pre>
+
+<h3>12.4 Shift Register</h3>
+<pre><code>always @(posedge clk) begin
+    q <= {din, q[7:1]};
+end</code></pre>
+
+<h3>12.5 FSM State Register</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        state <= IDLE;
+    else
+        state <= next_state;
+end</code></pre>
+</section>
+
+<section class="card" id="examples">
+<h2>13. 大量 Synthesizable Verilog 範例</h2>
+
+<h3>例 1：AND Gate</h3><pre><code>assign y = a & b;</code></pre>
+<h3>例 2：OR Gate</h3><pre><code>assign y = a | b;</code></pre>
+<h3>例 3：XOR Reduction</h3><pre><code>assign parity = ^data;</code></pre>
+<h3>例 4：2:1 MUX</h3><pre><code>assign y = sel ? b : a;</code></pre>
+<h3>例 5：8-bit Adder</h3><pre><code>assign {cout,sum} = a + b;</code></pre>
+<h3>例 6：Comparator</h3><pre><code>assign gt = (a > b);</code></pre>
+
+<h3>例 7：Decoder</h3>
+<pre><code>always @(*) begin
+    case(sel)
+        2'd0: y = 4'b0001;
+        2'd1: y = 4'b0010;
+        2'd2: y = 4'b0100;
+        2'd3: y = 4'b1000;
+    endcase
+end</code></pre>
+
+<h3>例 8：Popcount</h3>
+<pre><code>integer i;
+always @(*) begin
+    count = 0;
+    for (i=0; i<8; i=i+1)
+        count = count + data[i];
+end</code></pre>
+
+<h3>例 9：Bit Reverse</h3>
+<pre><code>integer i;
+always @(*) begin
+    for (i=0; i<8; i=i+1)
+        y[i] = x[7-i];
+end</code></pre>
+
+<h3>例 10：Saturating Logic</h3>
+<pre><code>always @(*) begin
+    if (x > 8'd200)
+        y = 8'd200;
+    else
+        y = x;
+end</code></pre>
+
+<h3>例 11：DFF</h3><pre><code>always @(posedge clk) q <= d;</code></pre>
+
+<h3>例 12：Pipeline</h3>
+<pre><code>always @(posedge clk) begin
+    s1 <= din;
+    s2 <= s1;
+    s3 <= s2;
+end</code></pre>
+
+<h3>例 13：Counter + Enable</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) count <= 0;
+    else if (en) count <= count + 1;
+end</code></pre>
+
+<h3>例 14：FSM Next-State</h3>
+<pre><code>always @(*) begin
+    next_state = state;
+    case(state)
+        IDLE: if (start) next_state = RUN;
+        RUN : if (done)  next_state = IDLE;
+        default: next_state = IDLE;
+    endcase
+end</code></pre>
+
+<h3>例 15：Hierarchical Module</h3>
+<pre><code>wire s0, c0, c1;
+
+half_adder U0(.a(a), .b(b), .sum(s0), .carry(c0));
+half_adder U1(.a(s0), .b(cin), .sum(sum), .carry(c1));
+
+assign cout = c0 | c1;</code></pre>
+
+<h3>例 16：Function Call</h3>
+<pre><code>function [7:0] inc8;
+    input [7:0] x;
+    begin
+        inc8 = x + 1'b1;
+    end
+endfunction
+
+assign y = inc8(a);</code></pre>
+</section>
+
+<section class="card" id="nonsynth">
+<h2>14. 可合成 RTL 與純模擬寫法的區別</h2>
+
+<div class="note">
+<b>以下是延伸說明：</b>課程投影片這兩頁主要列出「常見被 synthesis tool 支援的 constructs」；
+下面的對照是實務觀念補充，用來幫助你判斷 RTL 與 testbench。
+</div>
+
+<table>
+<tr><th>寫法</th><th>一般用途</th><th>判斷</th></tr>
+<tr><td><code>assign y = a & b;</code></td><td>組合硬體</td><td class="ok">典型可合成</td></tr>
+<tr><td><code>always @(posedge clk)</code></td><td>FF / register</td><td class="ok">典型可合成</td></tr>
+<tr><td><code>for(i=0;i&lt;8;i=i+1)</code></td><td>固定重複硬體</td><td class="ok">常可合成</td></tr>
+<tr><td><code>#10 a = 1;</code></td><td>simulation delay</td><td class="bad">一般不作為 ASIC RTL 硬體描述</td></tr>
+<tr><td><code>always #5 clk = ~clk;</code></td><td>testbench clock generator</td><td class="bad">典型 testbench 用法</td></tr>
+<tr><td><code>$display(...)</code></td><td>模擬輸出</td><td class="bad">simulation-oriented</td></tr>
+<tr><td><code>$finish</code></td><td>停止模擬</td><td class="bad">testbench</td></tr>
+</table>
+
+<div class="warn">
+不同 synthesis tool / FPGA / ASIC flow 的實際支援範圍可能不同，因此「可合成子集」最終仍需以使用的 synthesis tool 文件與課程要求為準。
+</div>
+</section>
+
+<section class="card" id="rules">
+<h2>15. 實務 Coding Rules</h2>
+
+<div class="grid2">
+<div class="mini">
+<h3 style="margin-top:0">Combinational</h3>
+<p>使用 <code>always @(*)</code> 或 <code>assign</code>。</p>
+<p>procedural assignment 通常用 <code>=</code>。</p>
+<p>所有路徑都要有輸出值。</p>
+</div>
+<div class="mini">
+<h3 style="margin-top:0">Sequential</h3>
+<p>使用 clock edge event。</p>
+<p>通常使用 <code>&lt;=</code>。</p>
+<p>Reset / enable 行為要明確。</p>
+</div>
+</div>
+
+<div class="key">
+<b>判斷技巧：</b>看到一段 Verilog，先問自己「這段可以畫成什麼硬體？」如果很難對應成有限 gates / muxes / FFs / arithmetic blocks，就要懷疑它是否只是 simulation construct。
+</div>
+</section>
+
+<section class="card" id="quiz">
+<h2>16. 自我測驗</h2>
+
+<details class="quiz"><summary>Q1：所有 Verilog 語法都能 synthesis 嗎？</summary><p>不是。課程列出的是 synthesis tools 常見支援的子集。</p></details>
+<details class="quiz"><summary>Q2：continuous assignment 是否屬於課程列出的可合成 constructs？</summary><p>是。</p></details>
+<details class="quiz"><summary>Q3：if、case、for 是否在課程支援清單中？</summary><p>是。</p></details>
+<details class="quiz"><summary>Q4：task 有什麼特別限制？</summary><p>課程註明 synthesis-supported task 不含 timing 或 event control。</p></details>
+<details class="quiz"><summary>Q5：for loop 是否代表硬體一定花 N 個 clock 執行？</summary><p>不是。固定次數的可合成 for 常被 synthesis 展開。</p></details>
+<details class="quiz"><summary>Q6：always #5 clk=~clk; 適合一般 ASIC RTL 嗎？</summary><p>通常是 testbench clock generator，而不是一般 synthesizable clock-generation RTL。</p></details>
+</section>
+
+<section class="card">
+<h2>17. 一頁記憶版</h2>
+<table>
+<tr><th>類別</th><th>常見可合成內容</th></tr>
+<tr><td>Structure</td><td>module、ports、instantiation</td></tr>
+<tr><td>Data</td><td>wire、reg、integer、vectors</td></tr>
+<tr><td>Dataflow</td><td>assign、operators、concatenation</td></tr>
+<tr><td>Procedural</td><td>begin/end、blocking/nonblocking</td></tr>
+<tr><td>Control</td><td>if、case、casex、casez、for</td></tr>
+<tr><td>Reusable logic</td><td>function、task（無 timing/event control）</td></tr>
+</table>
+
+<div class="key">
+<b>最後一句：</b>「Synthesizable Verilog 子集」就是那些能被 synthesis tool 轉成具體數位硬體的 Verilog constructs；寫 RTL 時應始終從「最後會變成什麼硬體」來思考。
+</div>
+</section>
+
+<div class="footer">SynthesizableVerilog.html — Verilog Synthesizable Subset 詳細教學</div>
+</main>
+
+<script>
+function copyCode(btn){
+  const code = btn.parentElement.querySelector("code").innerText;
+  navigator.clipboard.writeText(code).then(()=>{
+    const old = btn.innerText;
+    btn.innerText = "Copied!";
+    setTimeout(()=>btn.innerText = old,1200);
+  });
+}
+</script>
+</body>
+</html>

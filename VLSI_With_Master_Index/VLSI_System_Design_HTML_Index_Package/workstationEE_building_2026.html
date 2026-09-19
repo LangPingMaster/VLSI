@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Workstation and SoC Lab Tutorial 詳細說明</title>
+<style>
+  body { font-family: "Segoe UI", "Noto Sans TC", Arial, sans-serif; margin: 0; background:#f6f8fb; color:#1f2937; line-height:1.75;}
+  header { background:linear-gradient(135deg,#203a43,#2c5364); color:white; padding:42px 24px; }
+  header h1 { margin:0 0 8px; font-size:2rem; }
+  header p { margin:6px 0; opacity:.95; }
+  .wrap { max-width:1100px; margin:0 auto; padding:28px 20px 60px; }
+  .card { background:white; border-radius:16px; padding:24px; margin:20px 0; box-shadow:0 6px 24px rgba(0,0,0,.07);}
+  h2 { color:#174c63; margin-top:0; border-left:6px solid #3aa17e; padding-left:12px;}
+  h3 { color:#245b71; }
+  code, pre { font-family: Consolas, "Courier New", monospace; }
+  pre { background:#0f172a; color:#e2e8f0; padding:18px; border-radius:12px; overflow:auto; }
+  table { width:100%; border-collapse:collapse; margin:16px 0; }
+  th, td { border:1px solid #d7dee8; padding:10px 12px; vertical-align:top; }
+  th { background:#eaf4f7; }
+  .flow { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:center; margin:20px 0;}
+  .box { background:#eef7f5; border:2px solid #63b7a6; border-radius:12px; padding:14px 18px; min-width:150px; text-align:center; font-weight:600;}
+  .arrow { font-size:1.6rem; color:#4b5563; }
+  .note { background:#fff7ed; border-left:5px solid #f59e0b; padding:14px 16px; border-radius:8px; }
+  .tip { background:#eff6ff; border-left:5px solid #3b82f6; padding:14px 16px; border-radius:8px; }
+  .toc a { color:#0f766e; text-decoration:none; }
+  .toc li { margin:6px 0; }
+  .footer { text-align:center; color:#64748b; font-size:.9rem; margin-top:40px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Workstation and SoC Lab Tutorial 詳細說明</h1>
+    <p>VLSI System Design 2026 Fall</p>
+    <p>依附件內容整理；原資料內容不修改，另加入流程圖與補充說明方便閱讀。</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="card toc">
+    <h2>目錄</h2>
+    <ol>
+      <li><a href="#s1">這份文件到底在教什麼？</a></li>
+      <li><a href="#s2">第 1～3 頁：Workstation 是什麼？</a></li>
+      <li><a href="#s3">第 4～5 頁：Workstation 的 IP Address</a></li>
+      <li><a href="#s4">第 6 頁：為什麼要開啟 Xming？</a></li>
+      <li><a href="#s5">第 7～9 頁：PuTTY 的設定</a></li>
+      <li><a href="#s6">第 8 頁：X11 Forwarding</a></li>
+      <li><a href="#s7">第 9 頁：按 Open 正式連線</a></li>
+      <li><a href="#s8">第 10 頁：Host Key</a></li>
+      <li><a href="#s9">第 11～13 頁：登入 Workstation</a></li>
+      <li><a href="#s10">第 13 頁：Login Successfully</a></li>
+      <li><a href="#s11">這時你到底在哪裡？</a></li>
+      <li><a href="#s12">第 14 頁：Logout</a></li>
+      <li><a href="#s13">第 15～18 頁：FileZilla 傳檔案</a></li>
+      <li><a href="#s14">第 16 頁：FileZilla 連線方式</a></li>
+      <li><a href="#s15">第 17 頁：第一次連線 FileZilla</a></li>
+      <li><a href="#s16">第 18 頁：連線成功</a></li>
+      <li><a href="#s17">第 19～20 頁：修改密碼</a></li>
+      <li><a href="#s18">為什麼這份教材對 VLSI 特別重要？</a></li>
+      <li><a href="#s19">三個軟體一定要分清楚</a></li>
+      <li><a href="#s20">完整操作 SOP</a></li>
+      <li><a href="#s21">真正應該學會的 5 個觀念</a></li>
+      <li><a href="#s22">整份附件一句話總結</a></li>
+    </ol>
+  </section>
+
+  <section class="card" id="s1">
+    <h2>一、這份文件到底在教什麼？</h2>
+    <p>這份附件是 <b>《Workstation and SoC Lab Tutorial》</b>，屬於 2026 Fall 的 <b>VLSI System Design</b> 課程環境操作教學。主要目的不是教 Verilog 本身，而是先教你：<b>如何從 Windows 教室電腦連進實驗室 Linux Workstation、如何開啟圖形化 EDA 軟體、如何上傳下載檔案，以及如何修改密碼。</b></p>
+
+    <div class="flow">
+      <div class="box">Windows 教室電腦</div><div class="arrow">→</div>
+      <div class="box">Xming</div><div class="arrow">→</div>
+      <div class="box">PuTTY / SSH</div><div class="arrow">→</div>
+      <div class="box">Linux Workstation</div>
+    </div>
+    <div class="flow">
+      <div class="box">Windows 本機檔案</div><div class="arrow">→</div>
+      <div class="box">FileZilla / SFTP</div><div class="arrow">→</div>
+      <div class="box">Linux Workstation</div>
+    </div>
+
+    <p>Workstation 被教材定義為一台功能較強的電腦，並強調兩項重點：</p>
+    <ol>
+      <li>運算能力較強。</li>
+      <li>可以同時支援多位使用者與多任務。</li>
+    </ol>
+  </section>
+
+  <section class="card" id="s2">
+    <h2>二、第 1～3 頁：Workstation 是什麼？</h2>
+    <p>第 1 頁是封面。第 2 頁列出三個主題：</p>
+    <ul>
+      <li>Introduction of workstation</li>
+      <li>Connect to the workstation</li>
+      <li>Change your password</li>
+    </ul>
+
+    <p>第 3 頁開始解釋 workstation。教材寫：</p>
+    <pre>Workstation = A powerful PC</pre>
+    <p>並說明使用 workstation 的原因是：</p>
+    <ul>
+      <li>Powerful computational ability</li>
+      <li>Support multi-user &amp; multi-tasking</li>
+    </ul>
+
+    <p>這裡最重要的不是「它是一台比較快的 PC」，而是理解：<b>你的電腦只是操作端。</b></p>
+    <pre>你的 Windows
+    ↓
+只是 Remote Client
+
+Linux Workstation
+    ↓
+真正執行：
+simulation
+synthesis
+EDA
+CPU design
+etc.</pre>
+  </section>
+
+  <section class="card" id="s3">
+    <h2>三、第 4～5 頁：Workstation 的 IP Address</h2>
+    <h3>在 EE building computer room</h3>
+    <pre>140.116.156.5
+140.116.156.6</pre>
+
+    <h3>在 SoC computer room</h3>
+    <pre>192.168.200.5
+192.168.200.6</pre>
+
+    <p>這裡要特別理解一個觀念：<b>為什麼兩邊 IP 不一樣？</b> 因為它們屬於不同網路環境。</p>
+    <pre>EE Building
+      │
+      └── 140.116.156.x
+
+SoC Lab internal network
+      │
+      └── 192.168.200.x</pre>
+
+    <div class="note">實際操作時，不要單純記「永遠連某一個 IP」，而是要先看自己目前所在的網路環境，再決定輸入哪一組位址。</div>
+  </section>
+
+  <section class="card" id="s4">
+    <h2>四、第 6 頁：為什麼要開啟 Xming？</h2>
+    <p>教材要求：</p>
+    <pre>Before connecting to workstation, click Xming to run it in the background.</pre>
+    <p>原因是：</p>
+    <pre>Enabling the user to open the EDA tool with a graphical user interface (GUI).</pre>
+
+    <p>PuTTY 本身主要給你文字終端機，例如：</p>
+    <pre>ls
+cd
+pwd
+vcs</pre>
+
+    <p>但很多 EDA 軟體會開啟 waveform、schematic、layout、simulation GUI、synthesis GUI 等圖形視窗。這些視窗是 Linux 端產生的，但你坐在 Windows 電腦前，因此需要 Xming。</p>
+
+    <div class="flow">
+      <div class="box">Linux GUI</div><div class="arrow">→</div>
+      <div class="box">X11 Protocol</div><div class="arrow">→</div>
+      <div class="box">SSH X11 Forwarding</div><div class="arrow">→</div>
+      <div class="box">Xming</div><div class="arrow">→</div>
+      <div class="box">Windows 顯示畫面</div>
+    </div>
+  </section>
+
+  <section class="card" id="s5">
+    <h2>五、第 7～9 頁：PuTTY 的設定</h2>
+    <p>第 7 頁要求你先輸入 Host Name / IP address。</p>
+    <p>如果在 EE building：</p>
+    <pre>140.116.156.5
+或
+140.116.156.6</pre>
+
+    <p>如果在 SoC Lab：</p>
+    <pre>192.168.200.5
+或
+192.168.200.6</pre>
+
+    <p>PuTTY 在這裡的本質是：</p>
+    <pre>SSH Client</pre>
+
+    <p>SSH = Secure Shell，也就是：</p>
+    <pre>你的 Windows
+    ↓
+encrypted SSH connection
+    ↓
+Linux workstation</pre>
+  </section>
+
+  <section class="card" id="s6">
+    <h2>六、第 8 頁：一定要打開 X11 Forwarding</h2>
+    <p>PuTTY 裡要進入：</p>
+    <pre>Connection
+   ↓
+SSH
+   ↓
+X11</pre>
+    <p>然後勾選：</p>
+    <pre>Enable X11 forwarding</pre>
+
+    <p>Xming 與 X11 forwarding 是一組的：</p>
+    <table>
+      <tr><th>狀況</th><th>結果</th></tr>
+      <tr><td>只開 Xming，不勾 X11 forwarding</td><td>Linux GUI 無法正常轉送回 Windows</td></tr>
+      <tr><td>只勾 X11 forwarding，沒開 Xming</td><td>Windows 沒有 X Server 可以接收 GUI</td></tr>
+    </table>
+
+    <pre>Xming
+  +
+PuTTY X11 forwarding
+  +
+SSH</pre>
+  </section>
+
+  <section class="card" id="s7">
+    <h2>七、第 9 頁：按 Open 正式連接</h2>
+    <p>教材再次提醒：</p>
+    <pre>Make sure Xming is running.</pre>
+    <p>確認之後按：</p>
+    <pre>Open</pre>
+
+    <p>此時就會開始 SSH connection。</p>
+    <pre>Windows Client
+      │
+      │ SSH
+      ▼
+140.116.156.5
+      │
+      ▼
+Linux server</pre>
+  </section>
+
+  <section class="card" id="s8">
+    <h2>八、第 10 頁：Host Key 是什麼？</h2>
+    <p>第一次連伺服器時，PuTTY 通常會跳出 SSH Host Key 提示。教材要求出現這個視窗時接受它。</p>
+
+    <p>Host Key 的概念是：</p>
+    <blockquote>用來確認你連線的是這台伺服器。</blockquote>
+
+    <p>第一次連接時，你的電腦還沒有保存這台伺服器的身份資料，所以會詢問你是否信任這台主機。接受後，PuTTY 會記住伺服器的 key。</p>
+  </section>
+
+  <section class="card" id="s9">
+    <h2>九、第 11～13 頁：登入 Workstation</h2>
+    <h3>第 11 頁：username</h3>
+    <pre>login as:</pre>
+    <p>輸入學校／實驗室提供給你的 workstation username。</p>
+
+    <h3>第 12 頁：password</h3>
+    <pre>student01@140.116.156.5's password:</pre>
+    <p>輸入密碼。</p>
+
+    <div class="tip">Linux 的重要特點：輸入密碼時通常不會顯示任何字元，畫面上既不會顯示文字，也不一定會顯示星號，這是正常的。</div>
+  </section>
+
+  <section class="card" id="s10">
+    <h2>十、第 13 頁：Login Successfully</h2>
+    <p>登入成功後，就會進入 Linux shell。這表示你現在已經不是在 Windows 命令列，而是正在遠端操作 Linux workstation。</p>
+    <p>之後輸入的：</p>
+    <pre>ls
+cd
+mkdir
+vcs</pre>
+    <p>都會在遠端伺服器上執行。</p>
+  </section>
+
+  <section class="card" id="s11">
+    <h2>十一、這時你到底在哪裡？</h2>
+    <pre>你的實體位置
+│
+└── 成大 EE 電腦教室
+
+你的 Windows 電腦
+│
+└── PuTTY
+
+你的 Shell
+│
+└── Linux Workstation
+
+你的工作目錄
+│
+└── /home/你的帳號/...</pre>
+
+    <p>因此，如果你在 PuTTY 輸入：</p>
+    <pre>rm test.v</pre>
+    <p>刪除的是 workstation 上的 <code>test.v</code>，不是 Windows <code>C:\...</code> 裡的檔案。</p>
+  </section>
+
+  <section class="card" id="s12">
+    <h2>十二、第 14 頁：Logout</h2>
+    <p>離開伺服器時，教材教你輸入：</p>
+    <pre>exit</pre>
+    <p>即可 logout。</p>
+
+    <pre>Login
+  ↓
+work
+  ↓
+exit
+  ↓
+disconnect</pre>
+  </section>
+
+  <section class="card" id="s13">
+    <h2>十三、第 15～18 頁：FileZilla 傳檔案</h2>
+    <p>PuTTY 負責：</p>
+    <pre>登入 + command line + remote operation</pre>
+    <p>FileZilla 則負責：</p>
+    <pre>Windows ↔ Linux
+檔案傳輸</pre>
+  </section>
+
+  <section class="card" id="s14">
+    <h2>十四、第 16 頁：FileZilla 連線方式</h2>
+    <p>從教材截圖可以看出，設定使用：</p>
+    <pre>SFTP - SSH File Transfer Protocol</pre>
+
+    <pre>Protocol:
+SFTP
+
+Host:
+140.116.156.5
+或相對應 workstation
+
+Port:
+22
+
+Username:
+你的 workstation username
+
+Password:
+你的 workstation password</pre>
+
+    <p>重點是：<b>FileZilla 與 PuTTY 實際上是在存取同一台 Linux 主機，只是用途不同。</b></p>
+  </section>
+
+  <section class="card" id="s15">
+    <h2>十五、第 17 頁：第一次連線 FileZilla</h2>
+    <p>第一次連伺服器時，也可能出現主機金鑰確認視窗。教材說明出現這個視窗時選擇：</p>
+    <pre>確認</pre>
+    <p>這和 PuTTY 的 Host Key 概念相同。</p>
+  </section>
+
+  <section class="card" id="s16">
+    <h2>十六、第 18 頁：連線成功</h2>
+    <p>正常 FileZilla 畫面可以理解成左右兩邊：</p>
+    <pre>左邊                     右邊
+Windows                   Linux
+Local                     Remote
+──────────                ──────────
+C:\Lab1                   /home/user/Lab1
+
+test.v        →上傳→      test.v
+
+result.log    ←下載←      result.log</pre>
+
+    <p>這會成為以後交 VLSI 作業時很常用的操作。</p>
+
+    <pre>Windows 寫：
+top.v
+tb_top.v
+
+        ↓ upload
+
+Linux workstation：
+~/HW1/top.v
+~/HW1/tb_top.v
+
+        ↓ run simulation
+
+Linux 產生：
+wave.fsdb
+report.txt
+
+        ↓ download
+
+Windows 查看結果</pre>
+  </section>
+
+  <section class="card" id="s17">
+    <h2>十七、第 19～20 頁：修改密碼</h2>
+    <p>教材要求登入 workstation 後輸入：</p>
+    <pre>passwd</pre>
+
+    <p>然後依照畫面指示修改密碼：</p>
+    <pre>$ passwd
+
+Current password:
+New password:
+Retype new password:</pre>
+
+    <pre>舊密碼
+    ↓
+新密碼
+    ↓
+再輸入一次新密碼</pre>
+
+    <p>教材特別強調：強烈建議修改密碼，而且一定要記住它。</p>
+  </section>
+
+  <section class="card" id="s18">
+    <h2>十八、為什麼這份教材對 VLSI 特別重要？</h2>
+    <p>從表面看，這份教材只是在教：</p>
+    <pre>PuTTY
+Xming
+FileZilla</pre>
+
+    <p>實際上它是在準備後面的 IC Design Flow：</p>
+    <pre>Verilog / SystemVerilog
+        ↓
+Workstation
+        ↓
+Simulation
+        ↓
+Waveform
+        ↓
+Synthesis
+        ↓
+EDA tools
+        ↓
+Reports / netlist</pre>
+
+    <p>這份教材解決的是整個流程最前面的問題：</p>
+    <blockquote>How do I access the environment?</blockquote>
+  </section>
+
+  <section class="card" id="s19">
+    <h2>十九、三個軟體一定要分清楚</h2>
+    <table>
+      <tr><th>軟體</th><th>作用</th><th>類比</th></tr>
+      <tr><td><b>PuTTY</b></td><td>SSH 連接 Linux</td><td>遠端鍵盤</td></tr>
+      <tr><td><b>Xming</b></td><td>顯示 Linux GUI</td><td>遠端螢幕</td></tr>
+      <tr><td><b>FileZilla</b></td><td>SFTP 傳檔案</td><td>遠端隨身碟</td></tr>
+    </table>
+
+    <pre>PuTTY
+= 我控制 Linux
+
+Xming
+= 我看到 Linux GUI
+
+FileZilla
+= 我在 Windows 和 Linux 之間搬檔案</pre>
+  </section>
+
+  <section class="card" id="s20">
+    <h2>二十、完整操作 SOP</h2>
+    <pre>① 開啟 Xming
+        ↓
+② 開 PuTTY
+        ↓
+③ 輸入正確 workstation IP
+        ↓
+④ Connection → SSH → X11
+        ↓
+⑤ Enable X11 forwarding
+        ↓
+⑥ Open
+        ↓
+⑦ 第一次連線接受 Host Key
+        ↓
+⑧ 輸入 username
+        ↓
+⑨ 輸入 password
+        ↓
+⑩ 成功進入 Linux
+        ↓
+⑪ 進行 Verilog / EDA 工作
+        ↓
+⑫ 如需傳檔，使用 FileZilla + SFTP
+        ↓
+⑬ 完成後輸入 exit</pre>
+
+    <p>如果是第一次拿到個人帳號，再做一次：</p>
+    <pre>passwd</pre>
+  </section>
+
+  <section class="card" id="s21">
+    <h2>二十一、你在這份教材真正應該學會的 5 個觀念</h2>
+    <ol>
+      <li><b>Local 與 Remote 不同</b><br>Windows = Local；Linux workstation = Remote。</li>
+      <li><b>PuTTY 是 SSH</b><br>遠端登入與命令列操作。</li>
+      <li><b>Xming 是 GUI 顯示端</b><br>EDA GUI：Linux → Windows。</li>
+      <li><b>FileZilla 是檔案傳輸</b><br>Windows ↔ Linux。</li>
+      <li><b>Linux 工作站才是後面 IC Design 真正執行工作的地方</b><br>SystemVerilog、Simulation、Synthesis、EDA、CPU、ASIC flow 都會圍繞這個環境。</li>
+    </ol>
+  </section>
+
+  <section class="card" id="s22">
+    <h2>二十二、整份附件濃縮成一句話</h2>
+    <blockquote><b>這份 Workstation Tutorial 是 VLSI System Design 的環境入門教材，教你如何利用 Xming + PuTTY + SSH/X11 從 Windows 連到 Linux Workstation，再利用 FileZilla/SFTP 管理設計檔案，並維護自己的實驗室帳號。</b></blockquote>
+
+    <p>把課程相關教材串起來，可以得到以下學習主軸：</p>
+    <div class="flow">
+      <div class="box">Workstation / Linux</div><div class="arrow">→</div>
+      <div class="box">Verilog / SystemVerilog</div><div class="arrow">→</div>
+      <div class="box">Simulation</div><div class="arrow">→</div>
+      <div class="box">EDA</div><div class="arrow">→</div>
+      <div class="box">Synthesis</div><div class="arrow">→</div>
+      <div class="box">Gate-level circuit</div><div class="arrow">→</div>
+      <div class="box">CPU / Datapath / Controller</div><div class="arrow">→</div>
+      <div class="box">VLSI System Design</div>
+    </div>
+  </section>
+
+  <div class="footer">
+    本頁為附件內容之 HTML 整理版；正文內容保留原先整理資訊，另以流程圖、表格與版面強化閱讀。
+  </div>
+</div>
+</body>
+</html>

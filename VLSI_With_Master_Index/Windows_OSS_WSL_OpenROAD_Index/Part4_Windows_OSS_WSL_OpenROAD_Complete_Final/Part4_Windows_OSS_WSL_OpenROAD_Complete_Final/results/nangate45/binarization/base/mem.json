@@ -1,0 +1,312 @@
+{
+  "creator": "Yosys 0.68+post (git sha1 UNKNOWN, Release, GNU /usr/local/bin/wrapped-cc/g++ 11.4.0)",
+  "modules": {
+    "binarization": {
+      "attributes": {
+        "hdlname": "binarization",
+        "top": "00000000000000000000000000000001",
+        "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:2.1-11.10"
+      },
+      "ports": {
+        "clk": {
+          "direction": "input",
+          "bits": [ 2 ]
+        },
+        "rst_n": {
+          "direction": "input",
+          "bits": [ 3 ]
+        },
+        "pix_in": {
+          "direction": "input",
+          "bits": [ 4, 5, 6, 7, 8, 9, 10, 11 ]
+        },
+        "threshold": {
+          "direction": "input",
+          "bits": [ 12, 13, 14, 15, 16, 17, 18, 19 ]
+        },
+        "pix_out": {
+          "direction": "output",
+          "bits": [ 20 ]
+        }
+      },
+      "cells": {
+        "$auto$alumacc.cc:110:get_cf$1055": {
+          "hide_name": 1,
+          "type": "$not",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000001",
+            "Y_WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+            "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:8.10-8.29"
+          },
+          "port_directions": {
+            "A": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 21 ],
+            "Y": [ 22 ]
+          }
+        },
+        "$auto$alumacc.cc:548:replace_alu$1052": {
+          "hide_name": 1,
+          "type": "$alu",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000001000",
+            "B_SIGNED": "00000000000000000000000000000000",
+            "B_WIDTH": "00000000000000000000000000001000",
+            "Y_WIDTH": "00000000000000000000000000001000"
+          },
+          "attributes": {
+            "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:8.10-8.29"
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "BI": "input",
+            "CI": "input",
+            "CO": "output",
+            "X": "output",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 4, 5, 6, 7, 8, 9, 10, 11 ],
+            "B": [ 12, 13, 14, 15, 16, 17, 18, 19 ],
+            "BI": [ "1" ],
+            "CI": [ "1" ],
+            "CO": [ 23, 24, 25, 26, 27, 28, 29, 21 ],
+            "X": [ 30, 31, 32, 33, 34, 35, 36, 37 ],
+            "Y": [ 38, 39, 40, 41, 42, 43, 44, 45 ]
+          }
+        },
+        "$auto$alumacc.cc:584:replace_alu$1063": {
+          "hide_name": 1,
+          "type": "$reduce_or",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000010",
+            "Y_WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+          },
+          "port_directions": {
+            "A": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 46, 47 ],
+            "Y": [ 48 ]
+          }
+        },
+        "$auto$alumacc.cc:86:get_gt$1059": {
+          "hide_name": 1,
+          "type": "$or",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000001",
+            "B_SIGNED": "00000000000000000000000000000000",
+            "B_WIDTH": "00000000000000000000000000000001",
+            "Y_WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 22 ],
+            "B": [ 47 ],
+            "Y": [ 49 ]
+          }
+        },
+        "$auto$alumacc.cc:87:get_gt$1061": {
+          "hide_name": 1,
+          "type": "$not",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000001",
+            "Y_WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+            "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:8.10-8.29"
+          },
+          "port_directions": {
+            "A": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 49 ],
+            "Y": [ 46 ]
+          }
+        },
+        "$auto$alumacc.cc:96:get_eq$1057": {
+          "hide_name": 1,
+          "type": "$reduce_and",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000001000",
+            "Y_WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+            "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:8.10-8.29"
+          },
+          "port_directions": {
+            "A": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 30, 31, 32, 33, 34, 35, 36, 37 ],
+            "Y": [ 47 ]
+          }
+        },
+        "$procdff$1050": {
+          "hide_name": 1,
+          "type": "$adff",
+          "parameters": {
+            "ARST_POLARITY": "00000000000000000000000000000000",
+            "ARST_VALUE": "0",
+            "CLK_POLARITY": "1",
+            "WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+            "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:6.1-10.4"
+          },
+          "port_directions": {
+            "ARST": "input",
+            "CLK": "input",
+            "D": "input",
+            "Q": "output"
+          },
+          "connections": {
+            "ARST": [ 3 ],
+            "CLK": [ 2 ],
+            "D": [ 50 ],
+            "Q": [ 20 ]
+          }
+        },
+        "$procmux$1044": {
+          "hide_name": 1,
+          "type": "$mux",
+          "parameters": {
+            "WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+            "full_case": "00000000000000000000000000000001",
+            "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:8.10-8.29|/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:8.7-9.23"
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "S": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ "0" ],
+            "B": [ "1" ],
+            "S": [ 48 ],
+            "Y": [ 50 ]
+          }
+        }
+      },
+      "netnames": {
+        "$0\\pix_out[0:0]": {
+          "hide_name": 1,
+          "bits": [ 50 ],
+          "attributes": {
+            "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:6.1-10.4"
+          }
+        },
+        "$auto$alumacc.cc:483:extract_cmp_alu$1051": {
+          "hide_name": 1,
+          "bits": [ 38, 39, 40, 41, 42, 43, 44, 45 ],
+          "attributes": {
+            "unused_bits": "0 1 2 3 4 5 6 7"
+          }
+        },
+        "$auto$alumacc.cc:564:replace_alu$1053": {
+          "hide_name": 1,
+          "bits": [ 30, 31, 32, 33, 34, 35, 36, 37 ],
+          "attributes": {
+          }
+        },
+        "$auto$alumacc.cc:565:replace_alu$1054": {
+          "hide_name": 1,
+          "bits": [ 23, 24, 25, 26, 27, 28, 29, 21 ],
+          "attributes": {
+            "unused_bits": "0 1 2 3 4 5 6"
+          }
+        },
+        "$auto$rtlil.cc:3267:Not$1056": {
+          "hide_name": 1,
+          "bits": [ 22 ],
+          "attributes": {
+          }
+        },
+        "$auto$rtlil.cc:3267:Not$1062": {
+          "hide_name": 1,
+          "bits": [ 46 ],
+          "attributes": {
+          }
+        },
+        "$auto$rtlil.cc:3270:ReduceAnd$1058": {
+          "hide_name": 1,
+          "bits": [ 47 ],
+          "attributes": {
+          }
+        },
+        "$auto$rtlil.cc:3271:ReduceOr$1064": {
+          "hide_name": 1,
+          "bits": [ 48 ],
+          "attributes": {
+          }
+        },
+        "$auto$rtlil.cc:3315:Or$1060": {
+          "hide_name": 1,
+          "bits": [ 49 ],
+          "attributes": {
+          }
+        },
+        "clk": {
+          "hide_name": 0,
+          "bits": [ 2 ],
+          "attributes": {
+            "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:3.13-3.16"
+          }
+        },
+        "pix_in": {
+          "hide_name": 0,
+          "bits": [ 4, 5, 6, 7, 8, 9, 10, 11 ],
+          "attributes": {
+            "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:3.53-3.59"
+          }
+        },
+        "pix_out": {
+          "hide_name": 0,
+          "bits": [ 20 ],
+          "attributes": {
+            "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:4.41-4.48"
+          }
+        },
+        "rst_n": {
+          "hide_name": 0,
+          "bits": [ 3 ],
+          "attributes": {
+            "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:3.29-3.34"
+          }
+        },
+        "threshold": {
+          "hide_name": 0,
+          "bits": [ 12, 13, 14, 15, 16, 17, 18, 19 ],
+          "attributes": {
+            "src": "/OpenROAD-flow-scripts/flow/designs/src/binarization/binarization.v:4.19-4.28"
+          }
+        }
+      }
+    }
+  }
+}

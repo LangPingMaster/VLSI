@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DigitalICFlow.html — Digital IC Flow（數位 IC 設計流程）完整教學</title>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#64748b;
+  --blue:#2563eb;--teal:#0f766e;--green:#059669;--orange:#d97706;
+  --red:#dc2626;--purple:#7c3aed;--line:#dbe3ec;--code:#0f172a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;line-height:1.82}
+header{background:linear-gradient(135deg,#1e3a8a,#0f766e 60%,#115e59);color:#fff;padding:52px 24px 44px}
+header .inner,nav .bar,.wrap{max-width:1180px;margin:auto}
+header h1{margin:0 0 10px;font-size:2.18rem}
+header p{margin:5px 0;max-width:1050px;opacity:.96}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tag{padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);font-size:.88rem}
+nav{position:sticky;top:0;z-index:20;background:rgba(245,247,251,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+nav .bar{padding:8px 20px;display:flex;gap:10px;overflow:auto;white-space:nowrap}
+nav a{color:#0f766e;text-decoration:none;padding:5px 9px;border-radius:8px;font-size:.9rem}
+nav a:hover{background:#e2e8f0}
+.wrap{padding:28px 20px 80px}
+.card{background:var(--card);border-radius:18px;padding:26px;margin:22px 0;box-shadow:0 8px 28px rgba(15,23,42,.07)}
+h2{margin:0 0 16px;color:#134e4a;border-left:6px solid #14b8a6;padding-left:12px}
+h3{color:#1d4ed8;margin-top:26px}
+h4{color:#7c3aed;margin:18px 0 8px}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{background:var(--code);color:#e2e8f0;padding:17px 18px;border-radius:12px;overflow:auto;line-height:1.55}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid var(--line);padding:11px 12px;vertical-align:top}
+th{background:#ecfeff;color:#155e75}
+.note,.tip,.warn,.key{padding:14px 16px;border-radius:10px;margin:16px 0}
+.note{background:#fff7ed;border-left:5px solid #f59e0b}
+.tip{background:#eff6ff;border-left:5px solid #3b82f6}
+.warn{background:#fef2f2;border-left:5px solid #ef4444}
+.key{background:#ecfdf5;border-left:5px solid #10b981}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mini{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:18px}
+.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:24px 0}
+.box{min-width:150px;text-align:center;padding:14px 16px;border:2px solid #67e8f9;background:#ecfeff;border-radius:13px;font-weight:700}
+.box small{display:block;color:#475569;font-weight:500;margin-top:5px}
+.arrow{font-size:1.5rem;color:#64748b}
+.toc ol{columns:2;column-gap:34px}
+.toc li{margin:7px 0;break-inside:avoid}
+.toc a{color:#0f766e;text-decoration:none}
+.quiz{border:1px dashed #94a3b8;border-radius:14px;padding:14px 16px;margin:12px 0;background:#fff}
+.quiz summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+.phase{border:1px solid var(--line);border-radius:14px;padding:18px;background:#f8fafc;margin:14px 0}
+.footer{text-align:center;color:var(--muted);font-size:.92rem;margin-top:34px}
+@media(max-width:800px){header h1{font-size:1.7rem}.toc ol{columns:1}}
+</style>
+</head>
+<body>
+
+<header><div class="inner">
+<h1>Digital IC Flow（數位 IC 設計流程）完整教學</h1>
+<p>從 System Specification、Architecture / Functional Design、RTL、Simulation、Logic Synthesis、Gate-Level Netlist、Circuit / Physical Design、Verification、Fabrication 到 Packaging，一次把數位 IC 從「想法」走到「晶片」的完整流程串起來。</p>
+<p>本頁以課程的 Traditional VLSI Design Cycle / Design Flow 為主軸，並加入現代 RTL-to-GDS 常見名詞與大量例子。</p>
+<div class="tags">
+<span class="tag">Specification</span><span class="tag">Architecture</span><span class="tag">RTL</span>
+<span class="tag">Simulation</span><span class="tag">Synthesis</span><span class="tag">Gate-Level Netlist</span>
+<span class="tag">P&amp;R</span><span class="tag">STA</span><span class="tag">DRC/LVS</span><span class="tag">GDSII</span>
+</div>
+</div></header>
+
+<nav><div class="bar">
+<a href="#overview">總覽</a><a href="#spec">Specification</a><a href="#arch">Architecture</a>
+<a href="#rtl">RTL</a><a href="#sim">Simulation</a><a href="#synth">Synthesis</a>
+<a href="#gate">Gate-Level</a><a href="#physical">Physical</a><a href="#verify">Verification</a>
+<a href="#fab">Fabrication</a><a href="#examples">大量例子</a>
+</div></nav>
+
+<main class="wrap">
+
+<section class="card toc">
+<h2>目錄</h2>
+<ol>
+<li><a href="#overview">Digital IC Flow 整體概念</a></li>
+<li><a href="#source-flow">課程 Traditional VLSI Design Flow</a></li>
+<li><a href="#spec">System Specification</a></li>
+<li><a href="#arch">Functional / Architecture Design</a></li>
+<li><a href="#rtl">RTL Design</a></li>
+<li><a href="#sim">Functional / RTL Simulation</a></li>
+<li><a href="#synth">Logic Synthesis</a></li>
+<li><a href="#gate">Gate-Level Netlist</a></li>
+<li><a href="#circuit">Circuit Design</a></li>
+<li><a href="#physical">Physical Synthesis / P&amp;R</a></li>
+<li><a href="#verify">Extraction / Verification / Sign-off</a></li>
+<li><a href="#fab">Fabrication &amp; Packaging</a></li>
+<li><a href="#examples">大量完整流程例子</a></li>
+<li><a href="#files">各階段常見檔案</a></li>
+<li><a href="#debug">錯了要退回哪一層？</a></li>
+<li><a href="#pitfalls">常見誤解與考試重點</a></li>
+</ol>
+</section>
+
+<section class="card" id="overview">
+<h2>1. Digital IC Flow 整體概念</h2>
+
+<p>
+數位 IC 設計不是「寫完 Verilog → 晶片完成」。
+它是一條從高階功能描述逐漸下降到實體幾何與製造資料的流程。
+</p>
+
+<div class="flow">
+<div class="box">Specification<small>要做什麼？</small></div>
+<div class="arrow">→</div>
+<div class="box">Architecture<small>怎麼分模組？</small></div>
+<div class="arrow">→</div>
+<div class="box">RTL<small>Verilog/SystemVerilog</small></div>
+<div class="arrow">→</div>
+<div class="box">Simulation<small>功能正確？</small></div>
+<div class="arrow">→</div>
+<div class="box">Synthesis<small>轉成 gates/cells</small></div>
+<div class="arrow">→</div>
+<div class="box">Physical Design<small>Placement / Routing</small></div>
+<div class="arrow">→</div>
+<div class="box">Sign-off<small>Timing / DRC / LVS</small></div>
+<div class="arrow">→</div>
+<div class="box">GDSII / Tape-out</div>
+</div>
+
+<div class="key">
+<b>核心：</b>每一層都在回答不同問題：<br>
+功能對不對？→ RTL / Simulation<br>
+硬體能不能合成？→ Synthesis<br>
+時序過不過？→ STA<br>
+版圖能不能製造？→ DRC / LVS<br>
+最後才進入 fabrication。
+</div>
+</section>
+
+<section class="card" id="source-flow">
+<h2>2. 課程中的 Traditional VLSI Design Flow</h2>
+
+<p>
+課程的流程圖以如下階段串接：
+</p>
+
+<div class="flow">
+<div class="box">System Specification</div>
+<div class="arrow">→</div>
+<div class="box">Functional / Architecture Design</div>
+<div class="arrow">→</div>
+<div class="box">Logic Synthesis</div>
+<div class="arrow">→</div>
+<div class="box">Circuit Design</div>
+<div class="arrow">→</div>
+<div class="box">Physical Synthesis</div>
+<div class="arrow">→</div>
+<div class="box">Fabrication</div>
+<div class="arrow">→</div>
+<div class="box">Packaging</div>
+</div>
+
+<p>
+流程圖旁也對應了 Functional Simulation、Logic Simulation、Circuit Analysis、
+Extraction &amp; Verification，以及 specification、behavioral representation、
+structural representation、geometrical representation 等不同抽象層。
+</p>
+
+<div class="note">
+後面所加入的 RTL、STA、floorplan、placement、CTS、routing、DRC/LVS、GDSII 等，
+是用現代數位 ASIC flow 來展開課程圖中的各階段；若投影片未逐一寫出，我會以「延伸實務」來說明。
+</div>
+</section>
+
+<section class="card" id="spec">
+<h2>3. System Specification：先定義「晶片要做什麼」</h2>
+
+<p>
+Specification 是整個 flow 的起點。還沒有 Verilog，先把需求寫清楚。
+</p>
+
+<h3>例 1：8-bit Counter</h3>
+<pre><code>需求：
+1. 8-bit output
+2. 每個 rising edge +1
+3. active-low reset
+4. reset 後輸出 0</code></pre>
+
+<h3>例 2：FIR Filter</h3>
+<pre><code>需求：
+Input : 16-bit signed sample
+Output: 32-bit signed result
+Clock : 100 MHz
+Latency: <= 8 cycles
+Throughput: 1 sample / cycle</code></pre>
+
+<h3>例 3：CPU</h3>
+<pre><code>ISA           : RV32I
+Pipeline      : 5 stages
+Clock target  : 500 MHz
+Cache         : optional
+Interrupt     : required
+Area / Power  : constrained</code></pre>
+
+<div class="warn">
+Specification 不完整，後面每一層都可能反覆重做。
+</div>
+</section>
+
+<section class="card" id="arch">
+<h2>4. Functional / Architecture Design</h2>
+
+<p>
+Architecture Design 決定「功能要怎麼拆、資料怎麼流、需要哪些硬體資源」。
+課程強調 higher level abstraction 可以協助評估不同 architecture tradeoffs。
+</p>
+
+<h3>例：乘加器 y = a×b + c</h3>
+
+<div class="grid2">
+<div class="mini">
+<h3 style="margin-top:0">Architecture A：單週期</h3>
+<pre><code>a,b → multiplier → adder → y</code></pre>
+<p>Latency 小，但 critical path 可能很長。</p>
+</div>
+<div class="mini">
+<h3 style="margin-top:0">Architecture B：Pipeline</h3>
+<pre><code>a,b → multiplier → REG → adder → REG</code></pre>
+<p>Latency 增加，但較容易提高 clock frequency。</p>
+</div>
+</div>
+
+<h3>例：影像處理</h3>
+<pre><code>Pixel Stream
+   ↓
+Line Buffer
+   ↓
+3×3 Window
+   ↓
+Gaussian Filter
+   ↓
+Threshold
+   ↓
+Output</code></pre>
+</section>
+
+<section class="card" id="rtl">
+<h2>5. RTL Design：把 Architecture 寫成 Verilog / SystemVerilog</h2>
+
+<p>
+RTL = Register Transfer Level，描述 combinational logic、register、FSM 與資料傳輸。
+</p>
+
+<h3>Counter RTL</h3>
+<pre><code>always @(posedge clk or negedge rst_n) begin
+    if (!rst_n)
+        count <= 8'd0;
+    else
+        count <= count + 1'b1;
+end</code></pre>
+
+<h3>MUX RTL</h3>
+<pre><code>always @(*) begin
+    case(sel)
+        2'b00: y = d0;
+        2'b01: y = d1;
+        2'b10: y = d2;
+        2'b11: y = d3;
+    endcase
+end</code></pre>
+
+<h3>Pipeline RTL</h3>
+<pre><code>always @(posedge clk) begin
+    stage1 <= a * b;
+    stage2 <= stage1 + c;
+end</code></pre>
+
+<div class="key">
+RTL 的工作是清楚表達硬體行為，不是手動決定每一顆 standard cell。
+</div>
+</section>
+
+<section class="card" id="sim">
+<h2>6. Functional / RTL Simulation：先證明功能正確</h2>
+
+<p>
+在 synthesis 前，先用 testbench 驗證 RTL。
+課程傳統 flow 將 Functional Simulation 放在高階設計旁。
+</p>
+
+<h3>Counter Testbench</h3>
+<pre><code>initial begin
+    rst_n = 0;
+    #20 rst_n = 1;
+
+    #100;
+    $finish;
+end
+
+always #5 clk = ~clk;</code></pre>
+
+<h3>要檢查什麼？</h3>
+
+<table>
+<tr><th>檢查</th><th>例子</th></tr>
+<tr><td>功能</td><td>Counter 是否每 cycle +1</td></tr>
+<tr><td>Reset</td><td>Reset 是否回 0</td></tr>
+<tr><td>Corner Case</td><td>255 + 1 是否 wrap 到 0</td></tr>
+<tr><td>Protocol</td><td>valid/ready handshake 是否正確</td></tr>
+<tr><td>Latency</td><td>輸入後第幾個 cycle 得到輸出</td></tr>
+</table>
+</section>
+
+<section class="card" id="synth">
+<h2>7. Logic Synthesis：RTL → Gate-Level Netlist</h2>
+
+<p>
+Synthesis tool 讀取 RTL 與 standard-cell library，
+做 inference、logic optimization 與 technology mapping。
+課程也直接展示 Before synthesis / After synthesis 的 logic optimization 概念。
+</p>
+
+<div class="flow">
+<div class="box">RTL</div>
+<div class="arrow">→</div>
+<div class="box">Inference<small>MUX / FF / Adder</small></div>
+<div class="arrow">→</div>
+<div class="box">Optimization</div>
+<div class="arrow">→</div>
+<div class="box">Technology Mapping</div>
+<div class="arrow">→</div>
+<div class="box">Gate-Level Netlist</div>
+</div>
+
+<h3>例：RTL</h3>
+<pre><code>assign y = (a & b) | (a & c);</code></pre>
+
+<h3>Tool 可能最佳化</h3>
+<pre><code>y = a & (b | c);</code></pre>
+
+<h3>再映射到 cells</h3>
+<pre><code>OR2_X1  U1 (...);
+AND2_X1 U2 (...);</code></pre>
+</section>
+
+<section class="card" id="gate">
+<h2>8. Gate-Level Netlist</h2>
+
+<p>
+Gate-Level Netlist 主要描述 standard-cell instances 與 connectivity。
+</p>
+
+<h3>RTL</h3>
+<pre><code>always @(posedge clk)
+    q <= d;</code></pre>
+
+<h3>Gate-Level 示意</h3>
+<pre><code>DFF_X1 U_Q (
+    .D(d),
+    .CK(clk),
+    .Q(q)
+);</code></pre>
+
+<h3>Full Adder</h3>
+<p>
+課程同時提供 behavioral、dataflow、gate-level 描述，
+可以清楚看出抽象層下降後，結構資訊越來越明確。
+</p>
+</section>
+
+<section class="card" id="circuit">
+<h2>9. Circuit Design</h2>
+
+<p>
+課程 Traditional VLSI Design Flow 在 Logic Synthesis 之後列出 Circuit Design，
+並搭配 circuit analysis / structural representation。
+</p>
+
+<p class="note">
+在 standard-cell-based 數位 ASIC flow 裡，設計者通常不會對每一個 synthesized logic gate 都重新手刻 transistor circuit；
+大量 transistor-level circuit 細節已封裝在 standard-cell library 中。
+本節依課程的傳統 VLSI flow 解釋其抽象層位置。
+</p>
+
+<h3>例：Inverter</h3>
+<pre><code>Logic:
+Y = ~A
+
+Circuit:
+PMOS pull-up
+NMOS pull-down</code></pre>
+</section>
+
+<section class="card" id="physical">
+<h2>10. Physical Synthesis / Physical Design</h2>
+
+<p>
+課程的下一階段是 Physical Synthesis，並以 geometrical representation 表示版圖層級。
+在現代數位 flow 中，可以進一步拆成：
+</p>
+
+<div class="grid3">
+<div class="mini"><h3 style="margin-top:0">Floorplan</h3><p>決定 die/core、macro、I/O、power structure。</p></div>
+<div class="mini"><h3 style="margin-top:0">Placement</h3><p>把 standard cells 放到 rows。</p></div>
+<div class="mini"><h3 style="margin-top:0">CTS</h3><p>建立 clock tree。</p></div>
+<div class="mini"><h3 style="margin-top:0">Routing</h3><p>把 nets 以 metal wires 接起來。</p></div>
+<div class="mini"><h3 style="margin-top:0">Optimization</h3><p>修 timing、fanout、slew、congestion。</p></div>
+</div>
+
+<h3>Floorplan 例子</h3>
+<pre><code>+--------------------------------+
+| IO                         IO  |
+|                                |
+|   SRAM      CPU Core           |
+|                                |
+|       DSP / Accelerator        |
+|                                |
+| IO                         IO  |
++--------------------------------+</code></pre>
+
+<h3>Placement 例子</h3>
+<pre><code>Row 1: INV DFF NAND MUX DFF ...
+Row 2: AND BUF AOI  DFF INV ...
+Row 3: ...</code></pre>
+</section>
+
+<section class="card" id="verify">
+<h2>11. Extraction / Verification / Sign-off</h2>
+
+<p>
+課程 Physical Synthesis 階段旁明確標示 Extraction &amp; Verification。
+在現代數位 IC flow 裡，常見 sign-off 項目可進一步理解為：
+</p>
+
+<table>
+<tr><th>項目</th><th>目的</th></tr>
+<tr><td>Parasitic Extraction</td><td>取得 wire R/C 寄生參數</td></tr>
+<tr><td>STA</td><td>檢查 setup / hold / timing path</td></tr>
+<tr><td>DRC</td><td>版圖是否符合製程設計規則</td></tr>
+<tr><td>LVS</td><td>Layout connectivity 是否與電路/netlist 一致</td></tr>
+<tr><td>Power / IR / EM</td><td>延伸實務：檢查供電與可靠度</td></tr>
+</table>
+
+<h3>STA 例子</h3>
+<pre><code>FF1 → NAND → INV → MUX → FF2
+
+arrival time
++ cell delay
++ wire delay
+→ check setup at FF2</code></pre>
+
+<h3>DRC 例子</h3>
+<pre><code>Metal spacing too small
+→ DRC violation
+→ reroute / adjust geometry</code></pre>
+
+<h3>LVS 例子</h3>
+<pre><code>Schematic / Netlist says:
+A → INV → Y
+
+Layout extracted says:
+A → NAND → Y
+
+→ mismatch
+→ LVS fail</code></pre>
+</section>
+
+<section class="card" id="fab">
+<h2>12. Fabrication → Packaging</h2>
+
+<p>
+課程流程圖在 Physical Synthesis 後依序列出 Fabrication 與 Packaging。
+</p>
+
+<div class="flow">
+<div class="box">Physical Layout</div>
+<div class="arrow">→</div>
+<div class="box">Fabrication<small>晶圓製造</small></div>
+<div class="arrow">→</div>
+<div class="box">Wafer / Dies</div>
+<div class="arrow">→</div>
+<div class="box">Packaging<small>封裝</small></div>
+<div class="arrow">→</div>
+<div class="box">IC Product</div>
+</div>
+
+<p>
+課程另有 semiconductor business chain，將 IC Design、Wafer Fabrication、IC Packaging、IC Testing、
+System Manufacturers 等放在整體產業鏈中。
+</p>
+</section>
+
+<section class="card" id="examples">
+<h2>13. 大量完整流程例子</h2>
+
+<h3>例 1：AND Gate</h3>
+<pre><code>Spec:
+Y = A AND B
+
+RTL:
+assign y = a & b;
+
+Synthesis:
+AND2_X1
+
+Physical:
+place AND2_X1 and route A/B/Y
+
+Verification:
+timing + DRC/LVS
+
+Final:
+GDSII</code></pre>
+
+<h3>例 2：D Flip-Flop</h3>
+<pre><code>Spec:
+Q samples D at rising clock edge
+
+RTL:
+always @(posedge clk)
+    q <= d;
+
+Synthesis:
+DFF cell
+
+Physical:
+place DFF + route clock/data
+
+STA:
+check setup/hold</code></pre>
+
+<h3>例 3：8-bit Counter</h3>
+<pre><code>Spec
+ ↓
+8-bit increment every cycle
+ ↓
+RTL counter
+ ↓
+RTL simulation
+ ↓
+Synthesis
+ ↓
+8 DFFs + increment logic
+ ↓
+Placement/CTS/Route
+ ↓
+STA/DRC/LVS
+ ↓
+GDSII</code></pre>
+
+<h3>例 4：4-to-1 MUX</h3>
+<pre><code>Spec:
+select one of four inputs
+
+RTL:
+case(sel)
+
+Synthesis:
+MUX cells / equivalent gates
+
+Physical:
+placed/routed MUX network</code></pre>
+
+<h3>例 5：Full Adder</h3>
+<pre><code>Behavior:
+{cout,sum} = a + b + cin
+
+Dataflow:
+sum  = a ^ b ^ cin
+cout = ...
+
+Gate level:
+XOR + AND + OR
+
+Physical:
+standard cells + wires</code></pre>
+
+<h3>例 6：2-stage Pipeline</h3>
+<pre><code>Architecture:
+Stage 1 = add
+Stage 2 = compare
+
+RTL:
+s1 <= a+b;
+s2 <= (s1 > c);
+
+Synthesis:
+Adder + registers + comparator
+
+Physical:
+pipeline registers placed between logic regions
+
+STA:
+check each register-to-register path</code></pre>
+
+<h3>例 7：FSM Controller</h3>
+<pre><code>Specification:
+IDLE → RUN → DONE
+
+Architecture:
+state register + next-state logic
+
+RTL:
+case(state)
+
+Synthesis:
+DFFs + combinational logic
+
+Physical:
+cells + routing
+
+Verification:
+functional + timing</code></pre>
+
+<h3>例 8：FIR Filter</h3>
+<pre><code>Specification:
+1 sample/cycle
+
+Architecture:
+multipliers + adders + pipeline registers
+
+RTL:
+MAC datapath
+
+Synthesis:
+arithmetic cells / gate network
+
+Physical:
+large datapath placement
+
+STA:
+critical arithmetic paths</code></pre>
+
+<h3>例 9：Image Filter</h3>
+<pre><code>Specification:
+3×3 Gaussian filter
+
+Architecture:
+line buffers + 3×3 window + MAC
+
+RTL:
+streaming datapath
+
+Simulation:
+compare with golden model
+
+Synthesis:
+registers + arithmetic logic
+
+Physical:
+P&R
+
+Sign-off:
+STA / DRC / LVS</code></pre>
+
+<h3>例 10：Simple CPU</h3>
+<pre><code>ISA specification
+ ↓
+Datapath + Control architecture
+ ↓
+RTL modules:
+PC / ALU / RegFile / Decoder / Memory Interface
+ ↓
+RTL simulation
+ ↓
+Synthesis
+ ↓
+Gate-level netlist
+ ↓
+Floorplan / Placement / CTS / Routing
+ ↓
+Timing sign-off / Physical verification
+ ↓
+GDSII</code></pre>
+</section>
+
+<section class="card" id="files">
+<h2>14. 各階段常見檔案</h2>
+
+<p class="note">
+以下是現代 ASIC flow 的延伸實務整理，不代表課程這兩張 Traditional VLSI Flow 投影片逐一列出所有副檔名。
+</p>
+
+<table>
+<tr><th>階段</th><th>常見輸入 / 輸出</th></tr>
+<tr><td>Specification</td><td>Document / block diagram / interface spec</td></tr>
+<tr><td>RTL</td><td><code>.v</code>, <code>.sv</code></td></tr>
+<tr><td>Simulation</td><td>RTL + testbench + waveform</td></tr>
+<tr><td>Synthesis</td><td>RTL + <code>.lib/.db</code> + constraints → gate-level <code>.v</code></td></tr>
+<tr><td>Physical Design</td><td>Netlist + LEF + timing libs → DEF / routed layout</td></tr>
+<tr><td>Extraction</td><td>SPEF / parasitic data</td></tr>
+<tr><td>Sign-off</td><td>STA reports / DRC / LVS reports</td></tr>
+<tr><td>Tape-out</td><td>GDS / GDSII</td></tr>
+</table>
+</section>
+
+<section class="card" id="debug">
+<h2>15. 出錯時，要退回哪一層？</h2>
+
+<table>
+<tr><th>問題</th><th>可能回去修改</th></tr>
+<tr><td>功能錯</td><td>Specification / Architecture / RTL</td></tr>
+<tr><td>RTL simulation fail</td><td>RTL / testbench</td></tr>
+<tr><td>Synthesis error</td><td>RTL coding style / constraints</td></tr>
+<tr><td>Timing fail</td><td>Architecture / RTL / cell sizing / placement / routing</td></tr>
+<tr><td>Congestion</td><td>Floorplan / placement / architecture</td></tr>
+<tr><td>DRC fail</td><td>Routing / physical geometry</td></tr>
+<tr><td>LVS fail</td><td>Netlist / layout connectivity</td></tr>
+</table>
+
+<div class="key">
+Digital IC flow 不是只往前走，而是不斷「設計 → 驗證 → 發現問題 → 回上一層修正」。
+</div>
+</section>
+
+<section class="card" id="pitfalls">
+<h2>16. 常見誤解與考試重點</h2>
+
+<h3>誤解 1：RTL Simulation 通過，就代表晶片一定能做</h3>
+<p>錯。還要 synthesis、timing、physical verification 等。</p>
+
+<h3>誤解 2：Synthesis 後就完成 IC</h3>
+<p>錯。Synthesis 只得到 gate-level structural representation，還沒有 placement / routing。</p>
+
+<h3>誤解 3：Gate-Level Netlist = GDS</h3>
+<p>錯。Netlist 是 connectivity；GDS 是完整 physical geometry。</p>
+
+<h3>誤解 4：Physical Design 只是在畫漂亮版圖</h3>
+<p>錯。要同時處理 timing、routing、clock、power、design rules 等限制。</p>
+
+<h3>誤解 5：DRC 與 LVS 是同一件事</h3>
+<p>錯。DRC 檢查幾何規則；LVS 檢查 layout connectivity 是否對得上電路。</p>
+
+<h3>誤解 6：設計流程一定是單向的</h3>
+<p>錯。實際上會反覆迭代，甚至從 physical timing 問題退回 architecture 修改。</p>
+</section>
+
+<section class="card">
+<h2>17. 自我測驗</h2>
+
+<details class="quiz"><summary>Q1：Digital IC flow 的起點是什麼？</summary>
+<p>System Specification，先定義晶片要完成的功能與限制。</p></details>
+
+<details class="quiz"><summary>Q2：RTL 的下一個重要驗證階段是什麼？</summary>
+<p>Functional / RTL Simulation。</p></details>
+
+<details class="quiz"><summary>Q3：Synthesis 把 RTL 轉成什麼？</summary>
+<p>映射到 standard cells 的 Gate-Level Netlist。</p></details>
+
+<details class="quiz"><summary>Q4：Physical Design 常包含哪些步驟？</summary>
+<p>延伸實務上常包含 floorplan、placement、CTS、routing 與 physical optimization。</p></details>
+
+<details class="quiz"><summary>Q5：DRC 與 LVS 差在哪？</summary>
+<p>DRC 查 physical geometry rule；LVS 查 layout circuit connectivity 是否與 reference circuit/netlist 一致。</p></details>
+
+<details class="quiz"><summary>Q6：課程 Traditional VLSI Flow 最後兩個階段？</summary>
+<p>Fabrication → Packaging。</p></details>
+</section>
+
+<section class="card">
+<h2>18. 一頁記憶版</h2>
+
+<table>
+<tr><th>階段</th><th>核心問題</th></tr>
+<tr><td>Specification</td><td>要做什麼？</td></tr>
+<tr><td>Architecture</td><td>怎麼拆、怎麼算？</td></tr>
+<tr><td>RTL</td><td>怎麼用硬體描述語言表達？</td></tr>
+<tr><td>Simulation</td><td>功能正不正確？</td></tr>
+<tr><td>Synthesis</td><td>如何轉成 standard cells？</td></tr>
+<tr><td>Gate-Level</td><td>cells 怎麼連？</td></tr>
+<tr><td>Physical Design</td><td>cells 放哪、線怎麼接？</td></tr>
+<tr><td>Extraction / Verification</td><td>timing / geometry / connectivity 是否正確？</td></tr>
+<tr><td>Fabrication</td><td>把 layout 製造成 wafer</td></tr>
+<tr><td>Packaging</td><td>把 die 變成可使用 IC</td></tr>
+</table>
+
+<div class="key">
+<b>最後一句：</b><br>
+Digital IC Flow 就是把
+<b>Specification → Architecture → RTL → Simulation → Synthesis → Gate-Level → Physical Design → Verification → Fabrication → Packaging</b>
+逐層轉換，並在每一層確認「功能、時序、實體實現」都正確。
+</div>
+</section>
+
+<div class="footer">DigitalICFlow.html — VLSI System Design 詳細教學</div>
+</main>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RTL → GDSII → Sign-off｜完整网页 Index</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#07111f;color:#e8f1ff;font-family:Inter,"Noto Sans TC","Microsoft JhengHei",sans-serif;line-height:1.72}
+.hero{padding:70px 22px 48px;background:radial-gradient(circle at 15% 10%,#2563eb88,transparent 30%),radial-gradient(circle at 85% 15%,#9333ea77,transparent 28%),linear-gradient(135deg,#06101c,#0c1930)}.wrap,main{max-width:1250px;margin:auto}
+.badge{display:inline-block;padding:7px 13px;border:1px solid #ffffff35;border-radius:999px;background:#ffffff10;color:#bae6fd}
+h1{font-size:clamp(2.5rem,6vw,5rem);line-height:1.05;margin:.3em 0 .2em}.lead{max-width:980px;color:#c6d5e8;font-size:1.08rem}
+.flow{display:flex;gap:8px;flex-wrap:wrap;margin-top:25px;align-items:center}.flow span{background:#ffffff10;border:1px solid #ffffff20;padding:8px 11px;border-radius:10px}.flow b{color:#67e8f9}
+main{padding:28px 22px 70px}.note{background:#0e1b2e;border:1px solid #29425f;padding:20px;border-radius:18px;margin-bottom:22px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:18px}.card{background:linear-gradient(145deg,#0f1d30,#091524);border:1px solid #29415e;border-radius:20px;padding:22px;position:relative;overflow:hidden;box-shadow:0 15px 35px #0003}
+.card:before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:linear-gradient(90deg,var(--a),var(--b))}.cardhead{display:flex;align-items:center;justify-content:space-between}
+.pic{width:68px;height:68px;border-radius:18px;display:grid;place-items:center;font-size:35px;background:linear-gradient(135deg,var(--a),var(--b));box-shadow:0 10px 25px #0004}.no{font-size:2.2rem;font-weight:900;color:#ffffff20}
+h3{font-size:1.3rem;margin:16px 0 8px}.card p{color:#c1d0e3;min-height:112px}.focus{background:#071321;border-left:4px solid var(--a);padding:11px 13px;border-radius:8px;color:#b9cbe0}
+.btn{margin-top:17px;padding:14px;display:flex;gap:13px;align-items:center;border-radius:16px;text-decoration:none;color:white;background:linear-gradient(120deg,var(--a),var(--b));transition:.2s;box-shadow:0 10px 24px #0004}.btn:hover{transform:translateY(-3px);filter:brightness(1.08)}
+.mini{width:52px;height:52px;border-radius:13px;background:#ffffff25;display:grid;place-items:center;font-size:27px}.btn small,.btn strong{display:block}.btn small{opacity:.8}.btn strong{font-size:1rem}
+code{display:block;margin-top:10px;color:#71869e;font-size:.72rem;word-break:break-all}footer{padding:28px;text-align:center;color:#7589a1}
+@media(max-width:650px){.card p{min-height:0}}
+</style></head><body>
+<header class="hero"><div class="wrap"><span class="badge">Windows · OSS CAD Suite · WSL2 · OpenROAD · RTL-to-GDSII</span>
+<h1>完整网页总索引<br>MASTER INDEX</h1>
+<p class="lead">这份首页把 ZIP 内的教学网页集中成一个入口，并为每一个子页补上用途、内容与阅读重点。建议第一次依照 RTL 功能验证 → Synthesis → Standard Cell / STA → P&R → Sign-off → Post-Layout GLS 的顺序阅读。</p>
+<div class="flow"><span>Real Image / RTL</span><b>→</b><span>Yosys Synthesis</span><b>→</b><span>Gate-Level</span><b>→</b><span>Std Cell + STA</span><b>→</b><span>OpenROAD P&R</span><b>→</b><span>Sign-off</span><b>→</b><span>GLS + SDF</span></div>
+</div></header>
+<main><section class="note"><h2>使用方式</h2><p>解压 ZIP 后直接打开根目录的 <b>index.html</b>。每张彩色图片式按钮都使用相对路径连接原本子网页，因此整包可以离线移动。原始网页、图片、code、data 与 README 均保留在原目录结构中。</p></section>
+<section class="grid"><article class="card" style="--a:#06b6d4;--b:#2563eb">
+<div class="cardhead"><div class="pic">🖼️</div><div class="no">01</div></div>
+<h3>Part 2｜Real Image RTL Binarization（详细流程版）</h3><p>从真实彩色图片开始，经过灰阶转换、Golden Binary、RTL binarization，再重建 binary image。页面同时整理四张 BMP、Sample 2 实际资料、PowerShell 执行顺序、EDA Playground 编辑流程与 code files。</p>
+<div class="focus"><b>阅读重点：</b>重点理解 software golden model 与 RTL 输出如何逐像素比较，以及图片资料如何转换成 RTL 可读取的数据。</div>
+<a class="btn" href="Binarization_Part2_Real_Image_Verification/Binarization_Part2_Real_Image_Verification/Binarization_Part2_Real_Image_Verification_v4_index.html"><span class="mini">🖼️</span><span><small>彩色图片 Button</small><strong>进入这个子网页 →</strong></span></a>
+<code>Binarization_Part2_Real_Image_Verification/Binarization_Part2_Real_Image_Verification/Binarization_Part2_Real_Image_Verification_v4_index.html</code></article><article class="card" style="--a:#0ea5e9;--b:#14b8a6">
+<div class="cardhead"><div class="pic">🎞️</div><div class="no">02</div></div>
+<h3>Part 2｜Real Image RTL Binarization（基础版）</h3><p>较精简的 Part 2 教学页，包含完整流程图、四张测试图片、Grayscale / Golden Binary、design.sv、testbench_image.sv、prepare_image.py 与 rebuild_and_compare.py。</p>
+<div class="focus"><b>阅读重点：</b>适合第一次快速掌握 Real Image → RTL Binarization 的资料流。</div>
+<a class="btn" href="Binarization_Part2_Real_Image_Verification/Binarization_Part2_Real_Image_Verification/index.html"><span class="mini">🎞️</span><span><small>彩色图片 Button</small><strong>进入这个子网页 →</strong></span></a>
+<code>Binarization_Part2_Real_Image_Verification/Binarization_Part2_Real_Image_Verification/index.html</code></article><article class="card" style="--a:#8b5cf6;--b:#ec4899">
+<div class="cardhead"><div class="pic">✏️</div><div class="no">03</div></div>
+<h3>Part 2｜Editing Flow 版本</h3><p>在 Part 2 基础上特别强化「编辑 → 执行 → 验证」步骤，并加入 Windows PowerShell 与 EDA Playground 的操作顺序。</p>
+<div class="focus"><b>阅读重点：</b>适合实际修改 design.sv / testbench 后，照着页面重新执行验证。</div>
+<a class="btn" href="Binarization_Part2_Real_Image_Verification_v3_Editing_Flow/Binarization_Part2_Real_Image_Verification/index.html"><span class="mini">✏️</span><span><small>彩色图片 Button</small><strong>进入这个子网页 →</strong></span></a>
+<code>Binarization_Part2_Real_Image_Verification_v3_Editing_Flow/Binarization_Part2_Real_Image_Verification/index.html</code></article><article class="card" style="--a:#22c55e;--b:#0d9488">
+<div class="cardhead"><div class="pic">📂</div><div class="no">04</div></div>
+<h3>Part 2｜Full Flow + File Descriptions</h3><p>把 Part 2 全流程与各个代码、数据、图片档案的角色放在同一页说明，便于理解每个输入、输出与辅助脚本的用途。</p>
+<div class="focus"><b>阅读重点：</b>重点是建立资料夹结构与各文件之间的依赖关系。</div>
+<a class="btn" href="Part2_Full_Flow_Detailed_File_Descriptions/index.html"><span class="mini">📂</span><span><small>彩色图片 Button</small><strong>进入这个子网页 →</strong></span></a>
+<code>Part2_Full_Flow_Detailed_File_Descriptions/index.html</code></article><article class="card" style="--a:#10b981;--b:#84cc16">
+<div class="cardhead"><div class="pic">🧪</div><div class="no">05</div></div>
+<h3>Part 2｜Full Flow indexnew</h3><p>Part 2 的另一份完整索引版本，保留流程图、测试图片、Golden/RTL binary、代码档案与执行顺序。</p>
+<div class="focus"><b>阅读重点：</b>可作为 Part 2 的备用入口，方便对照不同编辑版本。</div>
+<a class="btn" href="Part2_Full_Flow_Detailed_File_Descriptions/indexnew.html"><span class="mini">🧪</span><span><small>彩色图片 Button</small><strong>进入这个子网页 →</strong></span></a>
+<code>Part2_Full_Flow_Detailed_File_Descriptions/indexnew.html</code></article><article class="card" style="--a:#f97316;--b:#ef4444">
+<div class="cardhead"><div class="pic">⚙️</div><div class="no">06</div></div>
+<h3>Part 3｜Synthesis &amp; Gate-Level Verification</h3><p>承接 Part 2 的 RTL，将设计经过 Yosys synthesis 产生 gate-level netlist，再执行 gate-level simulation，并整理 Yosys 指令、PASS 验证流程与每个档案用途。</p>
+<div class="focus"><b>阅读重点：</b>关键观念：RTL PASS 之后还要确认 synthesis 后的逻辑功能保持一致。</div>
+<a class="btn" href="Part3_Synthesis_GateLevel_Verification/Part3_Synthesis_GateLevel_Verification/index.html"><span class="mini">⚙️</span><span><small>彩色图片 Button</small><strong>进入这个子网页 →</strong></span></a>
+<code>Part3_Synthesis_GateLevel_Verification/Part3_Synthesis_GateLevel_Verification/index.html</code></article><article class="card" style="--a:#fb923c;--b:#eab308">
+<div class="cardhead"><div class="pic">🔩</div><div class="no">07</div></div>
+<h3>Part 3｜Yosys Synthesis 完整操作纪录</h3><p>从 OSS CAD Suite 版本选择、PowerShell 环境、Execution Policy、Yosys synthesis.ys，到输出检查与 Gate-Level Verification 的完整实作纪录。</p>
+<div class="focus"><b>阅读重点：</b>遇到 Windows/Yosys 环境问题时优先看这一页，因为保留了安装、路径与实际操作细节。</div>
+<a class="btn" href="Part3_Yosys_Synthesis_Complete_Guide_new.html"><span class="mini">🔩</span><span><small>彩色图片 Button</small><strong>进入这个子网页 →</strong></span></a>
+<code>Part3_Yosys_Synthesis_Complete_Guide_new.html</code></article><article class="card" style="--a:#6366f1;--b:#8b5cf6">
+<div class="cardhead"><div class="pic">🏗️</div><div class="no">08</div></div>
+<h3>Part 4｜Standard Cell Mapping · STA · P&amp;R</h3><p>从 technology library、Yosys technology mapping、mapped gate simulation、SDC、STA，一路延伸到 Placement &amp; Routing 与 Post-Layout Verification。</p>
+<div class="focus"><b>阅读重点：</b>这一页负责把 generic synthesized logic 推进到真正标准元件与实体设计观念。</div>
+<a class="btn" href="StdCell_STA_PnR_PostLayout/Part4_StdCell_STA_PnR_PostLayout/index.html"><span class="mini">🏗️</span><span><small>彩色图片 Button</small><strong>进入这个子网页 →</strong></span></a>
+<code>StdCell_STA_PnR_PostLayout/Part4_StdCell_STA_PnR_PostLayout/index.html</code></article><article class="card" style="--a:#2563eb;--b:#06b6d4">
+<div class="cardhead"><div class="pic">🛣️</div><div class="no">09</div></div>
+<h3>Part 4｜Windows + WSL2 + Docker + OpenROAD</h3><p>完整记录 Windows OSS CAD Suite、WSL2、Docker、OpenROAD Flow Scripts、GCD smoke test、自订 RTL/SDC、floorplan/PDN 修正、完整 OpenROAD flow、Final STA/Power 与 GDSII 输出。</p>
+<div class="focus"><b>阅读重点：</b>这是 Physical Design 主线页面；重点看从 RTL/SDC 到最终 GDSII 的真实 OpenROAD 流程。</div>
+<a class="btn" href="Part4_Windows_OSS_WSL_OpenROAD_Complete_Final/Part4_Windows_OSS_WSL_OpenROAD_Complete_Final/index.html"><span class="mini">🛣️</span><span><small>彩色图片 Button</small><strong>进入这个子网页 →</strong></span></a>
+<code>Part4_Windows_OSS_WSL_OpenROAD_Complete_Final/Part4_Windows_OSS_WSL_OpenROAD_Complete_Final/index.html</code></article><article class="card" style="--a:#16a34a;--b:#22c55e">
+<div class="cardhead"><div class="pic">✅</div><div class="no">10</div></div>
+<h3>Part 5｜Post-Layout Sign-off Verification</h3><p>整理 post-layout STA、SPEF、route DRC、antenna、LEC、LVS、Power/IR Drop、worst path 与最终 sign-off checklist。</p>
+<div class="focus"><b>阅读重点：</b>重点理解『完成 P&amp;R』不等于『完成 sign-off』，还必须从 timing、physical、logic、power 多面向检查。</div>
+<a class="btn" href="Part5_PostLayout_Signoff_Verification_Complete/Part5_PostLayout_Signoff_Verification_Complete/index.html"><span class="mini">✅</span><span><small>彩色图片 Button</small><strong>进入这个子网页 →</strong></span></a>
+<code>Part5_PostLayout_Signoff_Verification_Complete/Part5_PostLayout_Signoff_Verification_Complete/index.html</code></article><article class="card" style="--a:#dc2626;--b:#db2777">
+<div class="cardhead"><div class="pic">⏱️</div><div class="no">11</div></div>
+<h3>Part 7｜Post-Layout GLS + SDF</h3><p>针对 Post-Layout Gate-Level Simulation 与 SDF Back-Annotation，记录 functional PASS 与 timing PASS 的差异、SKY130/ModelSim 相容性处理、timing testbench 与 SDF command。</p>
+<div class="focus"><b>阅读重点：</b>重点理解 back-annotated delay 如何把实体布局后的时序资讯带回 gate-level simulation。</div>
+<a class="btn" href="Part7_PostLayout_GLS_SDF_Current/Part7_PostLayout_GLS_SDF_Current/index.html"><span class="mini">⏱️</span><span><small>彩色图片 Button</small><strong>进入这个子网页 →</strong></span></a>
+<code>Part7_PostLayout_GLS_SDF_Current/Part7_PostLayout_GLS_SDF_Current/index.html</code></article></section></main>
+<footer>RTL → GDSII → Sign-off Learning Hub · 11 个网页入口</footer></body></html>
