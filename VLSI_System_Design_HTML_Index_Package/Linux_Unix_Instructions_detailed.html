@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Linux/Unix Instructions 詳細說明</title>
+<style>
+  body { font-family:"Segoe UI","Noto Sans TC",Arial,sans-serif; margin:0; background:#f6f8fb; color:#1f2937; line-height:1.75; }
+  header { background:linear-gradient(135deg,#1f4037,#99f2c8); color:#0f172a; padding:42px 24px; }
+  header h1 { margin:0 0 10px; font-size:2rem; }
+  .wrap { max-width:1100px; margin:0 auto; padding:28px 20px 60px; }
+  .card { background:white; border-radius:16px; padding:24px; margin:20px 0; box-shadow:0 6px 24px rgba(0,0,0,.07); }
+  h2 { color:#155e75; margin-top:0; border-left:6px solid #22c55e; padding-left:12px; }
+  h3 { color:#166534; }
+  pre, code { font-family:Consolas,"Courier New",monospace; }
+  pre { background:#0f172a; color:#e2e8f0; padding:18px; border-radius:12px; overflow:auto; }
+  table { width:100%; border-collapse:collapse; margin:16px 0; }
+  th,td { border:1px solid #d7dee8; padding:10px 12px; vertical-align:top; }
+  th { background:#ecfdf5; }
+  .flow { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:center; margin:20px 0; }
+  .box { background:#f0fdf4; border:2px solid #86efac; border-radius:12px; padding:14px 18px; min-width:150px; text-align:center; font-weight:600; }
+  .arrow { font-size:1.6rem; color:#475569; }
+  .note { background:#fff7ed; border-left:5px solid #f59e0b; padding:14px 16px; border-radius:8px; }
+  .tip { background:#eff6ff; border-left:5px solid #3b82f6; padding:14px 16px; border-radius:8px; }
+  .danger { background:#fef2f2; border-left:5px solid #ef4444; padding:14px 16px; border-radius:8px; }
+  .toc a { color:#0f766e; text-decoration:none; }
+  .toc li { margin:6px 0; }
+  blockquote { margin:16px 0; padding:12px 18px; background:#f8fafc; border-left:4px solid #94a3b8; }
+  .footer { text-align:center; color:#64748b; font-size:.9rem; margin-top:40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Linux/Unix Instructions 詳細說明</h1>
+    <p>VLSI System Design 2026 Fall</p>
+    <p>依附件內容整理；原資料內容不修改，另加入流程圖與視覺化說明方便閱讀。</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="card toc">
+    <h2>目錄</h2>
+    <ol>
+      <li><a href="#s1">整份教材在教什麼？</a></li>
+      <li><a href="#s2">第 3 頁：為什麼 VLSI 要使用 Linux？</a></li>
+      <li><a href="#s3">第 5 頁：ls</a></li>
+      <li><a href="#s4">第 6 頁：mkdir</a></li>
+      <li><a href="#s5">第 7 頁：cd</a></li>
+      <li><a href="#s6">第 8 頁：pwd</a></li>
+      <li><a href="#s7">基本目錄操作串接</a></li>
+      <li><a href="#s8">第 9～11 頁：gedit</a></li>
+      <li><a href="#s9">第 10 頁：gedit 儲存</a></li>
+      <li><a href="#s10">第 11 頁：gedit 指定檔案</a></li>
+      <li><a href="#s11">第 12 頁：more</a></li>
+      <li><a href="#s12">第 13 頁：cp</a></li>
+      <li><a href="#s13">第 14 頁：mv</a></li>
+      <li><a href="#s14">cp 和 mv 的差別</a></li>
+      <li><a href="#s15">第 15 頁：rm</a></li>
+      <li><a href="#s16">第 16 頁：rmdir</a></li>
+      <li><a href="#s17">第 17 頁：tar</a></li>
+      <li><a href="#s18">第 18 頁：passwd</a></li>
+      <li><a href="#s19">第 19 頁：Ctrl+C / Tab / ↑</a></li>
+      <li><a href="#s20">第 20 頁：--help</a></li>
+      <li><a href="#s21">整份教材功能表</a></li>
+      <li><a href="#s22">用目錄樹理解所有指令</a></li>
+      <li><a href="#s23">實際做 VLSI Lab 時的操作</a></li>
+      <li><a href="#s24">和前一份 Workstation 教材的關係</a></li>
+      <li><a href="#s25">最值得先熟練的指令</a></li>
+    </ol>
+  </section>
+
+  <section class="card" id="s1">
+    <h2>一、整份教材在教什麼？</h2>
+    <p>這次附件是 <b>《Linux/Unix Instructions》</b>，屬於 <b>VLSI System Design 2026 Fall</b> 的 Linux/Unix 入門教材。它和前一份 Workstation 教材剛好銜接：前一份解決「怎麼登入 Linux Workstation」，這一份則開始教「登入之後，怎麼在 Linux 裡面操作檔案、目錄與基本工具」。</p>
+
+    <p>教材只有兩大主題：</p>
+    <ul>
+      <li>Pros and cons of Linux system</li>
+      <li>Unix Command</li>
+    </ul>
+
+    <div class="flow">
+      <div class="box">登入 Linux Workstation</div><div class="arrow">→</div>
+      <div class="box">ls</div><div class="arrow">→</div>
+      <div class="box">mkdir</div><div class="arrow">→</div>
+      <div class="box">cd / pwd</div><div class="arrow">→</div>
+      <div class="box">gedit / more</div><div class="arrow">→</div>
+      <div class="box">cp / mv</div><div class="arrow">→</div>
+      <div class="box">rm / rmdir</div><div class="arrow">→</div>
+      <div class="box">tar / passwd</div>
+    </div>
+  </section>
+
+  <section class="card" id="s2">
+    <h2>二、第 3 頁：為什麼 VLSI 要使用 Linux？</h2>
+    <p>教材列出的 Linux 優點有四項：</p>
+    <ul>
+      <li>The system has high stability.</li>
+      <li>Supports multiple tools and multiple users.</li>
+      <li>Convenient for managing groups.</li>
+      <li>A commonly used operation system in the industry.</li>
+    </ul>
+
+    <p>缺點則是：</p>
+    <ul>
+      <li>The graphical interface is not user-friendly enough.</li>
+      <li>Requires time to learn command usage.</li>
+    </ul>
+
+    <pre>Student A → Verilog Simulation
+Student B → Synthesis
+Student C → EDA Tool
+Student D → CPU Design
+                ↓
+          Linux Workstation</pre>
+  </section>
+
+  <section class="card" id="s3">
+    <h2>三、第 5 頁：ls —— 看目前有哪些東西</h2>
+    <pre>ls
+ls -a
+ls -l</pre>
+
+    <p><code>ls</code> 顯示檔案與目錄；<code>ls -a</code> 連隱藏檔也顯示；<code>ls -l</code> 顯示更完整的資訊，例如 permission、owner、size、last modified time。</p>
+
+    <h3>ls</h3>
+    <pre>$ ls
+Lab1  test.v  tb.v</pre>
+
+    <h3>ls -a</h3>
+    <p>Linux 隱藏檔通常以 <code>.</code> 開頭，例如：</p>
+    <pre>.bashrc
+.profile</pre>
+
+    <h3>ls -l</h3>
+    <pre>-rw-r--r-- 1 user group 2048 Sep 14 test.v</pre>
+
+    <pre>-rw-r--r--    permission
+user          owner
+group         group
+2048          size
+Sep 14        modification time
+test.v        filename</pre>
+  </section>
+
+  <section class="card" id="s4">
+    <h2>四、第 6 頁：mkdir —— 建立目錄</h2>
+    <pre>mkdir Lab1</pre>
+    <p>意思是建立一個名為 <code>Lab1</code> 的 directory。</p>
+
+    <pre>/home/user/
+├── Lab1/
+├── test.v
+└── tb.v</pre>
+
+    <p>在 VLSI 作業中，建議每個 Lab 分開：</p>
+    <pre>VLSI/
+├── Lab1/
+├── Lab2/
+├── Lab3/
+└── Final/</pre>
+  </section>
+
+  <section class="card" id="s5">
+    <h2>五、第 7 頁：cd —— 切換目錄</h2>
+    <pre>cd ..
+cd ~
+cd Lab1</pre>
+
+    <h3>cd Lab1</h3>
+    <pre>/home/user
+    │
+    └── Lab1
+         ↑
+         進入這裡</pre>
+
+    <h3>cd ..</h3>
+    <pre>/home/user/Lab1
+   ↓
+cd ..
+   ↓
+/home/user</pre>
+
+    <h3>cd ~</h3>
+    <p>回到 Home Directory。</p>
+
+    <pre>.     當前目錄
+..    上一級目錄
+~     Home Directory</pre>
+  </section>
+
+  <section class="card" id="s6">
+    <h2>六、第 8 頁：pwd —— 我現在到底在哪裡？</h2>
+    <p><code>pwd</code> = print working directory。</p>
+    <pre>$ pwd
+/home/user2/ms104/patty/Lab1</pre>
+
+    <pre>cd
+↓
+負責移動
+
+pwd
+↓
+負責告訴你移動到哪裡了</pre>
+  </section>
+
+  <section class="card" id="s7">
+    <h2>七、到這裡已經形成最基本的目錄操作</h2>
+    <pre>pwd
+ls
+mkdir Lab1
+cd Lab1
+pwd
+ls</pre>
+
+    <pre>我在哪裡？
+   ↓
+pwd
+
+這裡有什麼？
+   ↓
+ls
+
+建立 Lab1
+   ↓
+mkdir Lab1
+
+進去 Lab1
+   ↓
+cd Lab1
+
+確認位置
+   ↓
+pwd</pre>
+  </section>
+
+  <section class="card" id="s8">
+    <h2>八、第 9～11 頁：gedit —— 圖形化文字編輯器</h2>
+    <pre>gedit</pre>
+    <p>會開啟 GUI editor。</p>
+
+    <pre>gedit &</pre>
+    <p>教材特別說明：</p>
+    <pre>& → executes in the background</pre>
+
+    <pre>Terminal
+  │
+  ├── gedit 在背景執行
+  │
+  └── Terminal 可以繼續輸入 command</pre>
+  </section>
+
+  <section class="card" id="s9">
+    <h2>九、第 10 頁：在 gedit 裡面儲存檔案</h2>
+    <pre>輸入文字
+ ↓
+File
+ ↓
+Save As
+ ↓
+輸入 filename
+ ↓
+Save</pre>
+    <p>也就是說，Linux 不代表只能用 command line；一樣可以使用圖形化文字編輯器。</p>
+  </section>
+
+  <section class="card" id="s10">
+    <h2>十、第 11 頁：直接指定檔案開啟 gedit</h2>
+    <pre>gedit test.txt &</pre>
+    <p>表示用 gedit 開啟已存在的 <code>test.txt</code>。</p>
+
+    <pre>gedit 123.txt &</pre>
+    <p>表示用 gedit 開啟一個名為 <code>123.txt</code> 的新檔案。</p>
+
+    <p>同樣概念可延伸成：</p>
+    <pre>gedit top.v &
+gedit tb_top.v &</pre>
+  </section>
+
+  <section class="card" id="s11">
+    <h2>十一、第 12 頁：more —— 在 Terminal 看檔案內容</h2>
+    <pre>more test.txt</pre>
+    <p>功能是直接在 terminal 顯示檔案內容。</p>
+
+    <table>
+      <tr><th>指令</th><th>用途</th></tr>
+      <tr><td><code>gedit test.txt &amp;</code></td><td>圖形介面打開／編輯</td></tr>
+      <tr><td><code>more test.txt</code></td><td>Terminal 查看</td></tr>
+    </table>
+  </section>
+
+  <section class="card" id="s12">
+    <h2>十二、第 13 頁：cp —— Copy</h2>
+    <pre>cp test.txt homework.txt</pre>
+
+    <pre>Before
+
+test.txt
+
+      ↓ cp
+
+After
+
+test.txt
+homework.txt</pre>
+
+    <p>原來的 <code>test.txt</code> 還存在。</p>
+
+    <h3>Copy 整個目錄</h3>
+    <pre>cp -r Lab1 Lab2</pre>
+    <p><code>-r</code> = recursive。</p>
+
+    <pre>Lab1/
+├── RTL/
+│   ├── top.v
+│   └── alu.v
+├── TB/
+│   └── tb.v
+└── result/</pre>
+  </section>
+
+  <section class="card" id="s13">
+    <h2>十三、第 14 頁：mv —— Move，而且也可以 Rename</h2>
+    <pre>mv test.txt hw1.txt</pre>
+    <p>把 <code>test.txt</code> 改成 <code>hw1.txt</code>。</p>
+
+    <pre>mv hw1.txt ../Lab2</pre>
+    <p>把 <code>hw1.txt</code> 移到 Lab2 directory。</p>
+
+    <pre>mv Lab2 Lab3</pre>
+    <p>把 directory <code>Lab2</code> 改成 <code>Lab3</code>。</p>
+
+    <pre>mv source destination
+
+destination 是另一個 filename
+→ rename
+
+destination 是 directory
+→ move</pre>
+  </section>
+
+  <section class="card" id="s14">
+    <h2>十四、cp 和 mv 最大區別</h2>
+    <pre>cp = Copy
+原檔案還在
++
+產生複製品</pre>
+
+    <pre>mv = Move
+原位置的檔案不在
+→ 跑到新位置</pre>
+
+    <pre>cp top.v backup.v</pre>
+    <p>結果：</p>
+    <pre>top.v
+backup.v</pre>
+
+    <pre>mv top.v backup.v</pre>
+    <p>結果只有：</p>
+    <pre>backup.v</pre>
+  </section>
+
+  <section class="card" id="s15">
+    <h2>十五、第 15 頁：rm —— 刪除</h2>
+    <pre>rm homework.txt</pre>
+    <p>刪除 <code>homework.txt</code>。</p>
+
+    <pre>rm -r Lab3</pre>
+    <p>刪除 <code>Lab3</code> directory。</p>
+
+    <div class="danger">
+      <b>這是整份教材裡最需要小心的指令之一。</b> <code>rm -r</code> 會遞迴刪除整個目錄及其內容。
+    </div>
+  </section>
+
+  <section class="card" id="s16">
+    <h2>十六、第 16 頁：rmdir</h2>
+    <pre>rmdir Lab4</pre>
+    <p>功能是刪除 <b>empty directory</b>。</p>
+
+    <pre>rm file
+   ↓
+刪除檔案
+
+rmdir empty_directory
+   ↓
+刪除空資料夾
+
+rm -r directory
+   ↓
+遞迴刪除整個資料夾</pre>
+  </section>
+
+  <section class="card" id="s17">
+    <h2>十七、第 17 頁：tar</h2>
+    <pre>tar -cvf Lab1.tar Lab1</pre>
+    <p>教材描述為把 Lab1 壓成 Lab1.tar。</p>
+
+    <pre>tar -xvf Lab1.tar</pre>
+    <p>教材描述為把 Lab1.tar 解回原目錄。</p>
+
+    <pre>-c : create file
+-v : show the info.
+-f : following is the file name
+-x : decompress file</pre>
+
+    <pre>tar -cvf Lab1.tar Lab1
+     │││
+     ││└─ f → 後面指定 archive filename
+     │└── v → 顯示處理過程
+     └─── c → 建立 archive</pre>
+
+    <pre>tar -xvf Lab1.tar
+     │││
+     ││└─ filename
+     │└── verbose
+     └─── extract</pre>
+  </section>
+
+  <section class="card" id="s18">
+    <h2>十八、第 18 頁：passwd</h2>
+    <pre>passwd</pre>
+    <p>功能：</p>
+    <pre>change password</pre>
+
+    <div class="danger"><b>教材特別提醒：</b>Lab1 請勿更改測試帳號的密碼!!!!!!!!!!!!!!</div>
+
+    <pre>自己的正式帳號
+→ 依課程要求決定是否修改
+
+Lab1 測試帳號
+→ 不要修改密碼</pre>
+  </section>
+
+  <section class="card" id="s19">
+    <h2>十九、第 19 頁：三個超實用快捷操作</h2>
+
+    <h3>Ctrl + C</h3>
+    <p>Terminate current task。</p>
+    <pre>正在執行的 process
+        ↓
+     Ctrl+C
+        ↓
+      中止</pre>
+
+    <h3>Tab</h3>
+    <p>Autocomplete your command。</p>
+
+    <pre>gedit ver
+↓ 按 Tab
+gedit very_long_filename.v</pre>
+
+    <h3>↑</h3>
+    <p>show previous command。</p>
+  </section>
+
+  <section class="card" id="s20">
+    <h2>二十、第 20 頁：--help</h2>
+    <pre>command --help</pre>
+
+    <p>教材例子：</p>
+    <pre>rm --help</pre>
+
+    <p>作用是：</p>
+    <pre>show you the usage of the command</pre>
+
+    <p>同樣可以：</p>
+    <pre>cp --help
+mv --help
+rm --help</pre>
+  </section>
+
+  <section class="card" id="s21">
+    <h2>二十一、把整份教材整理成一張功能表</h2>
+    <table>
+      <tr><th>Command</th><th>全名/概念</th><th>教材中的用途</th></tr>
+      <tr><td><code>ls</code></td><td>list</td><td>看檔案、目錄</td></tr>
+      <tr><td><code>ls -a</code></td><td>all</td><td>連隱藏檔都顯示</td></tr>
+      <tr><td><code>ls -l</code></td><td>long listing</td><td>看詳細資訊</td></tr>
+      <tr><td><code>mkdir</code></td><td>make directory</td><td>建立目錄</td></tr>
+      <tr><td><code>cd</code></td><td>change directory</td><td>切換目錄</td></tr>
+      <tr><td><code>pwd</code></td><td>print working directory</td><td>看目前路徑</td></tr>
+      <tr><td><code>gedit</code></td><td>GUI editor</td><td>圖形化編輯文字</td></tr>
+      <tr><td><code>&amp;</code></td><td>background</td><td>背景執行</td></tr>
+      <tr><td><code>more</code></td><td>—</td><td>Terminal 查看檔案</td></tr>
+      <tr><td><code>cp</code></td><td>copy</td><td>複製</td></tr>
+      <tr><td><code>cp -r</code></td><td>recursive copy</td><td>複製整個目錄</td></tr>
+      <tr><td><code>mv</code></td><td>move</td><td>移動／改名</td></tr>
+      <tr><td><code>rm</code></td><td>remove</td><td>刪除檔案</td></tr>
+      <tr><td><code>rm -r</code></td><td>recursive remove</td><td>刪除目錄及內容</td></tr>
+      <tr><td><code>rmdir</code></td><td>remove directory</td><td>刪除空目錄</td></tr>
+      <tr><td><code>tar -cvf</code></td><td>create archive</td><td>建立 .tar</td></tr>
+      <tr><td><code>tar -xvf</code></td><td>extract archive</td><td>解開 .tar</td></tr>
+      <tr><td><code>passwd</code></td><td>password</td><td>修改密碼</td></tr>
+      <tr><td><code>Ctrl+C</code></td><td>interrupt</td><td>中止目前任務</td></tr>
+      <tr><td><code>Tab</code></td><td>autocomplete</td><td>自動補齊</td></tr>
+      <tr><td><code>↑</code></td><td>history</td><td>上一個 command</td></tr>
+      <tr><td><code>--help</code></td><td>help</td><td>查看指令說明</td></tr>
+    </table>
+  </section>
+
+  <section class="card" id="s22">
+    <h2>二十二、最重要的是理解「目錄樹」</h2>
+    <pre>/home/user
+│
+├── Lab1
+│   ├── top.v
+│   ├── alu.v
+│   └── tb.v
+│
+├── Lab2
+│   └── cpu.v
+│
+└── report.txt</pre>
+
+    <pre>ls
+→ 看樹的這一層
+
+cd
+→ 在樹裡面移動
+
+pwd
+→ 告訴你目前在哪個節點
+
+mkdir
+→ 增加一個目錄
+
+cp
+→ 複製節點
+
+mv
+→ 移動／改名節點
+
+rm
+→ 刪除節點
+
+gedit
+→ 修改檔案內容
+
+more
+→ 查看檔案內容
+
+tar
+→ 把一整棵子樹打包</pre>
+  </section>
+
+  <section class="card" id="s23">
+    <h2>二十三、實際做 VLSI Lab 時會變成什麼樣？</h2>
+    <pre>pwd
+ls
+
+mkdir Lab1
+cd Lab1
+
+gedit top.v &
+gedit tb_top.v &
+
+ls -l
+
+more top.v
+
+cp top.v top_backup.v
+
+tar -cvf Lab1.tar Lab1</pre>
+
+    <div class="flow">
+      <div class="box">登入 Workstation</div><div class="arrow">→</div>
+      <div class="box">mkdir 建 Project</div><div class="arrow">→</div>
+      <div class="box">cd 進 Project</div><div class="arrow">→</div>
+      <div class="box">gedit 寫 Verilog</div><div class="arrow">→</div>
+      <div class="box">Simulation / EDA</div><div class="arrow">→</div>
+      <div class="box">ls / more 檢查</div><div class="arrow">→</div>
+      <div class="box">cp 備份</div><div class="arrow">→</div>
+      <div class="box">tar 打包</div>
+    </div>
+  </section>
+
+  <section class="card" id="s24">
+    <h2>二十四、和上一份 Workstation 教材合起來看</h2>
+    <pre>【Workstation 教材】
+
+Windows
+   ↓
+Xming
+   ↓
+PuTTY
+   ↓ SSH
+Linux Workstation
+   ↓
+Login Successful
+
+=======================
+
+【這份 Linux/Unix 教材】
+
+pwd / ls
+   ↓
+mkdir / cd
+   ↓
+gedit
+   ↓
+more
+   ↓
+cp / mv
+   ↓
+rm / rmdir
+   ↓
+tar
+   ↓
+EDA / VLSI 工作</pre>
+
+    <blockquote><b>上一份教「怎麼進去」；這一份教「進去之後怎麼工作」。</b></blockquote>
+  </section>
+
+  <section class="card" id="s25">
+    <h2>二十五、最值得先熟練的指令</h2>
+    <pre>pwd
+ls
+ls -l
+mkdir Lab1
+cd Lab1
+cd ..
+cd ~
+gedit test.txt &
+more test.txt
+cp test.txt backup.txt
+mv backup.txt backup2.txt
+rm backup2.txt
+tar -cvf Lab1.tar Lab1
+tar -xvf Lab1.tar</pre>
+
+    <p>再加三個快捷鍵：</p>
+    <pre>Tab
+↑
+Ctrl+C</pre>
+
+    <div class="note">教材特別提醒：Lab1 測試帳號不要執行密碼變更。</div>
+  </section>
+
+  <div class="footer">
+    本頁為附件內容之 HTML 整理版；正文內容保留原先整理資訊，另以流程圖、表格與版面強化閱讀。
+  </div>
+</div>
+</body>
+</html>

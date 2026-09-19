@@ -1,0 +1,437 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Part 5 — Post-Layout Sign-off Verification</title>
+<style>
+:root{--bg:#06101d;--p:#0d1b2a;--p2:#081522;--line:#294a66;--tx:#edf6ff;--mut:#aac1d6;--ac:#66dcff;--ok:#78e49d;--wa:#ffd166;--er:#ff7d7d}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#06101c,#0a1b31);color:var(--tx);font:16px/1.7 system-ui,"Segoe UI","Noto Sans TC",sans-serif}header{padding:60px 7vw 42px;border-bottom:1px solid var(--line);background:radial-gradient(circle at 80% 0,#16455d,transparent 40%)}h1{font-size:clamp(32px,5vw,56px);line-height:1.08;margin:10px 0}h2{font-size:29px;margin-top:0}p{color:#d8e6f3}.wrap{max-width:1180px;margin:auto;padding:30px 22px 70px}section{background:#0d1b2aee;border:1px solid var(--line);border-radius:18px;padding:27px;margin:22px 0;box-shadow:0 15px 35px #0005}.badge{display:inline-block;padding:4px 11px;border:1px solid #34708c;border-radius:99px;margin:3px;color:#a8eaff}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}.m{padding:16px;background:var(--p2);border:1px solid var(--line);border-radius:13px}.m strong{display:block;font-size:25px;color:var(--ok)}.call{padding:13px 16px;background:var(--p2);border-left:4px solid var(--ac);border-radius:9px;margin:15px 0}.warn{border-left-color:var(--wa)}.code{background:#040a10;border:1px solid #31526e;border-radius:12px;overflow:hidden;margin:14px 0}.bar{background:#142a3e;padding:8px 12px;display:flex;justify-content:space-between}button{background:#188bb8;color:#fff;border:0;border-radius:6px;padding:5px 11px}pre{margin:0;padding:15px;overflow:auto;color:#d8f5ff}code{font-family:Consolas,monospace}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--line);padding:11px;text-align:left;vertical-align:top}th{color:#8ce8ff}.flow{display:flex;flex-direction:column;align-items:center;gap:7px}.node{width:100%;background:#092033;border:1px solid #377391;border-radius:12px;padding:13px 16px;text-align:center}.node b{display:block;color:#8ce8ff}.node span{font-family:Consolas,monospace;color:#d9f5ff}.split{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}.flow i{font-style:normal;font-size:24px;color:#70cce9}.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}figure{margin:0;background:#03080d;border:1px solid var(--line);border-radius:13px;overflow:hidden}figure img{width:100%;display:block;aspect-ratio:1/1;object-fit:contain;background:#000}figcaption{padding:11px;color:#cbddea}details{background:#081522;border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin:12px 0}summary{cursor:pointer;color:#8ce8ff;font-weight:bold}a{color:#69ddff}footer{text-align:center;color:#819bb3;padding:28px}@media(max-width:700px){.split{grid-template-columns:1fr}}
+</style></head><body>
+<header><span class="badge">Part 5</span><span class="badge">Post-Layout</span><span class="badge">STA</span><span class="badge">SPEF</span><span class="badge">LEC / DRC / LVS</span>
+<h1>Post-Layout Verification<br>& Sign-off 教學實作版</h1>
+<p>直接承接 Part 4 的 <b>binarization / Nangate45</b> 實際輸出。重點是：哪些結果已經被本次 OpenROAD flow 驗證、哪些只是產生了 handoff 檔案、以及真正 sign-off 前還缺哪些檢查。</p></header><main class="wrap">
+
+<section><h2>0. Part 5 的目的</h2>
+<div class="flow">
+<div class="node"><b>Part 4 Final Layout</b><span>6_final.odb / .def / .gds</span></div><i>↓</i>
+<div class="node"><b>Parasitic Extraction</b><span>6_final.spef</span></div><i>↓</i>
+<div class="split"><div class="node"><b>Post-layout STA</b><span>6_finish.rpt</span></div><div class="node"><b>Physical Checks</b><span>route DRC / antenna</span></div><div class="node"><b>Equivalence</b><span>1_synth_lec.v ↔ 6_final_lec.v</span></div></div><i>↓</i>
+<div class="node"><b>Sign-off Summary</b><span>Timing + Electrical + Physical + LEC/LVS status</span></div>
+</div>
+
+<div class="call warn"><b>重要：</b>「有 GDS」不等於「已完成所有 sign-off」。本次 Part 4 已有 final STA、routing report、SPEF、GDS 與 LEC netlist；但目前封包沒有一份可證明 <b>LEC PASS</b> 的完整 equivalence log，也沒有獨立 <b>LVS PASS</b> report。因此 Part 5 會把「已驗證」與「待驗證」清楚分開。</div></section>
+
+<section><h2>1. 目前 Sign-off 狀態</h2><div class="metrics">
+<div class="m">Final GDSII<strong>PASS</strong>6_final.gds 已產生</div>
+<div class="m">Post-layout STA<strong>PASS</strong>Worst slack +7.73 ns</div>
+<div class="m">Setup / Hold<strong>0 / 0</strong>violations</div>
+<div class="m">Electrical checks<strong>0 / 0 / 0</strong>slew / fanout / cap</div>
+<div class="m">Route DRC report<strong>Empty</strong>no violations listed</div>
+<div class="m">LEC / LVS<strong>Pending</strong>需保留正式 PASS log</div>
+</div></section>
+
+<section><h2>2. Part 4 → Part 5 輸入檔</h2>
+<table><tr><th>檔案</th><th>Part 5 用途</th></tr>
+<tr><td><code>6_final.odb</code></td><td>OpenROAD final database，可重新載入分析。</td></tr>
+<tr><td><code>6_final.def</code></td><td>最終 placement/routing geometry。</td></tr>
+<tr><td><code>6_final.gds</code></td><td>最終版圖，交給 KLayout / DRC / LVS flow。</td></tr>
+<tr><td><code>6_final.spef</code></td><td>寄生 R/C；post-layout timing 的關鍵輸入。</td></tr>
+<tr><td><code>6_final.sdc</code></td><td>最終 timing constraints。</td></tr>
+<tr><td><code>6_final.v</code></td><td>post-layout gate-level netlist。</td></tr>
+<tr><td><code>1_synth_lec.v</code> / <code>6_final_lec.v</code></td><td>前後 netlist 的 formal equivalence handoff。</td></tr></table></section>
+
+<section><h2>3. 第一步：確認 Final Artifacts 完整</h2>
+<p>ZIP 內已附 <code>scripts/01_check_final_artifacts.sh</code>。將它對 ORFS final results 目錄執行：</p>
+<div class="code"><div class="bar"><b>WSL / Container</b><button onclick="cp(this)">Copy</button></div><pre><code>cd /OpenROAD-flow-scripts/flow
+bash /path/to/Part5/scripts/01_check_final_artifacts.sh \
+  results/nangate45/binarization/base</code></pre></div>
+<p>這一步只確認檔案存在且非空，不代表 timing、DRC、LEC 或 LVS 自動 PASS。</p></section>
+
+<section><h2>4. Post-Layout STA：看什麼？</h2>
+<p>Place & Route 後，wire 已經有實際幾何，因此可以透過 SPEF 的 parasitic R/C 重新評估 delay。這就是為什麼 Part 5 不只看 synthesis timing。</p>
+<div class="code"><div class="bar"><b>快速抽取 final STA</b><button onclick="cp(this)">Copy</button></div><pre><code>cd Part5_PostLayout_Signoff_Verification_Complete/scripts
+./02_extract_sta_summary.sh ../reports/6_finish.rpt</code></pre></div>
+<table><tr><th>指標</th><th>本次實際結果</th><th>判讀</th></tr>
+<tr><td>TNS</td><td>0.00 ns</td><td>沒有累積 negative slack</td></tr>
+<tr><td>WNS</td><td>0.00 ns</td><td>summary 無 negative slack</td></tr>
+<tr><td>Worst slack</td><td>+7.73 ns</td><td>100 MHz constraint 通過</td></tr>
+<tr><td>Minimum period</td><td>2.27 ns</td><td>工具估計可再縮短 clock period</td></tr>
+<tr><td>Fmax</td><td>440.06 MHz</td><td>由 final timing report 推估</td></tr>
+<tr><td>Setup / Hold</td><td>0 / 0</td><td>沒有 setup / hold violation</td></tr></table>
+<details><summary>展開本次 6_finish.rpt</summary><pre>
+==========================================================================
+finish report_tns
+--------------------------------------------------------------------------
+tns max 0.00
+
+==========================================================================
+finish report_wns
+--------------------------------------------------------------------------
+wns max 0.00
+
+==========================================================================
+finish report_worst_slack
+--------------------------------------------------------------------------
+worst slack max 7.73
+
+==========================================================================
+finish report_clock_min_period
+--------------------------------------------------------------------------
+clk period_min = 2.27 fmax = 440.06
+
+==========================================================================
+finish report_clock_skew
+--------------------------------------------------------------------------
+Clock clk
+No launch/capture paths found.
+
+
+==========================================================================
+finish report_checks -path_delay min
+--------------------------------------------------------------------------
+Startpoint: pix_in[6] (input port clocked by clk)
+Endpoint: pix_out$_DFF_PN0_ (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                          0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (propagated)
+                          2.00    2.00 ^ input external delay
+     1    2.73    0.00    0.00    2.00 ^ pix_in[6] (in)
+                                         pix_in[6] (net)
+                  0.00    0.00    2.00 ^ input7/A (BUF_X1)
+     1    3.28    0.01    0.02    2.02 ^ input7/Z (BUF_X1)
+                                         net7 (net)
+                  0.01    0.00    2.02 ^ _57_/A (HA_X1)
+     2    3.70    0.01    0.02    2.04 v _57_/S (HA_X1)
+                                         _09_ (net)
+                  0.01    0.00    2.04 v _52_/A2 (NAND2_X1)
+     1    1.71    0.01    0.02    2.06 ^ _52_/ZN (NAND2_X1)
+                                         _33_ (net)
+                  0.01    0.00    2.06 ^ _54_/C1 (OAI221_X1)
+     1    1.50    0.01    0.02    2.07 v _54_/ZN (OAI221_X1)
+                                         _00_ (net)
+                  0.01    0.00    2.07 v pix_out$_DFF_PN0_/D (DFFR_X1)
+                                  2.07   data arrival time
+
+                          0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock source latency
+     1    3.94    0.00    0.00    0.00 ^ clk (in)
+                                         clk (net)
+                  0.00    0.00    0.00 ^ pix_out$_DFF_PN0_/CK (DFFR_X1)
+                          0.00    0.00   clock reconvergence pessimism
+                          0.00    0.00   library hold time
+                                  0.00   data required time
+-----------------------------------------------------------------------------
+                                  0.00   data required time
+                                 -2.07   data arrival time
+-----------------------------------------------------------------------------
+                                  2.07   slack (MET)
+
+
+
+==========================================================================
+finish report_checks -path_delay max
+--------------------------------------------------------------------------
+Startpoint: threshold[7] (input port clocked by clk)
+Endpoint: pix_out$_DFF_PN0_ (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                          0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (propagated)
+                          2.00    2.00 v input external delay
+     1    2.18    0.00    0.00    2.00 v threshold[7] (in)
+                                         threshold[7] (net)
+                  0.00    0.00    2.00 v input17/A (BUF_X1)
+     1    1.73    0.01    0.02    2.02 v input17/Z (BUF_X1)
+                                         net17 (net)
+                  0.01    0.00    2.02 v _38_/A (INV_X1)
+     1    3.52    0.01    0.02    2.04 ^ _38_/ZN (INV_X1)
+                                         _13_ (net)
+                  0.01    0.00    2.04 ^ _59_/B (HA_X1)
+     3    5.96    0.04    0.07    2.10 ^ _59_/S (HA_X1)
+                                         _15_ (net)
+                  0.04    0.00    2.11 ^ _50_/A1 (AND4_X2)
+     1    2.21    0.01    0.06    2.16 ^ _50_/ZN (AND4_X2)
+                                         _31_ (net)
+                  0.01    0.00    2.16 ^ _51_/A (OAI21_X1)
+     1    2.23    0.01    0.02    2.18 v _51_/ZN (OAI21_X1)
+                                         _32_ (net)
+                  0.01    0.00    2.18 v _54_/B2 (OAI221_X1)
+     1    1.57    0.03    0.05    2.23 ^ _54_/ZN (OAI221_X1)
+                                         _00_ (net)
+                  0.03    0.00    2.23 ^ pix_out$_DFF_PN0_/D (DFFR_X1)
+                                  2.23   data arrival time
+
+                         10.00   10.00   clock clk (rise edge)
+                          0.00   10.00   clock source latency
+     1    3.94    0.00    0.00   10.00 ^ clk (in)
+                                         clk (net)
+                  0.00    0.00   10.00 ^ pix_out$_DFF_PN0_/CK (DFFR_X1)
+                          0.00   10.00   clock reconvergence pessimism
+                         -0.04    9.96   library setup time
+                                  9.96   data required time
+-----------------------------------------------------------------------------
+                                  9.96   data required time
+                                 -2.23   data arrival time
+-----------------------------------------------------------------------------
+                                  7.73   slack (MET)
+
+
+
+==========================================================================
+finish report_checks -unconstrained
+--------------------------------------------------------------------------
+Startpoint: threshold[7] (input port clocked by clk)
+Endpoint: pix_out$_DFF_PN0_ (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                          0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (propagated)
+                          2.00    2.00 v input external delay
+     1    2.18    0.00    0.00    2.00 v threshold[7] (in)
+                                         threshold[7] (net)
+                  0.00    0.00    2.00 v input17/A (BUF_X1)
+     1    1.73    0.01    0.02    2.02 v input17/Z (BUF_X1)
+                                         net17 (net)
+                  0.01    0.00    2.02 v _38_/A (INV_X1)
+     1    3.52    0.01    0.02    2.04 ^ _38_/ZN (INV_X1)
+                                         _13_ (net)
+                  0.01    0.00    2.04 ^ _59_/B (HA_X1)
+     3    5.96    0.04    0.07    2.10 ^ _59_/S (HA_X1)
+                                         _15_ (net)
+                  0.04    0.00    2.11 ^ _50_/A1 (AND4_X2)
+     1    2.21    0.01    0.06    2.16 ^ _50_/ZN (AND4_X2)
+                                         _31_ (net)
+                  0.01    0.00    2.16 ^ _51_/A (OAI21_X1)
+     1    2.23    0.01    0.02    2.18 v _51_/ZN (OAI21_X1)
+                                         _32_ (net)
+                  0.01    0.00    2.18 v _54_/B2 (OAI221_X1)
+     1    1.57    0.03    0.05    2.23 ^ _54_/ZN (OAI221_X1)
+                                         _00_ (net)
+                  0.03    0.00    2.23 ^ pix_out$_DFF_PN0_/D (DFFR_X1)
+                                  2.23   data arrival time
+
+                         10.00   10.00   clock clk (rise edge)
+                          0.00   10.00   clock source latency
+     1    3.94    0.00    0.00   10.00 ^ clk (in)
+                                         clk (net)
+                  0.00    0.00   10.00 ^ pix_out$_DFF_PN0_/CK (DFFR_X1)
+                          0.00   10.00   clock reconvergence pessimism
+                         -0.04    9.96   library setup time
+                                  9.96   data required time
+-----------------------------------------------------------------------------
+                                  9.96   data required time
+                                 -2.23   data arrival time
+-----------------------------------------------------------------------------
+                                  7.73   slack (MET)
+
+
+
+==========================================================================
+finish report_check_types -max_slew -max_cap -max_fanout -violators
+--------------------------------------------------------------------------
+
+==========================================================================
+finish max_slew_check_slack
+--------------------------------------------------------------------------
+0.15770065784454346
+
+==========================================================================
+finish max_slew_check_limit
+--------------------------------------------------------------------------
+0.1985349953174591
+
+==========================================================================
+finish max_slew_check_slack_limit
+--------------------------------------------------------------------------
+0.7943
+
+==========================================================================
+finish max_fanout_check_slack
+--------------------------------------------------------------------------
+1.0000000150474662e+30
+
+==========================================================================
+finish max_fanout_check_limit
+--------------------------------------------------------------------------
+1.0000000150474662e+30
+
+==========================================================================
+finish max_capacitance_check_slack
+--------------------------------------------------------------------------
+18.14134407043457
+
+==========================================================================
+finish max_capacitance_check_limit
+--------------------------------------------------------------------------
+20.904499053955078
+
+==========================================================================
+finish max_capacitance_check_slack_limit
+--------------------------------------------------------------------------
+0.8678
+
+==========================================================================
+finish max_slew_violation_count
+--------------------------------------------------------------------------
+max slew violation count 0
+
+==========================================================================
+finish max_fanout_violation_count
+--------------------------------------------------------------------------
+max fanout violation count 0
+
+==========================================================================
+finish max_cap_violation_count
+--------------------------------------------------------------------------
+max cap violation count 0
+
+==========================================================================
+finish setup_violation_count
+--------------------------------------------------------------------------
+setup violation count 0
+
+==========================================================================
+finish hold_violation_count
+--------------------------------------------------------------------------
+hold violation count 0
+
+==========================================================================
+finish report_checks -path_delay max reg to reg
+--------------------------------------------------------------------------
+No paths found.
+
+==========================================================================
+finish report_checks -path_delay min reg to reg
+--------------------------------------------------------------------------
+No paths found.
+
+==========================================================================
+finish critical path target clock latency max path
+--------------------------------------------------------------------------
+0.0002
+
+==========================================================================
+finish critical path target clock latency min path
+--------------------------------------------------------------------------
+0.0002
+
+==========================================================================
+finish critical path source clock latency min path
+--------------------------------------------------------------------------
+0.0000
+
+==========================================================================
+finish critical path delay
+--------------------------------------------------------------------------
+2.2325
+
+==========================================================================
+finish critical path slack
+--------------------------------------------------------------------------
+7.7276
+
+==========================================================================
+finish slack div critical path delay
+--------------------------------------------------------------------------
+346.141097
+
+==========================================================================
+finish report_power
+--------------------------------------------------------------------------
+Group                  Internal  Switching    Leakage      Total
+                          Power      Power      Power      Power (Watts)
+----------------------------------------------------------------
+Sequential             6.58e-07   3.04e-08   8.57e-08   7.74e-07  15.6%
+Combinational          1.70e-06   1.19e-06   1.30e-06   4.19e-06  84.4%
+Clock                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Macro                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Pad                    0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+----------------------------------------------------------------
+Total                  2.36e-06   1.22e-06   1.39e-06   4.96e-06 100.0%
+                          47.5%      24.5%      27.9%
+</pre></details></section>
+
+<section><h2>5. SPEF：為什麼是 Post-Layout 的關鍵</h2>
+<p><code>6_final.spef</code> 描述 routed nets 的寄生 capacitance 與 resistance。RTL 階段不知道真正 wire 長度；routing 完成後才有較可信的 interconnect delay。Part 5 將這個檔案保留在 <code>inputs/</code>，可用於 OpenSTA/OpenROAD post-layout STA。</p>
+<div class="code"><div class="bar"><b>檢查 SPEF</b><button onclick="cp(this)">Copy</button></div><pre><code>ls -lh inputs/6_final.spef
+head -40 inputs/6_final.spef</code></pre></div></section>
+
+<section><h2>6. Physical Checks：Route DRC / Antenna</h2>
+<div class="code"><div class="bar"><b>檢查現有 physical reports</b><button onclick="cp(this)">Copy</button></div><pre><code>cd scripts
+./03_check_physical_reports.sh ../reports</code></pre></div>
+<p>本次 <code>5_route_drc.rpt</code> 為 0 bytes；<code>grt_antennas.log</code> 為 0 bytes；<code>drt_antennas.log</code> 為 0 bytes。對這些 0-byte 檔案最安全的說法是「該 report/log 沒有列出 violation」，不要把它擴大解讀成所有 foundry sign-off DRC 都已完成。</p></section>
+
+<section><h2>7. LEC：Logic Equivalence Checking</h2>
+<p>LEC 要回答的是：<b>經過 synthesis、optimization、buffer insertion、CTS/P&R 後，邏輯功能是否仍與參考設計等價？</b></p>
+<div class="code"><div class="bar"><b>確認 LEC handoff netlists</b><button onclick="cp(this)">Copy</button></div><pre><code>cd scripts
+./04_check_lec_handoff.sh ../inputs</code></pre></div>
+<div class="call warn">本次確實有 <code>1_synth_lec.v</code> 與 <code>6_final_lec.v</code>，但「檔案存在」不是 LEC PASS。下一個實作步驟應在 ORFS/正式 formal tool 中執行 equivalence check，並把明確的 PASS log 放入 <code>reports/</code>。</div></section>
+
+<section><h2>8. LVS：Layout vs. Schematic</h2>
+<p>LVS 比較「從 layout 抽出的電路」與「reference schematic/netlist」是否一致。它與 LEC 不同：LEC 是邏輯等價；LVS 是 physical extraction 後的 connectivity/device equivalence。</p>
+<div class="call warn">目前 Part 4 artifact set 沒有獨立 LVS PASS report，所以本版標為 <b>Pending</b>。真正 tape-out sign-off 時應使用 PDK 支援的 LVS deck / flow，取得可追溯的 PASS report。</div></section>
+
+<section><h2>9. Power / IR Drop</h2>
+<p>Final report 的 total power estimate 約 <b>4.96 µW</b>。由於這是非常小的教學 design，而且 activity/clock model 有限制，應把它當作此 flow 的 estimate，而不是晶片量測功耗。</p>
+<div class="gallery"><figure><a href="images/final_all.webp" target="_blank"><img src="images/final_all.webp"></a><figcaption><b>Final physical layout</b><br>cells、PDN、routing 與 I/O 的完整疊圖。</figcaption></figure><figure><a href="images/final_routing.webp" target="_blank"><img src="images/final_routing.webp"></a><figcaption><b>Final routing</b><br>詳細繞線結果。</figcaption></figure><figure><a href="images/final_worst_path.webp" target="_blank"><img src="images/final_worst_path.webp"></a><figcaption><b>Worst timing path</b><br>STA worst path 疊在 physical placement 上。</figcaption></figure><figure><a href="images/final_congestion.webp" target="_blank"><img src="images/final_congestion.webp"></a><figcaption><b>Congestion</b><br>routing congestion heatmap。</figcaption></figure><figure><a href="images/final_ir_drop.webp" target="_blank"><img src="images/final_ir_drop.webp"></a><figcaption><b>IR drop</b><br>IR-drop heatmap；本次圖例最大約 82.699 µV。</figcaption></figure><figure><a href="images/final_clocks.webp" target="_blank"><img src="images/final_clocks.webp"></a><figcaption><b>Clock network</b><br>最終 clock network。</figcaption></figure></div></section>
+
+<section><h2>10. Worst Path 如何與 Layout 對起來</h2>
+<p><code>final_worst_path.webp</code> 把 timing path 直接畫在 placement 上，因此可以從 STA 的「數字」連回 physical path。這是 Part 5 最重要的跨層觀念：</p>
+<div class="call"><b>RTL function → mapped cells → physical placement → routed wires → parasitic RC → path delay → slack</b></div>
+<p>本次 final critical path delay 約 2.2325 ns，10 ns constraint 下 worst slack 為 +7.73 ns。</p></section>
+
+<section><h2>11. 一鍵產生 Sign-off Snapshot</h2>
+<div class="code"><div class="bar"><b>執行</b><button onclick="cp(this)">Copy</button></div><pre><code>cd scripts
+./05_signoff_snapshot.sh ../reports</code></pre></div>
+<p>這支 script 不會偽造 sign-off；它只把現有證據整理成 snapshot，並明確標示 LEC/LVS 尚需正式 PASS log。</p></section>
+
+<section><h2>12. 最終 Sign-off Checklist</h2>
+<table><tr><th>項目</th><th>目前狀態</th><th>完成條件</th></tr>
+<tr><td>RTL / mapped functional verification</td><td>✅ 已完成</td><td>前段 mapped GLS 65,536 pixels，Mismatch=0</td></tr>
+<tr><td>Final GDS generation</td><td>✅ 已完成</td><td>6_final.gds</td></tr>
+<tr><td>Post-layout STA</td><td>✅ PASS</td><td>setup/hold=0 violations，worst slack +7.73 ns</td></tr>
+<tr><td>Electrical constraints</td><td>✅ PASS</td><td>slew/fanout/cap violations = 0</td></tr>
+<tr><td>Route DRC report</td><td>✅ 無 violation 列出</td><td>5_route_drc.rpt 為空</td></tr>
+<tr><td>Antenna reports</td><td>✅ 無 violation 列出</td><td>現有 antenna logs 為空</td></tr>
+<tr><td>Formal LEC</td><td>⚠️ 待正式 PASS log</td><td>equivalence checker 明確 PASS</td></tr>
+<tr><td>LVS</td><td>⚠️ 待執行</td><td>PDK LVS flow 明確 PASS</td></tr>
+<tr><td>Foundry sign-off DRC</td><td>⚠️ 教學 flow 不等同 foundry sign-off</td><td>正式 sign-off deck PASS</td></tr></table></section>
+
+<section><h2>13. Part 5 ZIP 內容</h2><pre><code>Part5_PostLayout_Signoff_Verification_Complete/
+├── index.html
+├── README.txt
+├── inputs/
+│   ├── 6_final.gds / .def / .odb
+│   ├── 6_final.v / .sdc / .spef
+│   ├── 1_synth_lec.v
+│   └── 6_final_lec.v
+├── reports/
+│   ├── 6_finish.rpt
+│   ├── 5_route_drc.rpt
+│   ├── 5_global_route.rpt
+│   ├── 4_cts_final.rpt
+│   └── ...
+├── images/
+│   ├── final_all.webp
+│   ├── final_routing.webp
+│   ├── final_worst_path.webp
+│   ├── final_congestion.webp
+│   └── final_ir_drop.webp ...
+├── scripts/
+│   ├── 01_check_final_artifacts.sh
+│   ├── 02_extract_sta_summary.sh
+│   ├── 03_check_physical_reports.sh
+│   ├── 04_check_lec_handoff.sh
+│   └── 05_signoff_snapshot.sh
+└── docs/
+    └── SIGNOFF_STATUS.md</code></pre></section>
+
+</main><footer>Part 5 · Post-Layout Verification / Sign-off · binarization / Nangate45</footer>
+<script>function cp(b){let c=b.closest('.code').querySelector('code').innerText;navigator.clipboard.writeText(c).then(()=>{b.innerText='Copied!';setTimeout(()=>b.innerText='Copy',900)})}</script></body></html>
