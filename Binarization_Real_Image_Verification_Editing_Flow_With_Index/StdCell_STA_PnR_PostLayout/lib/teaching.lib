@@ -1,0 +1,14 @@
+library(teaching) {
+  delay_model : table_lookup; time_unit : "1ns"; voltage_unit : "1V"; current_unit : "1mA"; capacitive_load_unit(1,pf);
+  nom_process : 1; nom_temperature : 25; nom_voltage : 1.0;
+  cell(INVX1){ area:1.0; pin(A){direction:input; capacitance:0.002;} pin(Y){direction:output; function:"!A"; timing(){related_pin:"A"; cell_rise(scalar){values("0.05");} cell_fall(scalar){values("0.05");} rise_transition(scalar){values("0.02");} fall_transition(scalar){values("0.02");}}}}
+  cell(BUFX1){ area:1.0; pin(A){direction:input; capacitance:0.002;} pin(Y){direction:output; function:"A"; timing(){related_pin:"A"; cell_rise(scalar){values("0.04");} cell_fall(scalar){values("0.04");} rise_transition(scalar){values("0.02");} fall_transition(scalar){values("0.02");}}}}
+  cell(AND2X1){ area:1.5; pin(A){direction:input;} pin(B){direction:input;} pin(Y){direction:output; function:"A & B";}}
+  cell(OR2X1){ area:1.5; pin(A){direction:input;} pin(B){direction:input;} pin(Y){direction:output; function:"A | B";}}
+  cell(XOR2X1){ area:2.0; pin(A){direction:input;} pin(B){direction:input;} pin(Y){direction:output; function:"A ^ B";}}
+  cell(XNOR2X1){ area:2.0; pin(A){direction:input;} pin(B){direction:input;} pin(Y){direction:output; function:"!(A ^ B)";}}
+  cell(NAND2X1){ area:1.2; pin(A){direction:input;} pin(B){direction:input;} pin(Y){direction:output; function:"!(A & B)";}}
+  cell(NOR2X1){ area:1.2; pin(A){direction:input;} pin(B){direction:input;} pin(Y){direction:output; function:"!(A | B)";}}
+  cell(MUX2X1){ area:2.2; pin(A){direction:input;} pin(B){direction:input;} pin(S){direction:input;} pin(Y){direction:output; function:"(!S&A)|(S&B)";}}
+  cell(DFFRNQX1){ area:4.0; ff(IQ,IQN){clocked_on:"CK"; next_state:"D"; clear:"!RN"; clear_preset_var1:L; clear_preset_var2:L;} pin(D){direction:input;} pin(CK){direction:input; clock:true;} pin(RN){direction:input;} pin(Q){direction:output; function:"IQ";} }
+}
