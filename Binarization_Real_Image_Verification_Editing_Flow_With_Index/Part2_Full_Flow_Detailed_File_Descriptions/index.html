@@ -1,0 +1,387 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Part 2｜Real Image RTL Binarization Verification</title><style>
+:root{--bg:#eef3f8;--ink:#172033;--blue:#2563eb;--teal:#0f766e;--line:#dbe4ef}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 Segoe UI,Noto Sans TC,Microsoft JhengHei,sans-serif}header{padding:48px 24px;color:white;background:linear-gradient(125deg,#172554,#1d4ed8 45%,#0f766e)}header div,main{max-width:1180px;margin:auto}h1{font-size:clamp(1.8rem,4vw,2.8rem);margin:0}main{padding:26px 18px 70px}section{background:white;border:1px solid var(--line);border-radius:20px;padding:26px;margin:20px 0;box-shadow:0 14px 36px #0f172a12}h2{color:#134e4a;border-left:7px solid #14b8a6;padding-left:12px}h3{color:#1d4ed8}.flow{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.b{padding:12px 14px;border-radius:12px;background:#ecfeff;border:1px solid #99f6e4;font-weight:700}.a{font-size:24px;color:#94a3b8}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.shot{border:1px solid var(--line);padding:15px;border-radius:16px;background:#f8fafc}img{max-width:100%;height:auto;border-radius:12px}.poster{width:100%;box-shadow:0 8px 25px #0f172a20}pre{position:relative;background:#0f172a;color:#e5edf7;padding:48px 18px 18px;border-radius:14px;overflow:auto}pre button{position:absolute;right:10px;top:10px;background:#334155;color:white;border:1px solid #64748b;border-radius:8px;padding:7px 11px;cursor:pointer}table{width:100%;border-collapse:collapse}th,td{border:1px solid var(--line);padding:10px}th{background:#ecfeff}.key{background:#ecfdf5;border-left:5px solid #10b981;padding:14px;border-radius:10px}@media(max-width:760px){.grid{grid-template-columns:1fr}}
+</style></head><body><header><div><h1>Part 2｜Real Color Image → Grayscale → RTL Binarization → Binary Image</h1><p>Golden Model Verification with Real Images · 256×256 · Threshold = 128</p></div></header><main>
+<section><h2>完整流程圖</h2><div class="flow"><span class="b">4 Color BMP</span><span class="a">→</span><span class="b">RGB → Gray</span><span class="a">→</span><span class="b">gray.hex</span><span class="a">→</span><span class="b">RTL Binarization</span><span class="a">→</span><span class="b">rtl_binary.txt</span><span class="a">→</span><span class="b">Rebuild PNG</span><span class="a">→</span><span class="b">Golden Compare</span><span class="a">→</span><span class="b">PASS</span></div><p class="key">先以 Python 產生 Golden Model，再用相同灰階 pixel 餵給 Verilog RTL；最後逐 pixel 比較。Mismatch = 0 才算通過。</p></section>
+<section><h2>Part 2 全流程 PNG</h2><img class="poster" src="Part2_Full_Flow.png"></section>
+<section><h2>四張 BMP 測試圖片</h2><div class="grid"><div class="shot"><h3>Sample 1</h3><img src="images/drawBbox_result_p1.png"><p>原始 BMP：<code>drawBbox_result_p1.bmp</code>。可替換為任一 256×256 彩色輸入，走相同驗證流程。</p></div><div class="shot"><h3>Sample 2</h3><img src="images/drawBbox_result_p2.png"><p>原始 BMP：<code>drawBbox_result_p2.bmp</code>。可替換為任一 256×256 彩色輸入，走相同驗證流程。</p></div><div class="shot"><h3>Sample 3</h3><img src="images/drawBbox_result_p3.png"><p>原始 BMP：<code>drawBbox_result_p3.bmp</code>。可替換為任一 256×256 彩色輸入，走相同驗證流程。</p></div><div class="shot"><h3>Sample 4</h3><img src="images/drawBbox_result_p4.png"><p>原始 BMP：<code>drawBbox_result_p4.bmp</code>。可替換為任一 256×256 彩色輸入，走相同驗證流程。</p></div></div></section>
+<section><h2>實際資料範例（p2）</h2><div class="grid"><div class="shot"><h3>Grayscale</h3><img src="images/sample_gray.png"></div><div class="shot"><h3>Golden Binary</h3><img src="images/sample_binary_golden.png"></div></div><p>Threshold = 128：Gray ≥ 128 → 1/白；Gray &lt; 128 → 0/黑。輸入共有 256×256 = 65,536 pixels。</p></section>
+<section><h2>驗證分工</h2><table><tr><th>階段</th><th>檔案</th><th>目的</th></tr><tr><td>Golden</td><td>prepare_image.py</td><td>BMP→Gray、gray.hex、golden_binary.txt</td></tr><tr><td>RTL</td><td>design.sv</td><td>clocked threshold comparator</td></tr><tr><td>Testbench</td><td>testbench_image.sv</td><td>$readmemh 送 65,536 pixels，輸出 rtl_binary.txt</td></tr><tr><td>Compare</td><td>rebuild_and_compare.py</td><td>重建 PNG、逐 pixel 比較、PASS/FAIL</td></tr></table></section>
+<section><h2>Code Files</h2><h3>design.sv</h3><pre><button onclick="copy(this)">Copy</button><code>`timescale 1ns/1ps
+module binarization(
+ input wire clk, input wire rst_n, input wire [7:0] pix_in,
+ input wire [7:0] threshold, output reg pix_out
+);
+always @(posedge clk or negedge rst_n) begin
+ if(!rst_n) pix_out &lt;= 1&#x27;b0;
+ else if(pix_in &gt;= threshold) pix_out &lt;= 1&#x27;b1;
+ else pix_out &lt;= 1&#x27;b0;
+end
+endmodule
+</code></pre><h3>testbench_image.sv</h3><pre><button onclick="copy(this)">Copy</button><code>`timescale 1ns/1ps
+module tb_binarization_image;
+localparam N=65536;
+reg clk, rst_n; reg [7:0] pix_in, threshold; wire pix_out;
+reg [7:0] img_mem [0:N-1]; integer i, fout;
+binarization dut(.clk(clk),.rst_n(rst_n),.pix_in(pix_in),.threshold(threshold),.pix_out(pix_out));
+initial clk=0; always #5 clk=~clk;
+initial begin
+ $readmemh(&quot;gray.hex&quot;,img_mem);
+ fout=$fopen(&quot;rtl_binary.txt&quot;,&quot;w&quot;);
+ threshold=8&#x27;d128; rst_n=0; pix_in=0; #12 rst_n=1;
+ for(i=0;i&lt;N;i=i+1) begin
+   @(negedge clk); pix_in=img_mem[i];
+   @(posedge clk); #1; $fwrite(fout,&quot;%0d\n&quot;,pix_out);
+ end
+ $fclose(fout); $display(&quot;Processed %0d pixels. Done.&quot;,N); #10 $finish;
+end
+endmodule
+</code></pre><h3>prepare_image.py</h3><pre><button onclick="copy(this)">Copy</button><code>from PIL import Image
+from pathlib import Path
+THRESHOLD=128
+INPUT=Path(&quot;../images/drawBbox_result_p2.bmp&quot;)
+img=Image.open(INPUT).convert(&quot;RGB&quot;)
+gray=img.convert(&quot;L&quot;)
+gray.save(&quot;../images/sample_gray.png&quot;)
+vals=list(gray.getdata())
+Path(&quot;../data/gray.hex&quot;).write_text(&quot;\n&quot;.join(f&quot;{v:02x}&quot; for v in vals)+&quot;\n&quot;)
+Path(&quot;../data/golden_binary.txt&quot;).write_text(&quot;\n&quot;.join(&quot;1&quot; if v&gt;=THRESHOLD else &quot;0&quot; for v in vals)+&quot;\n&quot;)
+gray.point(lambda p:255 if p&gt;=THRESHOLD else 0).save(&quot;../images/sample_binary_golden.png&quot;)
+print(&quot;Prepared&quot;,len(vals),&quot;pixels&quot;)
+</code></pre><h3>rebuild_and_compare.py</h3><pre><button onclick="copy(this)">Copy</button><code>from pathlib import Path
+from PIL import Image
+import numpy as np
+golden=np.loadtxt(&quot;../data/golden_binary.txt&quot;,dtype=np.uint8)
+rtl=np.loadtxt(&quot;rtl_binary.txt&quot;,dtype=np.uint8)
+if rtl.size != golden.size: raise SystemExit(f&quot;size mismatch: RTL={rtl.size}, golden={golden.size}&quot;)
+mismatch=int(np.count_nonzero(rtl!=golden))
+Image.fromarray((rtl.reshape(256,256)*255).astype(np.uint8),mode=&quot;L&quot;).save(&quot;../images/sample_binary_rtl.png&quot;)
+print(&quot;Total pixels:&quot;,golden.size); print(&quot;Mismatch pixels:&quot;,mismatch); print(&quot;Accuracy: %.2f%%&quot;%((1-mismatch/golden.size)*100)); print(&quot;PASS&quot; if mismatch==0 else &quot;FAIL&quot;)
+</code></pre></section>
+<section><h2>執行順序</h2><pre><code>cd code
+python prepare_image.py
+cp ../data/gray.hex .
+iverilog -g2012 -o simv design.sv testbench_image.sv
+vvp simv
+python rebuild_and_compare.py</code></pre><p class="key">完成 Part 2 後，再進 Part 3：Technology Mapping → Gate-Level Netlist → Gate-Level Simulation，並用同一張圖片再次驗證。</p></section>
+</main><script>async function copy(b){let t=b.parentElement.querySelector('code').innerText;await navigator.clipboard.writeText(t);b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1200)}</script>
+<section id="file-guide" style="margin-top:42px">
+  <h2>附錄｜專案內所有檔案的詳細說明</h2>
+  <p>
+    這一節逐一說明本 ZIP 內每個檔案的角色、由誰產生、在流程中的輸入／輸出關係，以及是否需要手動修改。
+    本專案的核心資料流為：
+    <strong>Color BMP → Python 前處理 → gray.hex → RTL/Testbench → Icarus 編譯與模擬 → rtl_binary.txt → Python 重建與 Golden Compare → PASS/FAIL</strong>。
+  </p>
+
+  <h3>一、根目錄檔案</h3>
+  <table>
+    <thead><tr><th>檔案</th><th>類型／角色</th><th>詳細說明</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>index.html</code></td>
+        <td>教學入口</td>
+        <td>整個 Part 2 的主要說明網頁。包含 Real Image RTL Binarization 的概念、流程、程式碼、操作步驟與結果說明。第一次開啟專案時建議先打開此檔。</td>
+      </tr>
+      <tr>
+        <td><code>README.txt</code></td>
+        <td>快速說明</td>
+        <td>非常精簡的專案說明，指出本專案是 Part 2 Real Image RTL Binarization Verification，並提示先開啟 <code>index.html</code>。</td>
+      </tr>
+      <tr>
+        <td><code>Part2_Full_Flow.png</code></td>
+        <td>完整流程圖</td>
+        <td>1536×1024 RGB 圖片，用視覺化方式呈現從彩色影像、灰階化、RTL、Testbench、Simulation、Binary Image 到 Golden Model Compare 的完整流程，適合放在報告或簡報中作為總覽圖。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>二、<code>code/</code>：程式與模擬核心</h3>
+  <table>
+    <thead><tr><th>檔案</th><th>角色</th><th>詳細說明</th><th>是否通常要修改</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>code/design.sv</code></td>
+        <td>RTL Design</td>
+        <td>
+          真正要驗證的硬體設計。模組名稱為 <code>binarization</code>，輸入包含
+          <code>clk</code>、<code>rst_n</code>、8-bit <code>pix_in</code> 與 8-bit <code>threshold</code>，
+          輸出為 1-bit <code>pix_out</code>。每個 clock 正緣判斷
+          <code>pix_in &gt;= threshold</code>；成立輸出 1，不成立輸出 0。
+          因為使用 <code>always @(posedge clk or negedge rst_n)</code>，
+          所以這是一個有暫存器的 synchronous pixel-processing RTL，而不是純 combinational comparator。
+        </td>
+        <td>要改硬體演算法時才修改。</td>
+      </tr>
+      <tr>
+        <td><code>code/testbench_image.sv</code></td>
+        <td>SystemVerilog Testbench</td>
+        <td>
+          負責驅動 65,536 個 pixel。<code>N=65536</code> 對應 256×256 影像。
+          Testbench 使用 <code>$readmemh("gray.hex", img_mem)</code> 載入灰階 pixel，
+          threshold 設為 <code>8'd128</code>，每次在 clock 負緣送入一個 pixel，
+          再於下一個 clock 正緣後讀取 <code>pix_out</code>。
+          每一個 RTL 結果透過 <code>$fwrite</code> 寫入 <code>rtl_binary.txt</code>。
+        </td>
+        <td>改影像尺寸、threshold、輸入檔名或刺激方式時修改。</td>
+      </tr>
+      <tr>
+        <td><code>code/prepare_image.py</code></td>
+        <td>Python 前處理／Golden Model</td>
+        <td>
+          此程式目前讀取 <code>../images/drawBbox_result_p2.bmp</code>，
+          先轉 RGB，再使用 Pillow 的 <code>convert("L")</code> 轉成 8-bit grayscale。
+          接著產生三類結果：
+          <code>sample_gray.png</code>、
+          <code>../data/gray.hex</code>、
+          <code>../data/golden_binary.txt</code>。
+          Golden binary 的規則與 RTL 相同：灰階值大於等於 128 記為 1，否則為 0。
+          因此它同時扮演「輸入資料產生器」和「軟體參考模型」兩個角色。
+        </td>
+        <td>換影像或 threshold 時通常要修改。</td>
+      </tr>
+      <tr>
+        <td><code>code/rebuild_and_compare.py</code></td>
+        <td>結果重建與驗證</td>
+        <td>
+          讀取 Python Golden Model 的 <code>../data/golden_binary.txt</code>
+          與 RTL simulation 的 <code>rtl_binary.txt</code>。
+          先檢查兩者 pixel 數量是否相同，再用 NumPy 做逐 pixel 比較。
+          RTL 的 0/1 資料會 reshape 成 256×256，再乘以 255，
+          產生可觀看的 <code>../images/sample_binary_rtl.png</code>。
+          最後列印 Total pixels、Mismatch pixels、Accuracy 以及 PASS/FAIL。
+          若 mismatch = 0，代表 RTL 與 Golden Model 完全一致。
+        </td>
+        <td>若影像尺寸或比較規則改變時修改。</td>
+      </tr>
+      <tr>
+        <td><code>code/run_local.sh</code></td>
+        <td>Linux / Git Bash 一鍵執行腳本</td>
+        <td>
+          把完整本機流程串起來：
+          <code>python prepare_image.py</code> →
+          <code>cp ../data/gray.hex .</code> →
+          <code>iverilog -g2012 -o simv design.sv testbench_image.sv</code> →
+          <code>vvp simv</code> →
+          <code>python rebuild_and_compare.py</code>。
+          其中 copy 動作是因為目前 Testbench 用
+          <code>$readmemh("gray.hex", ...)</code>，
+          因此 simulator 執行時必須在 <code>code/</code> 看到一份 <code>gray.hex</code>。
+        </td>
+        <td>一般不需要；流程或路徑改變時才改。</td>
+      </tr>
+      <tr>
+        <td><code>code/gray.hex</code></td>
+        <td>RTL Simulation 輸入資料</td>
+        <td>
+          256×256 共 65,536 個灰階 pixel，每一行是一個 8-bit grayscale value 的十六進位文字。
+          例如十進位 128 會寫成 <code>80</code>。
+          這份檔案目前與 <code>data/gray.hex</code> 內容完全相同，
+          是由 <code>run_local.sh</code> 的 <code>cp</code> 指令複製到 <code>code/</code>，
+          讓 <code>$readmemh("gray.hex", ...)</code> 可以直接讀到。
+        </td>
+        <td>不要手動改；由 Python 重新產生。</td>
+      </tr>
+      <tr>
+        <td><code>code/rtl_binary.txt</code></td>
+        <td>RTL Simulation 輸出</td>
+        <td>
+          由 Testbench 的 <code>$fwrite</code> 產生，共 65,536 筆 0/1。
+          每一行代表一個 pixel 經 RTL threshold comparator 處理後的結果。
+          本 ZIP 中此檔已經產生完成，而且目前與 <code>data/golden_binary.txt</code> 完全相同，
+          因此此版本的 RTL 驗證結果為零 mismatch。
+        </td>
+        <td>不要手動改；每次 simulation 會重新產生。</td>
+      </tr>
+      <tr>
+        <td><code>code/simv</code></td>
+        <td>Icarus 編譯產物</td>
+        <td>
+          執行
+          <code>iverilog -g2012 -o simv design.sv testbench_image.sv</code>
+          後產生的 simulation executable / intermediate simulation image。
+          它不是 RTL 原始碼，也不是 ASIC gate-level netlist。
+          下一步使用 <code>vvp simv</code> 執行，才真正開始 Testbench simulation。
+        </td>
+        <td>不要手動修改；由 iverilog 重建。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>三、<code>data/</code>：Python 與 RTL 之間的資料交換</h3>
+  <table>
+    <thead><tr><th>檔案</th><th>資料格式</th><th>詳細說明</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>data/gray.hex</code></td>
+        <td>65,536 行 hexadecimal pixel data</td>
+        <td>
+          由 <code>prepare_image.py</code> 產生，是彩色 BMP 經灰階化之後的 8-bit pixel stream。
+          它是 Python 世界轉交給 Verilog Testbench 的橋樑。
+          256×256 = 65,536，因此理論上有 65,536 筆 pixel。
+          <code>run_local.sh</code> 再把它複製成 <code>code/gray.hex</code> 供目前的 Testbench 使用。
+        </td>
+      </tr>
+      <tr>
+        <td><code>data/golden_binary.txt</code></td>
+        <td>65,536 行 0/1</td>
+        <td>
+          Python Golden Model 的標準答案。
+          每一個 grayscale pixel 使用相同 threshold = 128：
+          <code>gray &gt;= 128 → 1</code>，否則 <code>0</code>。
+          最後 <code>rebuild_and_compare.py</code> 會把它和 RTL 的
+          <code>rtl_binary.txt</code> 逐 pixel 比較。
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>四、<code>images/</code>：原始影像、預覽與驗證結果</h3>
+  <table>
+    <thead><tr><th>檔案</th><th>尺寸／模式</th><th>詳細說明</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>drawBbox_result_p1.bmp</code></td>
+        <td>256×256 RGB BMP</td>
+        <td>原始 Sample 1 彩色輸入影像。BMP 是較接近原始 pixel 儲存的格式，可作為影像處理測試來源。</td>
+      </tr>
+      <tr>
+        <td><code>drawBbox_result_p1.png</code></td>
+        <td>256×256 RGB PNG</td>
+        <td>Sample 1 的 PNG 預覽版本，主要方便 HTML/瀏覽器直接顯示；它不是 RTL simulation 必需的輸入。</td>
+      </tr>
+      <tr>
+        <td><code>drawBbox_result_p2.bmp</code></td>
+        <td>256×256 RGB BMP</td>
+        <td><strong>目前實際使用的輸入影像。</strong> <code>prepare_image.py</code> 的 <code>INPUT</code> 指向此檔，因此目前產生的 gray.hex、Golden Model 與 RTL output 都是以 p2 為來源。</td>
+      </tr>
+      <tr>
+        <td><code>drawBbox_result_p2.png</code></td>
+        <td>256×256 RGB PNG</td>
+        <td>Sample 2 的瀏覽器預覽版本；內容對應 p2 BMP，方便在 HTML 顯示。</td>
+      </tr>
+      <tr>
+        <td><code>drawBbox_result_p3.bmp</code></td>
+        <td>256×256 RGB BMP</td>
+        <td>原始 Sample 3 彩色影像。若要改測 p3，可把 <code>prepare_image.py</code> 的 INPUT 改成此檔，再重新跑完整流程。</td>
+      </tr>
+      <tr>
+        <td><code>drawBbox_result_p3.png</code></td>
+        <td>256×256 RGB PNG</td>
+        <td>Sample 3 的 PNG 預覽版，提供 HTML 顯示與人工檢視。</td>
+      </tr>
+      <tr>
+        <td><code>drawBbox_result_p4.bmp</code></td>
+        <td>256×256 RGB BMP</td>
+        <td>原始 Sample 4 彩色影像。可作為另一組真實影像的 RTL binarization 測試來源。</td>
+      </tr>
+      <tr>
+        <td><code>drawBbox_result_p4.png</code></td>
+        <td>256×256 RGB PNG</td>
+        <td>Sample 4 的 PNG 預覽版。</td>
+      </tr>
+      <tr>
+        <td><code>sample_gray.png</code></td>
+        <td>256×256 8-bit Grayscale</td>
+        <td>
+          <code>prepare_image.py</code> 將目前 p2 彩色影像轉成 grayscale 後產生的可視化結果。
+          <code>gray.hex</code> 裡的數值就是這張灰階圖每一個 pixel 的數字版本。
+        </td>
+      </tr>
+      <tr>
+        <td><code>sample_binary_golden.png</code></td>
+        <td>256×256 1-bit 概念／8-bit PNG 顯示</td>
+        <td>
+          Python Golden Model 的二值化影像。
+          threshold = 128；結果 0 顯示為黑色，1 顯示為白色。
+          這是 RTL 最終應該得到的「標準答案影像」。
+        </td>
+      </tr>
+      <tr>
+        <td><code>sample_binary_rtl.png</code></td>
+        <td>256×256 1-bit 概念／8-bit PNG 顯示</td>
+        <td>
+          將 <code>rtl_binary.txt</code> reshape 回 256×256 後產生的 RTL 結果圖。
+          本 ZIP 中此圖與 <code>sample_binary_golden.png</code> 完全相同，
+          表示現有 simulation 的 65,536 個 pixel 全部吻合。
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>五、檔案之間真正的依賴關係</h3>
+  <pre><code>images/drawBbox_result_p2.bmp
+        │
+        ▼
+code/prepare_image.py
+        │
+        ├──► images/sample_gray.png
+        ├──► data/gray.hex
+        ├──► data/golden_binary.txt
+        └──► images/sample_binary_golden.png
+                   │
+                   │
+data/gray.hex ──cp──► code/gray.hex
+                         │
+                         ▼
+                  testbench_image.sv
+                         │
+             ┌───────────┴───────────┐
+             ▼                       ▼
+        design.sv              Icarus Verilog
+             │                       │
+             └──────────┬────────────┘
+                        ▼
+                       simv
+                        │
+                     vvp simv
+                        │
+                        ▼
+                code/rtl_binary.txt
+                        │
+                        ▼
+            rebuild_and_compare.py
+              ▲                 │
+              │                 ├──► images/sample_binary_rtl.png
+data/golden_binary.txt ─────────┤
+                                └──► Mismatch / Accuracy / PASS</code></pre>
+
+  <h3>六、哪些是「原始檔」、哪些是「自動產生檔」？</h3>
+  <table>
+    <thead><tr><th>分類</th><th>檔案</th><th>建議</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>主要原始碼</td>
+        <td><code>design.sv</code>、<code>testbench_image.sv</code>、<code>prepare_image.py</code>、<code>rebuild_and_compare.py</code>、<code>run_local.sh</code></td>
+        <td>這些才是主要需要閱讀、理解與版本控制的程式。</td>
+      </tr>
+      <tr>
+        <td>原始影像</td>
+        <td><code>drawBbox_result_p1~p4.bmp</code></td>
+        <td>作為真實影像測試來源。</td>
+      </tr>
+      <tr>
+        <td>Python 產生資料</td>
+        <td><code>data/gray.hex</code>、<code>data/golden_binary.txt</code>、<code>sample_gray.png</code>、<code>sample_binary_golden.png</code></td>
+        <td>不要手動修改；重跑 <code>prepare_image.py</code> 即可重建。</td>
+      </tr>
+      <tr>
+        <td>Compile / Simulation 產物</td>
+        <td><code>code/simv</code>、<code>code/rtl_binary.txt</code>、<code>sample_binary_rtl.png</code></td>
+        <td>不要手動修改；重新 compile/simulate/compare 即可重建。</td>
+      </tr>
+      <tr>
+        <td>方便顯示的預覽</td>
+        <td><code>drawBbox_result_p1~p4.png</code></td>
+        <td>主要供 HTML 與人工檢視，不是 RTL 必需檔案。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="padding:16px 18px;margin-top:20px;border:1px solid #dbe4ef;border-radius:12px;background:#f8fafc">
+    <strong>目前這個 ZIP 的驗證狀態：</strong>
+    <code>code/rtl_binary.txt</code> 與 <code>data/golden_binary.txt</code> 完全相同，
+    而 <code>sample_binary_rtl.png</code> 與 <code>sample_binary_golden.png</code> 也完全相同。
+    因此現有資料代表 65,536 個 pixel 的 RTL 輸出和 Python Golden Model 一致。
+  </div>
+</section>
+
+</body></html>
