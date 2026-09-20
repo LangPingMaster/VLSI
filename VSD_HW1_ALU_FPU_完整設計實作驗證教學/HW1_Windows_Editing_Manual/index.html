@@ -1,0 +1,864 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>HW1 Windows 編輯與測試完整手冊</title>
+<style>
+:root{--b:#075aa8;--g:#137a4a;--o:#d66a00;--p:#6741d9;--ink:#18212b;--line:#d8e2ee;--bg:#f5f8fc}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:"Microsoft JhengHei","Noto Sans TC",Arial,sans-serif;color:var(--ink);line-height:1.75}
+header{background:linear-gradient(120deg,#05396c,#0873c5);color:white;padding:38px 6vw}header h1{margin:0;font-size:clamp(30px,4vw,50px)}header p{font-size:18px;max-width:1050px}
+main{max-width:1250px;margin:auto;padding:24px}.hero{width:100%;display:block;border-radius:16px;box-shadow:0 10px 28px #0002;margin-bottom:28px}
+.card{background:white;border:1px solid var(--line);border-radius:15px;padding:26px;margin:22px 0;box-shadow:0 5px 18px #17324d0c}
+h2{color:var(--b);border-bottom:3px solid #e6f1fb;padding-bottom:8px}h3{color:var(--g)}h4{color:var(--p)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:15px}.box{border:1px solid var(--line);border-radius:12px;padding:17px;background:#fbfdff}
+pre{background:#101820;color:#eaf2f8;padding:18px;border-radius:11px;overflow:auto;line-height:1.45;white-space:pre}code{font-family:Consolas,"Courier New",monospace}
+.copywrap{position:relative}.copybtn{position:absolute;right:10px;top:10px;background:#1976d2;color:white;border:0;border-radius:7px;padding:7px 11px;cursor:pointer}
+table{width:100%;border-collapse:collapse;margin:14px 0}th,td{border:1px solid #cdd9e6;padding:9px;vertical-align:top}th{background:#eaf4ff}
+.note{background:#fff8df;border-left:5px solid #e39a00;padding:14px;border-radius:8px}.good{background:#ecf9f2;border-left:5px solid #15905a;padding:14px;border-radius:8px}.warn{background:#fff0f0;border-left:5px solid #c83232;padding:14px;border-radius:8px}
+.flow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:9px;margin:18px 0}.step{padding:12px 15px;background:#edf5ff;border:1px solid #a9cdec;border-radius:10px;font-weight:700}.arr{font-size:24px}
+svg{width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+nav a{display:inline-block;margin:4px;padding:5px 9px;border-radius:999px;background:#eaf4ff;color:#075aa8;text-decoration:none}
+.small{color:#5f6b76;font-size:14px}details{border:1px solid var(--line);border-radius:10px;padding:12px;margin:12px 0}summary{font-weight:700;cursor:pointer;color:#075aa8}
+footer{text-align:center;color:#687582;padding:30px}
+</style>
+<script>
+function cp(id,b){navigator.clipboard.writeText(document.getElementById(id).innerText);b.innerText='已複製 ✓';setTimeout(()=>b.innerText='複製程式碼',1400)}
+</script></head><body>
+<header><h1>VLSI System Design 2026 — HW1 Windows 編輯與測試完整手冊</h1>
+<p>從 Windows 編輯環境、VS Code、MobaXterm/SSH、ALU/FPU 程式閱讀，到 CSV 測資、VCS、FSDB、Verdi、Superlint 與繳交。頁面中的程式碼都可直接按「複製程式碼」。</p></header>
+<main>
+
+<!-- 圖片依使用者要求放在網頁前面 -->
+<img class="hero" src="assets/00_hw1_manual_overview.png" alt="HW1 Windows 編輯與測試總覽圖">
+
+<section class="card"><h2>總覽圖詳細說明</h2>
+<p>上方圖片先把整份 HW1 的工作流程壓縮成一張「先看全貌、再進入細節」的導航圖。左側是章節導覽，中間依序呈現作業概述、Windows 環境、VS Code、作業檔案結構與 ALU 編輯示意。實際工作時，不應把 Windows 編輯器與 EDA simulator 混為一談：VS Code 的角色主要是讓你舒服地寫、搜尋、縮排與閱讀 Verilog/SystemVerilog；真正的課程驗證則是在 Linux/SoC Lab 上使用 VCS，波形可再用 Verdi 查看。也就是說，推薦流程不是「在 VS Code 按 Run 就算完成」，而是「Windows 寫 RTL → 傳到 Linux → VCS 編譯/模擬 → 依 FAIL 或波形回頭修 RTL」。</p>
+<p>圖中 ALU/FPU 方塊表示 HW1 的兩個主要 DUT。ALU 是 32-bit integer/DSP combinational operation；FPU 是 IEEE-754 single precision，除了運算本身，還有 enable/valid 的時序協定。因此兩題的測試方式不同：ALU testbench 每筆資料送入後固定等待，再直接比較結果；FPU testbench 則送一個 start/enable pulse，之後等待 ready/valid 才取結果。這個差異是後面除錯時最重要的觀念之一。</p></section>
+
+<section class="card"><h2>1. Windows OS 到底用什麼編輯系統？</h2>
+<div class="grid"><div class="box"><h3>首選：Visual Studio Code</h3><p>推薦程度最高。它不是 VCS 的替代品，而是 RTL source editor。適合大型 ALU/FPU 的括號配對、語法上色、全專案搜尋、同時開啟 DUT/testbench、快速跳到 module/function。建議安裝 Verilog/SystemVerilog 語法 extension；但 extension 的紅線或綠勾只供輔助，最後仍以課程 VCS 為準。</p></div>
+<div class="box"><h3>MobaXterm</h3><p>Windows 端連 SoC Lab 很實用，因為同一套工具同時有 SSH terminal 與檔案傳輸介面。你可以在 VS Code 改完 ALU.sv/FPU.v，再透過 MobaXterm 把檔案同步到 Linux 工作目錄，然後直接在 terminal 執行 VCS。</p></div>
+<div class="box"><h3>Notepad++ / Vim</h3><p>都能編輯，但不建議作為第一次做這份 HW1 的主要環境。Notepad++ 適合快速改小檔；Vim 適合熟悉 Linux 的使用者。對含多個 function、case、testbench 與 pattern 的作業，VS Code 的整體可讀性更好。</p></div></div>
+<h3>推薦的 Windows 工作鏈</h3>
+<div class="flow"><span class="step">VS Code 編輯</span><span class="arr">→</span><span class="step">MobaXterm 傳檔</span><span class="arr">→</span><span class="step">SSH 到 SoC Lab</span><span class="arr">→</span><span class="step">VCS Simulation</span><span class="arr">→</span><span class="step">FSDB / Verdi</span><span class="arr">→</span><span class="step">修正</span></div>
+</section>
+
+<section class="card"><h2>2. Windows + VS Code 安裝與設定</h2>
+<ol><li>安裝 VS Code。</li><li>Extensions 搜尋 Verilog / SystemVerilog 語法支援。目的主要是 syntax highlight、format 與閱讀輔助。</li>
+<li>建立例如 <code>D:\VSD2026\HW1\</code>，把 ZIP 解壓縮到這裡。</li><li>VS Code 使用 <b>File → Open Folder</b> 開整個 <code>StudentID_HW1</code>，不要只開單一檔案。</li>
+<li>左側 Explorer 同時保留 <code>Src</code> 與 <code>Sim</code>；編輯 DUT 時可對照 testbench 的 port name、width 與 handshake。</li></ol>
+<div class="note"><b>為什麼要開 Folder？</b>因為你會一直在 <code>ALU.sv ↔ ALU_tb.sv ↔ pattern_alu.csv</code>，以及 <code>FPU.v ↔ FPU_tb.sv ↔ pattern_fpu.csv</code> 之間切換。只開單檔會讓跨檔搜尋與路徑理解變得困難。</div></section>
+
+<section class="card"><h2>3. 你這份 ZIP 的實際專案結構</h2>
+<pre>StudentID_HW1/
+├── README_中文说明.txt
+├── Src/
+│   ├── ALU.sv
+│   └── FPU.v
+└── Sim/
+    ├── ALU_tb.sv
+    ├── FPU_tb.sv
+    └── pattern/
+        ├── pattern_alu.csv
+        └── pattern_fpu.csv</pre>
+<p><code>Src</code> 是你要理解與修改的 DUT；<code>Sim</code> 是驗證環境。尤其不要為了讓錯誤 RTL 顯示 PASS 而修改 expected pattern。真正 hidden test 不會跟著你的本地 CSV 改變。</p></section>
+
+<section class="card"><h2>4. ALU.sv：完整程式，可直接 Copy</h2>
+<p>以下不是另外虛構的示範，而是直接放入你這次上傳的 <code>VSD_HW1_complete_answer(1).zip</code> 內 <code>Src/ALU.sv</code>。程式本身已有中文註解。閱讀時建議依「decode → RV32IM → RV32B → DSP」四層拆開，而不要從第一行一路硬背到最後一行。</p>
+<div class="copywrap"><button class="copybtn" onclick="cp('alu',this)">複製程式碼</button><pre id="alu">module ALU (
+    input  logic [31:0] instruction_i,
+    input  logic [31:0] src_A_i,
+    input  logic [31:0] src_B_i,
+    output logic [31:0] result_o
+);
+    // ================================================================
+    // HW1 Prob.A : 32-bit ALU
+    // 支援：RV32IM 14 個 + RV32B 12 個 + DSP custom 5 個 = 31 個指令
+    // ================================================================
+
+    logic [6:0] opcode, funct7;
+    logic [2:0] funct3;
+    logic [4:0] shamt;
+    logic signed [63:0] mul_ss;
+    logic signed [64:0] mul_su;
+    logic [63:0] mul_uu;
+    integer i;
+    integer cnt;
+    integer tmp;
+    integer dot_sum;
+    integer lane_a, lane_b, lane_r;
+
+    always_comb begin
+        opcode = instruction_i[6:0];
+        funct3 = instruction_i[14:12];
+        funct7 = instruction_i[31:25];
+        shamt  = src_B_i[4:0];
+
+        // 乘法先擴展位元，避免 signed/unsigned 混用造成高 32-bit 錯誤。
+        mul_ss = $signed(src_A_i) * $signed(src_B_i);
+        mul_su = $signed({src_A_i[31],src_A_i}) * $signed({1&#x27;b0,src_B_i});
+        mul_uu = $unsigned(src_A_i) * $unsigned(src_B_i);
+        result_o = 32&#x27;b0;
+
+        if (opcode == 7&#x27;b0110011) begin
+            // ---------------- RV32IM / RV32B R-type ----------------
+            case (funct7)
+                7&#x27;b0000000: begin
+                    case (funct3)
+                        3&#x27;b000: result_o = src_A_i + src_B_i;                     // ADD
+                        3&#x27;b001: result_o = src_A_i &lt;&lt; shamt;                       // SLL
+                        3&#x27;b010: result_o = ($signed(src_A_i) &lt; $signed(src_B_i)); // SLT
+                        3&#x27;b011: result_o = ($unsigned(src_A_i) &lt; $unsigned(src_B_i)); // SLTU
+                        3&#x27;b100: result_o = src_A_i ^ src_B_i;                      // XOR
+                        3&#x27;b101: result_o = src_A_i &gt;&gt; shamt;                       // SRL
+                        3&#x27;b110: result_o = src_A_i | src_B_i;                      // OR
+                        3&#x27;b111: result_o = src_A_i &amp; src_B_i;                      // AND
+                        default: result_o = 32&#x27;b0;
+                    endcase
+                end
+                7&#x27;b0100000: begin
+                    case (funct3)
+                        3&#x27;b000: result_o = src_A_i - src_B_i;                      // SUB
+                        3&#x27;b101: result_o = $signed(src_A_i) &gt;&gt;&gt; shamt;             // SRA
+                        default: result_o = 32&#x27;b0;
+                    endcase
+                end
+                7&#x27;b0000001: begin
+                    case (funct3)
+                        3&#x27;b000: result_o = mul_uu[31:0];   // MUL：低 32-bit signed/unsigned 相同
+                        3&#x27;b001: result_o = mul_ss[63:32];  // MULH：signed × signed
+                        3&#x27;b010: result_o = mul_su[63:32];  // MULHSU：signed × unsigned
+                        3&#x27;b011: result_o = mul_uu[63:32];  // MULHU：unsigned × unsigned
+                        default: result_o = 32&#x27;b0;
+                    endcase
+                end
+                7&#x27;b0110000: begin
+                    // ROL / ROR。shamt=0 要特別處理，避免位移 32。
+                    case (funct3)
+                        3&#x27;b001: result_o = (shamt==0) ? src_A_i : ((src_A_i &lt;&lt; shamt) | (src_A_i &gt;&gt; (32-shamt)));
+                        3&#x27;b101: result_o = (shamt==0) ? src_A_i : ((src_A_i &gt;&gt; shamt) | (src_A_i &lt;&lt; (32-shamt)));
+                        default: result_o = 32&#x27;b0;
+                    endcase
+                end
+                7&#x27;b0000101: begin
+                    case (funct3)
+                        3&#x27;b100: result_o = ($signed(src_A_i) &lt; $signed(src_B_i)) ? src_A_i : src_B_i; // MIN
+                        3&#x27;b110: result_o = ($signed(src_A_i) &gt; $signed(src_B_i)) ? src_A_i : src_B_i; // MAX
+                        3&#x27;b101: result_o = ($unsigned(src_A_i) &lt; $unsigned(src_B_i)) ? src_A_i : src_B_i; // MINU
+                        3&#x27;b111: result_o = ($unsigned(src_A_i) &gt; $unsigned(src_B_i)) ? src_A_i : src_B_i; // MAXU
+                        default: result_o = 32&#x27;b0;
+                    endcase
+                end
+                7&#x27;b0010100: begin
+                    if (funct3==3&#x27;b001) result_o = src_A_i | (32&#x27;b1 &lt;&lt; shamt); // BSET
+                end
+                7&#x27;b0100100: begin
+                    case (funct3)
+                        3&#x27;b001: result_o = src_A_i &amp; ~(32&#x27;b1 &lt;&lt; shamt);       // BCLR
+                        3&#x27;b101: result_o = (src_A_i &gt;&gt; shamt) &amp; 32&#x27;b1;        // BEXT
+                        default: result_o = 32&#x27;b0;
+                    endcase
+                end
+                default: result_o = 32&#x27;b0;
+            endcase
+        end
+        else if (opcode == 7&#x27;b0010011 &amp;&amp; funct7 == 7&#x27;b0110000) begin
+            // ---------------- RV32B unary：CLZ / CTZ / CPOP ----------------
+            case (instruction_i[24:20])
+                5&#x27;b00000: begin // CLZ
+                    cnt = 0;
+                    for (i=31; i&gt;=0; i=i-1) begin
+                        if (src_A_i[i] == 1&#x27;b0 &amp;&amp; cnt == (31-i)) cnt = cnt + 1;
+                    end
+                    result_o = cnt;
+                end
+                5&#x27;b00001: begin // CTZ
+                    cnt = 0;
+                    for (i=0; i&lt;32; i=i+1) begin
+                        if (src_A_i[i] == 1&#x27;b0 &amp;&amp; cnt == i) cnt = cnt + 1;
+                    end
+                    result_o = cnt;
+                end
+                5&#x27;b00010: begin // CPOP
+                    cnt = 0;
+                    for (i=0; i&lt;32; i=i+1) cnt = cnt + src_A_i[i];
+                    result_o = cnt;
+                end
+                default: result_o = 32&#x27;b0;
+            endcase
+        end
+        else if (opcode == 7&#x27;b0001011 &amp;&amp; funct7 == 7&#x27;b0000000) begin
+            // ---------------- DSP Custom Extension ----------------
+            case (funct3)
+                3&#x27;b000: begin // DOTP4：四組 signed 8-bit 乘積再相加
+                    dot_sum = 0;
+                    for (i=0; i&lt;4; i=i+1) begin
+                        lane_a = $signed(src_A_i[i*8 +: 8]);
+                        lane_b = $signed(src_B_i[i*8 +: 8]);
+                        dot_sum = dot_sum + lane_a * lane_b;
+                    end
+                    result_o = dot_sum[31:0];
+                end
+                3&#x27;b001: begin // SADD8：每一 lane 獨立 signed saturation
+                    result_o = 0;
+                    for (i=0; i&lt;4; i=i+1) begin
+                        lane_a = $signed(src_A_i[i*8 +: 8]);
+                        lane_b = $signed(src_B_i[i*8 +: 8]);
+                        tmp = lane_a + lane_b;
+                        if (tmp &gt; 127) lane_r = 127;
+                        else if (tmp &lt; -128) lane_r = -128;
+                        else lane_r = tmp;
+                        result_o[i*8 +: 8] = lane_r[7:0];
+                    end
+                end
+                3&#x27;b010: begin // SSUB8
+                    result_o = 0;
+                    for (i=0; i&lt;4; i=i+1) begin
+                        lane_a = $signed(src_A_i[i*8 +: 8]);
+                        lane_b = $signed(src_B_i[i*8 +: 8]);
+                        tmp = lane_a - lane_b;
+                        if (tmp &gt; 127) lane_r = 127;
+                        else if (tmp &lt; -128) lane_r = -128;
+                        else lane_r = tmp;
+                        result_o[i*8 +: 8] = lane_r[7:0];
+                    end
+                end
+                3&#x27;b011: begin // ABS：最小負數依題目規格飽和到 0x7fffffff
+                    if (src_A_i == 32&#x27;h80000000) result_o = 32&#x27;h7fffffff;
+                    else if ($signed(src_A_i) &lt; 0) result_o = -$signed(src_A_i);
+                    else result_o = src_A_i;
+                end
+                3&#x27;b100: begin // CLIP8：限制到 [-128,127]，再 sign-extend 成 32-bit
+                    if ($signed(src_A_i) &gt; 127) result_o = 32&#x27;h0000007f;
+                    else if ($signed(src_A_i) &lt; -128) result_o = 32&#x27;hffffff80;
+                    else result_o = {{24{src_A_i[7]}},src_A_i[7:0]};
+                end
+                default: result_o = 32&#x27;b0;
+            endcase
+        end
+    end
+endmodule
+</pre></div>
+<h3>ALU 程式如何讀</h3>
+<p>最前面先把 32-bit instruction 切成 <code>opcode</code>、<code>funct3</code>、<code>funct7</code>；shift amount 則取 <code>src_B_i[4:0]</code>。接著先計算 signed×signed、signed×unsigned、unsigned×unsigned 三種 64-bit multiplication 中間值，原因是 MULH/MULHSU/MULHU 真正不同的是高 32 bits 的 signedness。主 <code>always_comb</code> 先將 <code>result_o=0</code>，再依 opcode/funct 解碼，這個 default assignment 也能降低 combinational latch 的風險。</p>
+<p>DSP 區塊使用 8-bit lane。DOTP4 把 A/B 各拆成四組 signed byte，相乘後累加；SADD8/SSUB8 每個 lane 都做 [-128,127] saturation；ABS 特別處理 <code>0x80000000</code>；CLIP8 把輸入限制到 signed 8-bit 範圍後再 sign-extend。這些 corner cases 很適合 hidden test，所以不能只驗證一般正數。</p></section>
+
+<section class="card"><h2>5. FPU.v：完整程式，可直接 Copy</h2>
+<p>以下同樣直接來自你上傳 ZIP 的 <code>Src/FPU.v</code>，保留其中的中文註解。這份 FPU 把 IEEE-754 處理拆成分類 function、sticky-jam shift、MIN/MAX、ADD/SUB、operation selector 與 valid handshake，比把所有內容塞在一個 always block 更容易追。</p>
+<div class="copywrap"><button class="copybtn" onclick="cp('fpu',this)">複製程式碼</button><pre id="fpu">module FPU(
+    input clk,
+    input rst,
+    input enable,
+    input [1:0] instruction,   // 0:min, 1:max, 2:add, 3:sub
+    input [31:0] ai,
+    input [31:0] bi,
+    output reg [31:0] co,
+    output reg valid
+);
+    // ================================================================
+    // HW1 Prob.B : IEEE-754 single-precision FPU
+    // 課件指定：MIN / MAX / ADD / SUB，並處理 NaN、Inf、Zero、GRS round-to-even。
+    // 介面採一拍接受、一拍輸出：enable=1 時鎖存運算結果；下一個 clock valid=1。
+    // ================================================================
+
+    reg [31:0] pending_result;
+    reg        pending_valid;
+
+    // ---------- 基本分類函式 ----------
+    function is_nan;
+        input [31:0] x;
+        begin is_nan = (&amp;x[30:23]) &amp;&amp; (|x[22:0]); end
+    endfunction
+    function is_inf;
+        input [31:0] x;
+        begin is_inf = (&amp;x[30:23]) &amp;&amp; (~|x[22:0]); end
+    endfunction
+    function is_zero;
+        input [31:0] x;
+        begin is_zero = (~|x[30:0]); end
+    endfunction
+
+    // 將 27-bit {24-bit significand, G,R,S} 右移並做 sticky-jam。
+    function [26:0] shr_jam27;
+        input [26:0] x;
+        input integer sh;
+        integer k;
+        reg sticky;
+        reg [26:0] y;
+        begin
+            if (sh &lt;= 0) begin
+                shr_jam27 = x;
+            end else if (sh &gt;= 27) begin
+                shr_jam27 = {26&#x27;b0, |x};
+            end else begin
+                y = x &gt;&gt; sh;
+                sticky = 1&#x27;b0;
+                for (k=0; k&lt;27; k=k+1)
+                    if (k &lt; sh) sticky = sticky | x[k];
+                y[0] = y[0] | sticky;
+                shr_jam27 = y;
+            end
+        end
+    endfunction
+
+    // ---------- 浮點 MIN ----------
+    function [31:0] fp_min;
+        input [31:0] a, b;
+        begin
+            if (is_nan(a) &amp;&amp; is_nan(b)) fp_min = 32&#x27;hFFC00000;
+            else if (is_nan(a)) fp_min = b;
+            else if (is_nan(b)) fp_min = a;
+            else if (is_zero(a) &amp;&amp; is_zero(b)) fp_min = (a[31] || b[31]) ? 32&#x27;h80000000 : 32&#x27;h00000000;
+            else if (a[31] != b[31]) fp_min = a[31] ? a : b;
+            else if (!a[31]) fp_min = (a[30:0] &lt; b[30:0]) ? a : b;
+            else fp_min = (a[30:0] &gt; b[30:0]) ? a : b;
+        end
+    endfunction
+
+    // ---------- 浮點 MAX ----------
+    function [31:0] fp_max;
+        input [31:0] a, b;
+        begin
+            if (is_nan(a) &amp;&amp; is_nan(b)) fp_max = 32&#x27;hFFC00000;
+            else if (is_nan(a)) fp_max = b;
+            else if (is_nan(b)) fp_max = a;
+            else if (is_zero(a) &amp;&amp; is_zero(b)) fp_max = (a[31] &amp;&amp; b[31]) ? 32&#x27;h80000000 : 32&#x27;h00000000;
+            else if (a[31] != b[31]) fp_max = a[31] ? b : a;
+            else if (!a[31]) fp_max = (a[30:0] &gt; b[30:0]) ? a : b;
+            else fp_max = (a[30:0] &lt; b[30:0]) ? a : b;
+        end
+    endfunction
+
+    // ---------- 浮點 ADD/SUB 核心 ----------
+    function [31:0] fp_addsub;
+        input [31:0] a, b;
+        input sub; // 0:add, 1:sub
+        reg sa, sb, sb_eff, sr;
+        reg [7:0] ea, eb;
+        reg [22:0] fa, fb;
+        reg [23:0] siga24, sigb24;
+        reg [26:0] siga, sigb, bigsig, smallsig, aligned, norm;
+        reg [27:0] raw;
+        reg [7:0] e_big, e_small;
+        integer de, ew, k;
+        reg s_big, s_small;
+        reg [23:0] keep24;
+        reg [24:0] rounded25;
+        reg guard_b, round_b, sticky_b, inc;
+        reg [7:0] efield;
+        begin
+            sa = a[31]; sb = b[31]; sb_eff = b[31] ^ sub;
+            ea = a[30:23]; eb = b[30:23]; fa = a[22:0]; fb = b[22:0];
+
+            // 課件 special case：任何 NaN -&gt; 固定 canonical NaN 0xFFC00000。
+            if (is_nan(a) || is_nan(b)) begin
+                fp_addsub = 32&#x27;hFFC00000;
+            end
+            // Infinity：先把 SUB 視為 a + (-b)，再判斷正負無限大的衝突。
+            else if (is_inf(a) &amp;&amp; is_inf(b) &amp;&amp; (sa != sb_eff)) begin
+                fp_addsub = 32&#x27;hFFC00000;
+            end
+            else if (is_inf(a)) begin
+                fp_addsub = {sa,8&#x27;hff,23&#x27;b0};
+            end
+            else if (is_inf(b)) begin
+                fp_addsub = {sb_eff,8&#x27;hff,23&#x27;b0};
+            end
+            // 兩個零：同號保留該號；異號在 round-to-even 下回 +0。
+            else if (is_zero(a) &amp;&amp; is_zero(b)) begin
+                fp_addsub = {(sa==sb_eff) ? sa : 1&#x27;b0,31&#x27;b0};
+            end
+            else if (is_zero(a)) begin
+                fp_addsub = {sb_eff,b[30:0]};
+            end
+            else if (is_zero(b)) begin
+                fp_addsub = a;
+            end
+            else begin
+                // exponent=0 的 subnormal 使用 effective exponent=1，hidden bit=0。
+                siga24 = (ea==0) ? {1&#x27;b0,fa} : {1&#x27;b1,fa};
+                sigb24 = (eb==0) ? {1&#x27;b0,fb} : {1&#x27;b1,fb};
+                siga = {siga24,3&#x27;b000};
+                sigb = {sigb24,3&#x27;b000};
+
+                // 先依 exponent，再依 significand 決定 magnitude 較大者。
+                if (((ea==0)?8&#x27;d1:ea) &gt; ((eb==0)?8&#x27;d1:eb) ||
+                   ((((ea==0)?8&#x27;d1:ea) == ((eb==0)?8&#x27;d1:eb)) &amp;&amp; siga24 &gt;= sigb24)) begin
+                    bigsig=siga; smallsig=sigb; e_big=(ea==0)?8&#x27;d1:ea; e_small=(eb==0)?8&#x27;d1:eb;
+                    s_big=sa; s_small=sb_eff;
+                end else begin
+                    bigsig=sigb; smallsig=siga; e_big=(eb==0)?8&#x27;d1:eb; e_small=(ea==0)?8&#x27;d1:ea;
+                    s_big=sb_eff; s_small=sa;
+                end
+
+                de = e_big - e_small;
+                aligned = shr_jam27(smallsig,de);
+                ew = e_big;
+                sr = s_big;
+
+                if (s_big == s_small) begin
+                    // 同號：significand 相加。
+                    raw = {1&#x27;b0,bigsig} + {1&#x27;b0,aligned};
+                    if (raw[27]) begin
+                        // carry 造成右移一位；被丟掉的 bit 要併入 sticky。
+                        norm[26:1] = raw[27:2];
+                        norm[0] = raw[1] | raw[0];
+                        ew = ew + 1;
+                    end else begin
+                        norm = raw[26:0];
+                    end
+                end else begin
+                    // 異號：因 bigsig &gt;= aligned，所以直接做 magnitude subtraction。
+                    raw = {1&#x27;b0,bigsig} - {1&#x27;b0,aligned};
+                    norm = raw[26:0];
+                    if (norm == 0) begin
+                        fp_addsub = 32&#x27;h00000000;
+                    end else begin
+                        // cancellation 後向左 normalize；ew=1 時不能再減 exponent。
+                        for (k=0; k&lt;26; k=k+1) begin
+                            if ((norm[26]==0) &amp;&amp; (ew&gt;1)) begin
+                                norm = norm &lt;&lt; 1;
+                                ew = ew - 1;
+                            end
+                        end
+                    end
+                end
+
+                if (norm != 0) begin
+                    // exponent overflow -&gt; Infinity。
+                    if (ew &gt;= 255) begin
+                        fp_addsub = {sr,8&#x27;hff,23&#x27;b0};
+                    end else begin
+                        // GRS round-to-nearest, ties-to-even。
+                        keep24  = norm[26:3];
+                        guard_b = norm[2];
+                        round_b = norm[1];
+                        sticky_b= norm[0];
+                        inc = guard_b &amp;&amp; (round_b || sticky_b || keep24[0]);
+                        rounded25 = {1&#x27;b0,keep24} + inc;
+
+                        if (rounded25[24]) begin
+                            // rounding 本身又產生 carry。
+                            keep24 = rounded25[24:1];
+                            ew = ew + 1;
+                        end else begin
+                            keep24 = rounded25[23:0];
+                        end
+
+                        if (ew &gt;= 255) begin
+                            fp_addsub = {sr,8&#x27;hff,23&#x27;b0};
+                        end else begin
+                            // ew=1 且 hidden bit=0 表示 subnormal，真正 exponent field 應為 0。
+                            if ((ew==1) &amp;&amp; (keep24[23]==0)) efield = 0;
+                            else efield = ew[7:0];
+                            fp_addsub = {sr,efield,keep24[22:0]};
+                        end
+                    end
+                end
+            end
+        end
+    endfunction
+
+    // ---------- 指令選擇 ----------
+    function [31:0] do_op;
+        input [1:0] op;
+        input [31:0] a,b;
+        begin
+            case(op)
+                2&#x27;d0: do_op = fp_min(a,b);
+                2&#x27;d1: do_op = fp_max(a,b);
+                2&#x27;d2: do_op = fp_addsub(a,b,1&#x27;b0);
+                2&#x27;d3: do_op = fp_addsub(a,b,1&#x27;b1);
+                default: do_op = 32&#x27;b0;
+            endcase
+        end
+    endfunction
+
+    // ---------- valid handshake ----------
+    // enable 在某個上升緣為 1：計算並暫存；下一個上升緣 valid=1 且 co 有效。
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            co &lt;= 32&#x27;b0;
+            valid &lt;= 1&#x27;b0;
+            pending_result &lt;= 32&#x27;b0;
+            pending_valid &lt;= 1&#x27;b0;
+        end else begin
+            valid &lt;= pending_valid;
+            if (pending_valid) co &lt;= pending_result;
+            pending_valid &lt;= enable;
+            if (enable) pending_result &lt;= do_op(instruction,ai,bi);
+        end
+    end
+endmodule
+</pre></div>
+<h3>FPU 架構圖</h3>
+<svg viewBox="0 0 1150 220"><g font-family="Arial" font-size="18">
+<rect x="30" y="70" width="130" height="70" rx="12" fill="#eaf4ff" stroke="#075aa8"/><text x="95" y="112" text-anchor="middle">ai / bi</text>
+<rect x="205" y="70" width="145" height="70" rx="12" fill="#edf9f2" stroke="#137a4a"/><text x="277" y="100" text-anchor="middle">Classify</text><text x="277" y="125" text-anchor="middle">NaN/Inf/Zero</text>
+<rect x="395" y="70" width="135" height="70" rx="12" fill="#fff8df" stroke="#d66a00"/><text x="462" y="112" text-anchor="middle">Align</text>
+<rect x="575" y="70" width="135" height="70" rx="12" fill="#f1edff" stroke="#6741d9"/><text x="642" y="112" text-anchor="middle">Add/Sub</text>
+<rect x="755" y="70" width="145" height="70" rx="12" fill="#eaf4ff" stroke="#075aa8"/><text x="827" y="100" text-anchor="middle">Normalize</text><text x="827" y="125" text-anchor="middle">GRS Round</text>
+<rect x="945" y="70" width="160" height="70" rx="12" fill="#edf9f2" stroke="#137a4a"/><text x="1025" y="100" text-anchor="middle">pending_result</text><text x="1025" y="125" text-anchor="middle">co + valid</text>
+<g stroke="#667" stroke-width="3"><line x1="160" y1="105" x2="195" y2="105"/><line x1="350" y1="105" x2="385" y2="105"/><line x1="530" y1="105" x2="565" y2="105"/><line x1="710" y1="105" x2="745" y2="105"/><line x1="900" y1="105" x2="935" y2="105"/></g></g></svg>
+<p>圖中前半部處理 IEEE-754 數值本身，最後一段則是介面時序。你的程式採 <code>pending_result/pending_valid</code>：enable 在某個 rising edge 為 1 時先算好並暫存，下一個 clock 把 pending_valid 送到 valid，若有效則把 pending_result 送到 co。這正好要與 testbench 的等待方式一起理解。</p></section>
+
+<section class="card"><h2>6. Testbench 完整程式：如何測你的 RTL</h2>
+<details open><summary>ALU_tb.sv — 點開/收合，並可複製</summary>
+<div class="copywrap"><button class="copybtn" onclick="cp('alutb',this)">複製程式碼</button><pre id="alutb">`timescale 1ns/10ps
+`define PatternPATH &quot;./pattern/pattern_alu.csv&quot;
+`include &quot;../Src/ALU.sv&quot;
+
+module tb_ALU;
+
+localparam DATA_WIDTH   = 32;
+localparam INST_WIDTH   = 32; 
+
+reg   [INST_WIDTH-1:0  ]   instruction_i;
+reg   [DATA_WIDTH-1:0  ]   src_A_i;
+reg   [DATA_WIDTH-1:0  ]   src_B_i;
+wire  [DATA_WIDTH-1:0  ]   result_o;
+
+int error[31];
+int score[31] = &#x27;{default:2}; 
+int total_score = 0;
+int fail_count = 0;
+
+int fd, nread;
+string line;
+int inst_id;
+logic [31:0] inst_hex, a_hex, b_hex, exp_hex;
+
+ALU ALU (
+    .instruction_i (instruction_i),
+    .src_A_i       (src_A_i),
+    .src_B_i       (src_B_i),
+    .result_o      (result_o)
+);
+
+initial begin
+  instruction_i = 32&#x27;d0;
+  src_A_i       = 32&#x27;d0;
+  src_B_i       = 32&#x27;d0;
+  
+  for(int i=0; i&lt;31; i++) error[i] = 0;
+
+  fd = $fopen(`PatternPATH, &quot;r&quot;);
+  if (fd == 0) begin
+    $display(&quot;[ERROR] Cannot open %s&quot;, `PatternPATH);
+    $finish;
+  end
+
+  while (!$feof(fd)) begin
+    void&#x27;($fgets(line, fd));
+    if (line.len() == 0) continue;
+
+    nread = $sscanf(line, &quot;%d,%h,%h,%h,%h&quot;, inst_id, inst_hex, a_hex, b_hex, exp_hex);
+    if (nread != 5) continue;
+
+    instruction_i = inst_hex;
+    src_A_i       = a_hex;
+    src_B_i       = b_hex;
+    #10;
+    
+    if($isunknown(result_o))begin
+      $display(&quot; ============ Unknown value occurs at result_o (Inst ID: %0d) ============&quot;, inst_id);
+      $finish;
+    end
+    else begin
+      if(result_o !== exp_hex)begin
+        error[inst_id] += 1;
+        if(error[inst_id] &lt;= 5) 
+          $display(&quot;[FAIL] Inst %0d | A=%h B=%h Inst=%h | GOT=%h EXP=%h&quot;, inst_id, src_A_i, src_B_i, instruction_i, result_o, exp_hex);
+      end
+    end
+  end
+  $fclose(fd);
+
+  $display(&quot;\n========================================&quot;);
+
+  
+  for(int i=0; i&lt;31; i++) begin
+     if(error[i] === 0) begin
+        $display(&quot;Instruction %2d ALL PASS !!!&quot;, i);
+        total_score += score[i];
+     end else begin
+        $display(&quot;Instruction %2d FAILED (%0d errors)&quot;, i, error[i]);
+        fail_count++;
+     end
+  end
+  $display(&quot;========================================&quot;);
+
+  if(fail_count == 0)begin
+    $display(&quot;\n&quot;);
+    $display(&quot; ****************************               &quot;);
+    $display(&quot; **                        **       |\\__||  &quot;);
+    $display(&quot; **  Congratulations !!    **      / O.O  | &quot;);
+    $display(&quot; **                        **    /_____   | &quot;);
+    $display(&quot; **  Simulation PASS!!     **   /^ ^ ^ \\  |&quot;);
+    $display(&quot; **                        **  |^ ^ ^ ^ |w| &quot;);
+    $display(&quot; ****************************   \\m___m__|_|&quot;);
+  end
+  else begin
+    $display(&quot;\n&quot;);
+    $display(&quot; ****************************               &quot;);
+    $display(&quot; **                        **       |\\__||  &quot;);
+    $display(&quot; **  OOPS!!                **      / X,X  | &quot;);
+    $display(&quot; **                        **    /_____   | &quot;);
+    $display(&quot; **  Simulation Failed!!   **   /^ ^ ^ \\  |&quot;);
+    $display(&quot; **                        **  |^ ^ ^ ^ |w| &quot;);
+    $display(&quot; ****************************   \\m___m__|_|&quot;);
+  end
+  
+  $display(&quot;\n====== Your score : %2d ======\n&quot;, total_score);
+  $finish;
+end
+
+initial begin
+    `ifdef FSDB
+        $dumpfile(&quot;ALU.fsdb&quot;);
+        $dumpvars(0, tb_ALU);
+    `endif
+end
+
+endmodule</pre></div></details>
+<p>ALU_tb 先用 <code>$fopen("./pattern/pattern_alu.csv","r")</code> 開測資，逐行 <code>$fgets</code>，再以 <code>$sscanf("%d,%h,%h,%h,%h")</code> 解析 5 欄。每筆把 instruction、A、B 填到 DUT，等待 <code>#10</code> 後比較 <code>result_o !== exp_hex</code>。如果 result 是 X，testbench 會立即停止；如果答案錯，則把該 instruction ID 的 error counter 加一，最多列出前五筆詳細錯誤。</p>
+<details><summary>FPU_tb.sv — 點開/收合，並可複製</summary>
+<div class="copywrap"><button class="copybtn" onclick="cp('fputb',this)">複製程式碼</button><pre id="fputb">`timescale 1ns/1ps
+`define MAX 100000 // Max cycle number
+`include &quot;../Src/FPU.v&quot;
+module tb_fp32;
+  logic         clk;
+  logic         rst;
+  logic         start;
+  logic [31:0]  a, b;
+  logic [31:0]  result;
+  logic         ready;
+  logic [1:0]   ins;
+  initial begin
+    clk = 0;
+    forever #5 clk = ~clk;
+  end
+
+  FPU dut(
+    .clk(clk),
+    .rst(rst),
+    .enable(start),
+    .instruction(ins),
+    .ai(a),
+    .bi(b),
+    .co(result),
+    .valid(ready)
+  );
+ 
+
+  int fd, line_no, nread;
+  string line;
+  int unsigned n_total, n_pass, n_fail;
+
+  logic [31:0] a_hex, b_hex, exp_hex;
+  logic [1:0] in;
+  function automatic bit equal_bits(logic [31:0] x, logic [31:0] y);
+    return x === y;
+  endfunction
+
+task send_and_check;
+      input [31:0] ai, bi, expected;
+      input [1:0] ii;
+      reg   [31:0] got;
+      begin
+        // ? A
+      ins   &lt;= ii;
+      a     &lt;= ai;
+      start &lt;= 1&#x27;d1;	  
+        // ? B
+      b     &lt;= bi;
+      @(posedge clk);
+      start &lt;= 1&#x27;d0;
+        // ? Z
+        @(posedge clk);
+        while (!ready) @(posedge clk);
+        got = result;
+
+
+        n_total = n_total + 1;
+        if(n_fail &lt; 5) begin
+        if (equal_bits(got, expected)) begin
+          n_pass = n_pass + 1;
+          //$display(&quot;[PASS] A=%h  B=%h  Z=%h&quot;, ai, bi, got);
+        end else begin
+          n_fail = n_fail + 1;
+          $display(&quot;[FAIL] line = %d A=%h  B=%h  GOT=%h  EXP=%h&quot;, line_no,ai, bi, got, expected);
+        end
+        end
+      end
+    endtask
+
+  initial begin
+    rst   = 1;
+    start = 0;
+    a     = &#x27;0;
+    b     = &#x27;0;
+    #20;
+    rst   = 0;
+    
+
+    fd = $fopen(&quot;./pattern/pattern_fpu.csv&quot;,&quot;r&quot;);
+
+
+    if (fd == 0) begin  
+      $finish;
+    end
+
+    n_total = 0; n_pass = 0; n_fail = 0; line_no = 0;
+    
+
+    while (!$feof(fd)) begin
+      line_no++;
+      void&#x27;($fgets(line, fd));
+      if (line.len() == 0) continue;
+
+      nread = $sscanf(line, &quot;%h,%h,%h,%h&quot;, a_hex, b_hex, exp_hex,in);
+      if (nread != 4) begin
+        continue;
+      end
+
+      send_and_check(a_hex,b_hex,exp_hex,in);
+
+    end
+    #(10*`MAX)
+    $fclose(fd);
+    $display(&quot;TOTAL=%0d PASS=%0d FAIL=%0d&quot;, n_total, n_pass, n_fail);
+    if (n_fail != 0)begin 
+      $display(&quot;   THERE ARE FAILURES                      &quot;);
+      $display(&quot;       _______                             &quot;);
+      $display(&quot;      |.--+--.|                            &quot;);
+      $display(&quot;      ||  |  ||                            &quot;);
+      $display(&quot;      ||--`--||                            &quot;);
+      $display(&quot;      ||    ,||                            &quot;);
+      $display(&quot;      ||  ,&#x27; ||                            &quot;);
+      $display(&quot;      ||,&#x27;   ||                            &quot;);
+      $display(&quot;      ||     ||                            &quot;);
+      $display(&quot;      ||_____||__                          &quot;);
+      $display(&quot;      | ___.  |  `.                        &quot;);
+      $display(&quot;      |(x x)) |  ,(                        &quot;);
+      $display(&quot;      |`.-,&#x27;  |-&#x27;_ )                       &quot;);
+      $display(&quot;      |______ |\&#x27; -&#x27;     See u again        &quot;);
+      $display(&quot;    _\     /_) )                            &quot;);
+      $display(&quot;    &#x27;\&quot;`\___//_)&#x27;                           &quot;);
+      $display(&quot;          &#x27;&#x27;^                               &quot;);
+    end
+    else begin            
+      $display(&quot;   ALL TEST PASS                           &quot;);
+      $display(&quot;       _______                             &quot;);
+      $display(&quot;      |.--+--.|                            &quot;);
+      $display(&quot;      ||  |  ||                            &quot;);
+      $display(&quot;      ||--`--||                            &quot;);
+      $display(&quot;      ||    ,||                            &quot;);
+      $display(&quot;      ||  ,&#x27; ||                            &quot;);
+      $display(&quot;      ||,&#x27;   ||                            &quot;);
+      $display(&quot;      ||     ||                            &quot;);
+      $display(&quot;      ||_____||__                          &quot;);
+      $display(&quot;      | ___.  |  `.                        &quot;);
+      $display(&quot;      |(o o)) |  ,(                        &quot;);
+      $display(&quot;      | `--&#x27;  |-&#x27;_ )                       &quot;);
+      $display(&quot;      |______ |\&#x27; -&#x27;     Good job           &quot;);
+      $display(&quot;    _\     /_) )                            &quot;);
+      $display(&quot;    &#x27;\&quot;`\___//_)&#x27;                           &quot;);
+      $display(&quot;          &#x27;&#x27;^                               &quot;);
+    end
+    $finish;
+  end
+
+  initial begin
+	`ifdef FSDB
+		$dumpfile(&quot;FPU.fsdb&quot;);
+		$dumpvars(0, tb_fp32);
+	`endif
+  end
+endmodule
+</pre></div></details>
+<p>FPU_tb 的重點不是固定延遲，而是 handshake。<code>send_and_check</code> 先放 instruction/A/B，令 <code>start=1</code>，等一個 posedge 後把 start 拉低；接著再等 posedge，然後 <code>while(!ready)</code> 持續等待。ready 一旦為 1，才把 result 取到 got 並與 expected bit-by-bit 比較。因此 FPU 如果卡住，第一件事不是懷疑 CSV，而是看 valid/ready 是否有被正確拉高。</p></section>
+
+<section class="card"><h2>7. 測資檔案怎麼測？實際格式與數量</h2>
+<div class="grid"><div class="box"><h3>pattern_alu.csv</h3><p>實際共有 <b>2,326</b> 筆。五欄依序是 instruction ID、instruction hex、A、B、expected。31 類 instruction 都存在；ID 29 有 76 筆，其餘類別各 75 筆。</p></div>
+<div class="box"><h3>pattern_fpu.csv</h3><p>實際共有 <b>2,000</b> 筆。四欄依序是 A、B、expected、operation。operation 0/1/2/3 對應 MIN/MAX/ADD/SUB。</p></div></div>
+<h3>ALU CSV 前 8 筆</h3><table><thead><tr><th>Inst ID</th><th>Instruction</th><th>A</th><th>B</th><th>Expected</th></tr></thead><tbody><tr><td><code>0</code></td><td><code>002081b3</code></td><td><code>e3a41ed6</code></td><td><code>519b5c9e</code></td><td><code>353f7b74</code></td></tr><tr><td><code>1</code></td><td><code>402081b3</code></td><td><code>e3a41ed6</code></td><td><code>519b5c9e</code></td><td><code>9208c238</code></td></tr><tr><td><code>2</code></td><td><code>002091b3</code></td><td><code>e3a41ed6</code></td><td><code>519b5c9e</code></td><td><code>80000000</code></td></tr><tr><td><code>3</code></td><td><code>0020a1b3</code></td><td><code>e3a41ed6</code></td><td><code>519b5c9e</code></td><td><code>00000001</code></td></tr><tr><td><code>4</code></td><td><code>0020b1b3</code></td><td><code>e3a41ed6</code></td><td><code>519b5c9e</code></td><td><code>00000000</code></td></tr><tr><td><code>5</code></td><td><code>0020c1b3</code></td><td><code>e3a41ed6</code></td><td><code>519b5c9e</code></td><td><code>b23f4248</code></td></tr><tr><td><code>6</code></td><td><code>0020d1b3</code></td><td><code>e3a41ed6</code></td><td><code>519b5c9e</code></td><td><code>00000003</code></td></tr><tr><td><code>7</code></td><td><code>4020d1b3</code></td><td><code>e3a41ed6</code></td><td><code>519b5c9e</code></td><td><code>ffffffff</code></td></tr></tbody></table>
+<h3>FPU CSV 前 8 筆</h3><table><thead><tr><th>A</th><th>B</th><th>Expected</th><th>Op</th></tr></thead><tbody><tr><td><code>4FF65800</code></td><td><code>CEEBDBA2</code></td><td><code>CEEBDBA2</code></td><td><code>0</code></td></tr><tr><td><code>4FF65800</code></td><td><code>CEEBDBA2</code></td><td><code>4FF65800</code></td><td><code>1</code></td></tr><tr><td><code>4FF65800</code></td><td><code>CEEBDBA2</code></td><td><code>4FBB6118</code></td><td><code>2</code></td></tr><tr><td><code>4FF65800</code></td><td><code>CEEBDBA2</code></td><td><code>5018A774</code></td><td><code>3</code></td></tr><tr><td><code>4FF65801</code></td><td><code>CEEBDBA3</code></td><td><code>CEEBDBA3</code></td><td><code>0</code></td></tr><tr><td><code>4FF65801</code></td><td><code>CEEBDBA3</code></td><td><code>4FF65801</code></td><td><code>1</code></td></tr><tr><td><code>4FF65801</code></td><td><code>CEEBDBA3</code></td><td><code>4FBB6118</code></td><td><code>2</code></td></tr><tr><td><code>4FF65801</code></td><td><code>CEEBDBA3</code></td><td><code>5018A775</code></td><td><code>3</code></td></tr></tbody></table>
+<p class="warn"><b>測試原則：</b>測資檔是 golden reference，不要用 Excel 開完又存檔導致十六進位字串或格式被改掉。若只想看內容，優先用 VS Code 直接開 CSV。</p></section>
+
+<section class="card"><h2>8. MobaXterm → Linux → VCS：實際操作</h2>
+<ol><li>Windows 打開 MobaXterm，建立 SSH session，登入課程 SoC Lab。</li><li>把 <code>StudentID_HW1</code> 上傳到自己的 Linux 目錄。</li><li>terminal 用 <code>pwd</code> 確認位置，再 <code>cd StudentID_HW1/Sim</code>。</li><li>從 <code>Sim</code> 執行 VCS，因為 testbench 的 pattern path 是 <code>./pattern/...</code>，而 source include 是 <code>../Src/...</code>。</li></ol>
+<div class="copywrap"><button class="copybtn" onclick="cp('cmd',this)">複製程式碼</button><pre id="cmd"># 1. 先確認目前目錄
+pwd
+ls
+
+# 2. 進入 Sim
+cd ~/你的工作目錄/StudentID_HW1/Sim
+
+# 3. ALU
+vcs -R -full64 -sverilog ALU_tb.sv -debug_access+all +define+FSDB
+
+# 4. FPU
+vcs -R -full64 -sverilog FPU_tb.sv -debug_access+all +define+FSDB
+
+# 5. 若正式作業目錄有 superlint.tcl
+jg -superlint superlint.tcl</pre></div>
+<p class="note">不要在 Windows PowerShell 直接輸入 <code>vcs</code> 就期待成功。VCS/Verdi/JasperGold 是課程 Linux EDA 環境中的工具；Windows 這裡主要負責編輯、SSH 與傳檔。</p></section>
+
+<section class="card"><h2>9. 測出來的結果怎麼看？</h2>
+<h3>ALU 全部通過時，testbench 的結尾形式</h3>
+<pre>Instruction  0 ALL PASS !!!
+Instruction  1 ALL PASS !!!
+...
+Instruction 30 ALL PASS !!!
+========================================
+**  Congratulations !!    **
+**  Simulation PASS!!     **
+====== Your score : 62 ======</pre>
+<p>這個 62 是 ALU_tb 自己的 scoring：31 個 instruction category，每個 <code>score[i]=2</code>，某類只要有任何 error，該類就不加 2 分。因此它是 provided testbench 的內部顯示分數，不要直接把它當成整份 HW1 最終成績。</p>
+<h3>ALU FAIL 時</h3><pre>[FAIL] Inst 12 | A=........ B=........ Inst=........ | GOT=........ EXP=........</pre>
+<p>除錯時只先看第一筆：Inst 告訴你是哪一類 operation；A/B 是輸入；GOT 是你的 RTL；EXP 是 golden。把同一組數值手算，再到波形追 result_o。</p>
+<h3>FPU 全部通過時</h3><pre>TOTAL=2000 PASS=2000 FAIL=0
+ALL TEST PASS
+Good job</pre>
+<p>這是根據你提供的 testbench 與目前 CSV 2,000 筆資料推得的「全數正確時應有結果」。本 HTML 製作環境沒有課程授權 VCS，所以我沒有假裝已在這裡執行 VCS；真正結果請在 SoC Lab 依上一節指令執行。</p>
+<div class="warn"><b>FPU_tb 的特殊陷阱：</b>程式寫成 <code>if(n_fail &lt; 5)</code> 才進行後續 pass/fail comparison，所以出現第 5 個 failure 後，後面的 pattern 不再正常累計比較。看到 FAIL 時應先修前五筆，再重跑，而不是只依最後 TOTAL 判斷覆蓋情況。</div></section>
+
+<section class="card"><h2>10. FSDB 與 Verdi：從 FAIL 追到 RTL</h2>
+<p>兩個 testbench 都有 <code>`ifdef FSDB</code>。因為 VCS command 加了 <code>+define+FSDB</code>，ALU 會 dump <code>ALU.fsdb</code>，FPU 會 dump <code>FPU.fsdb</code>。terminal 告訴你「哪一筆錯」，Verdi 則讓你看「為什麼錯」。</p>
+<svg viewBox="0 0 1150 300"><text x="35" y="40" font-size="23" fill="#075aa8" font-weight="bold">FPU 時序觀念：送一拍 enable，等待 valid</text>
+<text x="25" y="95" font-size="18">clk</text><path d="M80 90h50v-28h50v28h50v-28h50v28h50v-28h50v28h50v-28h50v28h50v-28h50v28h50v-28h50v28h50" fill="none" stroke="#137a4a" stroke-width="4"/>
+<text x="10" y="165" font-size="18">enable</text><path d="M80 165H180V125H280V165H1050" fill="none" stroke="#075aa8" stroke-width="5"/>
+<text x="25" y="235" font-size="18">valid</text><path d="M80 235H380V195H480V235H1050" fill="none" stroke="#c83232" stroke-width="5"/>
+<text x="120" y="118" font-size="16">鎖存 op / ai / bi</text><text x="360" y="187" font-size="16">co 有效</text></svg>
+<p>ALU 建議加入 <code>instruction_i/src_A_i/src_B_i/result_o/opcode/funct3/funct7</code>；FPU 建議至少看 <code>clk/rst/enable/instruction/ai/bi/co/valid/pending_valid/pending_result</code>。若 ADD/SUB 才錯，再加入 exponent、significand、GRS、normalize 的中間訊號。</p></section>
+
+<section class="card"><h2>11. Superlint 與常見錯誤</h2>
+<table><tr><th>問題</th><th>典型症狀</th><th>處理</th></tr>
+<tr><td>路徑錯誤</td><td>Cannot open pattern</td><td>一定從 Sim 目錄執行，先用 pwd/ls。</td></tr>
+<tr><td>Unknown X</td><td>ALU_tb 直接停止</td><td>檢查 always_comb default、case default、未賦值變數。</td></tr>
+<tr><td>Signedness</td><td>MULH、DSP、比較錯</td><td>明確使用 $signed/$unsigned，確認 intermediate width。</td></tr>
+<tr><td>FPU 不結束</td><td>while(!ready) 一直等</td><td>看 valid FSM/pipe，確認 enable 進來後 valid 最終會出現。</td></tr>
+<tr><td>只有浮點 corner case 錯</td><td>一般數字 pass</td><td>逐項查 NaN、Inf、±0、subnormal、round-to-even。</td></tr>
+<tr><td>ModelSim pass、VCS fail</td><td>不同 simulator 結果不同</td><td>以課程指定 VCS 為最後依據。</td></tr></table></section>
+
+<section class="card"><h2>12. 每次修改後，照這張表操作</h2>
+<table><tr><th>順序</th><th>動作</th><th>成功條件</th></tr>
+<tr><td>1</td><td>VS Code 修改一小段 RTL，存檔</td><td>port 名稱/width 不亂改</td></tr>
+<tr><td>2</td><td>MobaXterm 同步到 Linux</td><td>確認上傳的是最新時間版本</td></tr>
+<tr><td>3</td><td>cd 到 Sim，跑 VCS</td><td>compile 無 error</td></tr>
+<tr><td>4</td><td>先處理第一個 FAIL</td><td>手算與 GOT/EXP 對得上</td></tr>
+<tr><td>5</td><td>需要時用 FSDB/Verdi</td><td>找到第一個偏離 golden 的內部節點</td></tr>
+<tr><td>6</td><td>全部 provided patterns pass</td><td>ALU 31 類皆 PASS；FPU 2,000 筆 PASS</td></tr>
+<tr><td>7</td><td>Superlint</td><td>處理重要 error/warning</td></tr>
+<tr><td>8</td><td>整理 hierarchy + report + tar</td><td>壓縮後再列出內容檢查</td></tr></table>
+<div class="good"><b>核心觀念：</b>編輯器負責「寫得舒服」，testbench/pattern 負責「定義怎麼驗」，VCS 負責「真正執行」，Verdi 負責「看波形找原因」，Superlint 負責「找 RTL 結構與 coding 問題」。把五者角色分清楚，HW1 的流程就會非常清楚。</div></section>
+
+<section class="card"><h2>附錄：打包命令</h2>
+<div class="copywrap"><button class="copybtn" onclick="cp('tar',this)">複製程式碼</button><pre id="tar"># 回到 HW1_StudentID 的上一層
+cd ..
+
+# 依老師最後要求的資料夾名稱調整後打包
+tar -cvf HW1_StudentID.tar HW1_StudentID/
+
+# 一定再檢查 tar 裡面到底有什麼
+tar -tf HW1_StudentID.tar</pre></div></section>
+
+</main><footer>HW1 Windows Editing & Verification Manual · Generated from the uploaded HW1 answer package and course workflow</footer></body></html>

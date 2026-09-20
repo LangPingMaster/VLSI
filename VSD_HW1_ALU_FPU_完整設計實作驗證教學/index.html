@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VSD HW1｜ALU & FPU 完整設計、實作與驗證教學</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#07111f;color:#e8f0f7;line-height:1.75}
+.hero{padding:64px 22px 46px;background:radial-gradient(circle at 20% 0,#164e63 0,transparent 38%),radial-gradient(circle at 90% 10%,#4c1d95 0,transparent 34%),#081321;border-bottom:1px solid #29445d}
+.wrap{max-width:1180px;margin:auto}.eyebrow{display:inline-block;padding:6px 12px;border-radius:999px;background:#17324a;color:#7dd3fc;font-weight:900;letter-spacing:.08em}
+h1{font-size:clamp(30px,5vw,54px);line-height:1.16;margin:16px 0 8px}.sub{font-size:18px;color:#8ff3dc;font-weight:800;margin:0 0 14px}.lead{max-width:900px;color:#c5d3df}
+.quick{display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}.quick a{color:#fff;text-decoration:none;background:#10283c;border:1px solid #31536d;padding:8px 12px;border-radius:10px}
+main{max-width:1180px;margin:32px auto;padding:0 20px 60px}.intro{background:#0d2032;border:1px solid #2a4c67;border-radius:18px;padding:22px;margin-bottom:24px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}.card{background:#0b1b2b;border:1px solid #284760;border-radius:20px;overflow:hidden;box-shadow:0 14px 38px #0005}
+.picbtn{min-height:150px;display:flex;align-items:center;gap:18px;padding:25px;color:#fff;text-decoration:none;position:relative;transition:.2s transform,.2s filter}.picbtn:hover{transform:translateY(-3px);filter:brightness(1.08)}.num{position:absolute;top:12px;left:14px;font-size:12px;font-weight:900;opacity:.8}.icon{font-size:48px;filter:drop-shadow(0 5px 8px #0005)}.pictxt{display:flex;flex-direction:column;min-width:0}.pictxt b{font-size:22px;line-height:1.3}.pictxt small{opacity:.88;margin-top:7px}.arrow{margin-left:auto;font-size:34px;font-weight:900}.body{padding:20px 22px 23px}.body h2{font-size:21px;margin:7px 0}.body p{color:#c6d3df;margin:7px 0 15px}.badge{display:inline-block;background:#173b54;color:#a5f3fc;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:900}.tags{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.tags span{font-size:12px;background:#142b3d;border:1px solid #31516a;padding:3px 8px;border-radius:999px}.open{display:inline-block;margin-top:7px;color:#75f0dc;font-weight:900;text-decoration:none}
+.flow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px}.flow span{background:#132c41;border:1px solid #31546f;padding:7px 10px;border-radius:9px}footer{text-align:center;color:#7f96aa;padding:28px}
+@media(max-width:780px){.grid{grid-template-columns:1fr}.hero{padding-top:42px}}
+</style></head><body>
+<header class="hero"><div class="wrap"><span class="eyebrow">VLSI SYSTEM DESIGN · HW1</span>
+<h1>VSD HW1｜ALU & FPU 完整設計、實作與驗證教學</h1>
+<p class="sub">VLSI System Design HW1 — ALU & FPU Design, Implementation and Verification</p>
+<p class="lead">重新製作的總入口。這個 Index 直接整理你這次 ZIP 裡的所有主要子頁，並說明每一頁「在做什麼、什麼時候看、與 HW1 哪個階段有關」。彩色圖片式按鈕本身即可直接進入對應頁面。</p>
+<div class="quick"><a href="VSD_HW1_new(4).pdf">官方 PDF</a><a href="VSD_HW1_ALU_#U4e92#U52d5#U4e0b#U62c9#U5f0f_#U542bCSV#U6e2c#U8cc7_3Cases_#U5b8c#U6574#U4e2d#U6587#U8a3b#U89e3.html">ALU</a><a href="VSD_HW1_ProbB_FPU_#U4e92#U52d5#U4e0b#U62c9#U5f0f_#U542bCSV#U6e2c#U8cc7_3Cases_#U5b8c#U6574#U4e2d#U6587#U8a3b#U89e3.html">FPU</a><a href="VSD_HW1_ModelSim.html">ModelSim</a><a href="HW1_Windows_Editing_Manual/index.html">Windows 手冊</a></div>
+</div></header>
+<main>
+<section class="intro"><h2>建議閱讀順序</h2><p>第一次做 HW1 時，建議先確認官方規格，再分別完成 ALU 與 FPU，接著進 ModelSim 做 compile / simulation / waveform，最後再用 Windows 手冊處理實際檔案、編輯與測試環境。</p>
+<div class="flow"><span>① 官方 PDF</span>→<span>② ALU</span>→<span>③ FPU</span>→<span>④ ModelSim 驗證</span>→<span>⑤ Windows 編輯 / 測試手冊</span></div></section>
+<section class="grid"><article class="card">
+      <a class="picbtn" href="VSD_HW1_new(4).pdf" style="background:linear-gradient(135deg,#2563eb,#06b6d4)">
+        <div class="num">01</div><div class="icon">📘</div>
+        <div class="pictxt"><b>官方作業規格 PDF</b><small>VSD HW1 NEW — Homework Specification</small></div>
+        <div class="arrow">→</div>
+      </a>
+      <div class="body"><div class="badge">規格入口</div>
+        <h2>官方作業規格 PDF</h2><p>先從官方 HW1 題目開始。這份 PDF 是整個網站的規格基準，用來確認 Problem A / Problem B、I/O、功能要求、模擬與繳交規則。做 RTL 前先看它，後面的 ALU/FPU 子頁則把規格轉成可實作與可驗證的內容。</p>
+        <div class="tags"><span>Problem A / B</span><span>I/O 規格</span><span>作業要求</span><span>繳交規則</span></div>
+        <a class="open" href="VSD_HW1_new(4).pdf">開啟這個子頁 →</a>
+      </div>
+    </article>
+<article class="card">
+      <a class="picbtn" href="VSD_HW1_ALU_互動下拉式_含CSV測資_3Cases_完整中文註解.html" style="background:linear-gradient(135deg,#7c3aed,#ec4899)">
+        <div class="num">02</div><div class="icon">⚙️</div>
+        <div class="pictxt"><b>ALU 完整互動教學</b><small>ALU Design × RTL × CSV Verification</small></div>
+        <div class="arrow">→</div>
+      </a>
+      <div class="body"><div class="badge">Problem A</div>
+        <h2>ALU 完整互動教學</h2><p>ALU 主頁。從官方 Problem A 需求開始，整理 RV32IM、RV32B 與 Custom DSP，並把 instruction field extraction、decoder、Arithmetic/Logic/Shift、Multiplier、Bit-Manip、DSP Unit 對應到 ALU.sv。頁面同時含 CSV 測資、Testbench 驗證流程與 3 個實際 Case，可用下拉式介面逐段閱讀。</p>
+        <div class="tags"><span>31 Operations</span><span>ALU.sv</span><span>ALU_tb.sv</span><span>CSV + 3 Cases</span></div>
+        <a class="open" href="VSD_HW1_ALU_#U4e92#U52d5#U4e0b#U62c9#U5f0f_#U542bCSV#U6e2c#U8cc7_3Cases_#U5b8c#U6574#U4e2d#U6587#U8a3b#U89e3.html">開啟這個子頁 →</a>
+      </div>
+    </article>
+<article class="card">
+      <a class="picbtn" href="VSD_HW1_ProbB_FPU_互動下拉式_含CSV測資_3Cases_完整中文註解.html" style="background:linear-gradient(135deg,#059669,#14b8a6)">
+        <div class="num">03</div><div class="icon">🧮</div>
+        <div class="pictxt"><b>FPU 完整互動教學</b><small>FPU IEEE-754 × Datapath × CSV Verification</small></div>
+        <div class="arrow">→</div>
+      </a>
+      <div class="body"><div class="badge">Problem B</div>
+        <h2>FPU 完整互動教學</h2><p>FPU 主頁。從 IEEE-754 single precision 的 S/E/F 格式開始，依序解釋 MIN/MAX、ADD/SUB、特殊值、Exponent Alignment、Mantissa 運算、Normalization、GRS 與 Round-to-Nearest-Even，並對照 FPU RTL、enable/valid 時序、FPU_tb.sv、CSV 測資與 3 個實際驗證 Case。</p>
+        <div class="tags"><span>IEEE-754</span><span>ADD / SUB</span><span>MIN / MAX</span><span>GRS + 3 Cases</span></div>
+        <a class="open" href="VSD_HW1_ProbB_FPU_#U4e92#U52d5#U4e0b#U62c9#U5f0f_#U542bCSV#U6e2c#U8cc7_3Cases_#U5b8c#U6574#U4e2d#U6587#U8a3b#U89e3.html">開啟這個子頁 →</a>
+      </div>
+    </article>
+<article class="card">
+      <a class="picbtn" href="VSD_HW1_ModelSim.html" style="background:linear-gradient(135deg,#ea580c,#f59e0b)">
+        <div class="num">04</div><div class="icon">📈</div>
+        <div class="pictxt"><b>ModelSim 模擬與波形驗證</b><small>Compile × Simulate × Waveform × Result Analysis</small></div>
+        <div class="arrow">→</div>
+      </a>
+      <div class="body"><div class="badge">Simulation</div>
+        <h2>ModelSim 模擬與波形驗證</h2><p>把 RTL 從『寫完』帶到『真的跑過模擬』。內容整理 ModelSim 的工作目錄、vlib、vlog、vsim、run -all、quit -sim 等流程，並分別說明 ALU 與 FPU 模擬結果、Transcript 判讀、Break in Module 的意義，以及正式 waveform 操作與報告撰寫方式。</p>
+        <div class="tags"><span>vlib / vlog</span><span>vsim / run</span><span>Waveform</span><span>Transcript</span></div>
+        <a class="open" href="VSD_HW1_ModelSim.html">開啟這個子頁 →</a>
+      </div>
+    </article>
+<article class="card">
+      <a class="picbtn" href="HW1_Windows_Editing_Manual/index.html" style="background:linear-gradient(135deg,#334155,#6366f1)">
+        <div class="num">05</div><div class="icon">💻</div>
+        <div class="pictxt"><b>Windows 編輯與測試完整手冊</b><small>VS Code × Project Structure × RTL × Testbench</small></div>
+        <div class="arrow">→</div>
+      </a>
+      <div class="body"><div class="badge">Windows Guide</div>
+        <h2>Windows 編輯與測試完整手冊</h2><p>適合從 Windows 環境開始操作。內容包含 VS Code、MobaXterm、Notepad++ / Vim 的定位，Windows 工作鏈、專案資料夾結構、ALU.sv / FPU.v、Testbench、CSV pattern 的實際格式與數量。若你要從『檔案在哪裡、怎麼改、怎麼測』開始，先看這頁。</p>
+        <div class="tags"><span>VS Code</span><span>專案結構</span><span>RTL 編輯</span><span>Pattern / TB</span></div>
+        <a class="open" href="HW1_Windows_Editing_Manual/index.html">開啟這個子頁 →</a>
+      </div>
+    </article></section>
+<section class="intro" style="margin-top:24px"><h2>每個子頁的角色</h2>
+<p><b>官方 PDF</b>負責「規格」；<b>ALU / FPU 互動頁</b>負責「從規格轉成 RTL、Testbench 與 CSV 驗證」；<b>ModelSim</b>負責「實際 compile、run、waveform 與結果判讀」；<b>Windows 手冊</b>則負責「實際工作環境、專案結構與檔案操作」。因此這五個入口合在一起，就是從題目理解到實際驗證的一套完整 HW1 導覽。</p></section>
+</main><footer>VSD HW1 · Redo Index · ALU / FPU / Simulation / Windows Workflow</footer></body></html>

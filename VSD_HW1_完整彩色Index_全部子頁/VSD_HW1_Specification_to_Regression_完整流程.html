@@ -1,0 +1,161 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VSD HW1 完整設計驗證流程</title><style>
+:root{--bg:#06111f;--panel:#0c1d31;--panel2:#102944;--line:#345d87;--accent:#55ead8;--text:#edf6ff;--muted:#b8cce0;--warn:#ffd166;--bad:#ff9292;--good:#8ee6a7}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(135deg,#050b14,#0a1930 55%,#071322);color:var(--text);font-family:system-ui,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.75}
+header{position:sticky;top:0;z-index:20;background:#06111ff2;border-bottom:1px solid #294d70;padding:12px 3vw}nav{display:flex;gap:7px;overflow:auto}nav a{white-space:nowrap;background:var(--accent);color:#04101c;text-decoration:none;font-weight:800;padding:6px 10px;border-radius:8px}
+main{max-width:1550px;margin:auto;padding:28px 3vw 90px}h1{font-size:clamp(31px,4vw,52px);line-height:1.18}h2{color:var(--accent);border-bottom:1px solid #315575;padding-bottom:8px;margin-top:46px}h3{color:#c3d9ff}.lead{font-size:1.08rem;color:#d8e8f7}
+.card{background:#0c1b2df2;border:1px solid #315575;border-radius:16px;padding:20px;margin:17px 0}.good{border-left:5px solid var(--good)}.note{border-left:5px solid var(--warn)}.danger{border-left:5px solid var(--bad)}
+.flow{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:9px}.node{padding:11px 14px;background:#122c49;border:1px solid #4d7cac;border-radius:11px;font-weight:800}.arr{color:var(--accent);font-size:25px}
+table{width:100%;border-collapse:collapse;margin:13px 0}th,td{border:1px solid #315575;padding:9px;vertical-align:top}th{background:#153755;color:#baf4eb}
+pre,code{font-family:Consolas,"Cascadia Code",monospace}pre{background:#020812;border:1px solid #203c58;border-radius:11px;padding:15px;overflow:auto}.eq{background:#102640;text-align:center;padding:11px;border-radius:10px;font-size:1.06rem}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:15px}.stage{counter-increment:stage}.stage h2:before{content:counter(stage) ". ";color:#fff}
+body{counter-reset:stage}.tag{display:inline-block;background:#183a5c;border:1px solid #4c7299;border-radius:999px;padding:2px 9px;margin:2px;font-size:.9rem}.mini{color:var(--muted);font-size:.94rem}
+</style></head><body>
+<header><b>VSD HW1｜Specification → Regression</b><nav><a href="#spec">Specification</a><a href="#encoding">Encoding</a><a href="#rtl">RTL</a><a href="#stim">TB</a><a href="#golden">Golden</a><a href="#wave">Wave</a><a href="#lint">Lint</a><a href="#reg">Regression</a><a href="#loop">Debug Loop</a><a href="#commands">Commands</a></nav></header>
+<main>
+<h1>VSD HW1｜完整設計與驗證流程</h1>
+<p class="lead">本頁完整展開附件中的流程：<b>Specification → Encoding → RTL Datapath → TB Stimulus → Golden Compare → Waveform Debug → Lint → Regression</b>。它不是八個互不相關的步驟，而是一個會反覆迭代的 RTL 開發閉環。以下直接連結到你的 HW1：ALU 31 個 operations，以及 FPU MIN / MAX / ADD / SUB。</p>
+
+<div class="card good">
+<div class="flow"><span class="node">Specification</span><span class="arr">→</span><span class="node">Encoding</span><span class="arr">→</span><span class="node">RTL Datapath</span><span class="arr">→</span><span class="node">TB Stimulus</span><span class="arr">→</span><span class="node">Golden Compare</span><span class="arr">→</span><span class="node">Waveform Debug</span><span class="arr">→</span><span class="node">Lint</span><span class="arr">→</span><span class="node">Regression</span></div>
+<p><b>真正完成的條件：</b>不是「code 寫完」，而是 specification 已轉成 RTL，而且官方 patterns、邊界測試、handshake、lint 與完整 regression 都能一致驗證。</p>
+</div>
+
+<section id="spec" class="stage"><h2>Specification｜先知道硬體「應該做什麼」</h2>
+<div class="card"><p>Specification 是所有後續工作的唯一出發點。此時不要急著寫 <code>always_comb</code>，先把 operation、I/O、特殊規則、位寬、signedness、timing 全部整理成可實作條件。</p>
+<table><tr><th>HW1 類別</th><th>需要從規格抽出的內容</th><th>若漏掉會怎樣</th></tr>
+<tr><td>ALU</td><td>instruction_i、src_A_i、src_B_i、result_o；RV32IM/RV32B/DSP operations</td><td>decode 或 arithmetic semantics 錯</td></tr>
+<tr><td>DSP</td><td>4× signed 8-bit lanes、per-lane saturation、ABS INT_MIN、CLIP8 sign extension</td><td>一般 case 過、boundary fail</td></tr>
+<tr><td>FPU</td><td>IEEE-754 S/E/F、special values、alignment、normalization、GRS/RNE</td><td>最後 bit、NaN/Inf/zero 等錯誤</td></tr>
+<tr><td>Protocol</td><td>enable / valid / clk / reset</td><td>數學答案對但 TB hang/fail</td></tr></table>
+<div class="flow"><span class="node">讀題</span><span class="arr">→</span><span class="node">列 I/O</span><span class="arr">→</span><span class="node">列 Operations</span><span class="arr">→</span><span class="node">列 Corner Cases</span><span class="arr">→</span><span class="node">定義 Timing</span></div>
+</div></section>
+
+<section id="encoding" class="stage"><h2>Encoding｜把 32-bit instruction 轉成 operation</h2>
+<div class="card note">
+<p>CPU 不會看到文字「ADD」或「SADD8」，RTL 收到的是 <code>instruction_i[31:0]</code>。所以必須先抽欄位，再分層 decode。</p>
+<div class="eq">instruction[31:25]=funct7　|　[24:20]=rs2 field　|　[19:15]=rs1 field　|　[14:12]=funct3　|　[11:7]=rd　|　[6:0]=opcode</div>
+<div class="flow"><span class="node">instruction_i</span><span class="arr">→</span><span class="node">opcode</span><span class="arr">→</span><span class="node">funct3</span><span class="arr">→</span><span class="node">funct7 / [24:20]</span><span class="arr">→</span><span class="node">operation select</span></div>
+<pre>logic [6:0] opcode = instruction_i[6:0];
+logic [2:0] funct3 = instruction_i[14:12];
+logic [6:0] funct7 = instruction_i[31:25];</pre>
+<p>例如 ADD 與 SUB 可以共享 opcode/funct3，但由 funct7 再區分。Custom DSP 則先命中 DSP opcode，再用 funct3 選 DOTP4/SADD8/SSUB8/ABS/CLIP8。</p>
+</div></section>
+
+<section id="rtl" class="stage"><h2>RTL Datapath｜把規格變成真正的硬體資料路徑</h2>
+<div class="card">
+<div class="two"><div><h3>ALU Datapath</h3><div class="flow"><span class="node">Decode</span><span class="arr">→</span><span class="node">ADD/SUB</span><span class="node">Compare</span><span class="node">Shift</span><span class="node">Multiply</span><span class="node">Bitmanip</span><span class="node">DSP</span><span class="arr">→</span><span class="node">MUX</span></div></div>
+<div><h3>FPU Datapath</h3><div class="flow"><span class="node">Unpack</span><span class="arr">→</span><span class="node">Classify</span><span class="arr">→</span><span class="node">Align</span><span class="arr">→</span><span class="node">Add/Sub</span><span class="arr">→</span><span class="node">Normalize</span><span class="arr">→</span><span class="node">RNE</span><span class="arr">→</span><span class="node">Pack</span></div></div></div>
+<table><tr><th>RTL 問題</th><th>一定要明確決定</th></tr>
+<tr><td>Signedness</td><td><code>$signed</code> 在哪裡需要？SLT/SLTU、MULH family、DSP lanes。</td></tr>
+<tr><td>Intermediate width</td><td>8-bit saturation 先擴 9-bit；32×32 multiplication 要保留完整 product。</td></tr>
+<tr><td>Combinational vs Sequential</td><td>ALU 主體適合 combinational；FPU handshake/control 涉及 clocked state/register。</td></tr>
+<tr><td>Default assignment</td><td><code>always_comb</code> 要避免漏賦值形成 latch。</td></tr></table>
+</div></section>
+
+<section id="stim" class="stage"><h2>TB Stimulus｜Testbench 如何把測資送進 DUT？</h2>
+<div class="card good">
+<div class="flow"><span class="node">CSV</span><span class="arr">→</span><span class="node">$fopen</span><span class="arr">→</span><span class="node">$fgets</span><span class="arr">→</span><span class="node">$sscanf</span><span class="arr">→</span><span class="node">Drive DUT</span></div>
+<h3>ALU</h3><p>輸入 instruction/A/B 後等待一小段 simulation time，再讀 <code>result_o</code>。這是 combinational verification。</p>
+<h3>FPU</h3><div class="flow"><span class="node">A/B/op</span><span class="arr">+</span><span class="node">enable=1</span><span class="arr">→ posedge</span><span class="node">enable=0</span><span class="arr">→</span><span class="node">wait valid</span><span class="arr">→</span><span class="node">capture co</span></div>
+<p>這一步驗證的不只是 arithmetic，也驗證 transaction timing。</p>
+</div></section>
+
+<section id="golden" class="stage"><h2>Golden Compare｜GOT 與 EXP 必須怎麼比？</h2>
+<div class="card danger">
+<div class="flow"><span class="node">DUT Output = GOT</span><span class="arr">↔</span><span class="node">CSV Answer = EXP</span><span class="arr">→</span><span class="node">PASS / FAIL</span></div>
+<p>HW1 的比較本質是 bit pattern verification。FPU starter TB 使用 bit-exact comparison，因此不是「小數差不多就算對」。GRS/RNE、signed zero、special-value pattern 都可能決定最後 32 bits。</p>
+<table><tr><th>若 FAIL</th><th>先保存</th></tr><tr><td>ALU</td><td>instruction、A、B、GOT、EXP、operation ID</td></tr><tr><td>FPU</td><td>line、A、B、instruction、GOT、EXP、valid timing</td></tr></table>
+<p><b>不要一次看 500 個 FAIL。</b>第一個 failing vector 通常已足夠找到共同 root cause。</p>
+</div></section>
+
+<section id="wave" class="stage"><h2>Waveform Debug｜找「第一個錯」而不是只看最後 output</h2>
+<div class="card">
+<div class="flow"><span class="node">FAIL Vector</span><span class="arr">→</span><span class="node">定位 Wave 時間</span><span class="arr">→</span><span class="node">Inputs</span><span class="arr">→</span><span class="node">Decode/Classify</span><span class="arr">→</span><span class="node">Intermediate</span><span class="arr">→</span><span class="node">Output</span></div>
+<table><tr><th>ALU 波形</th><th>FPU 波形</th></tr>
+<tr><td>opcode / funct3 / funct7</td><td>clk / rst / enable / valid</td></tr>
+<tr><td>src_A / src_B</td><td>S/E/F classification</td></tr>
+<tr><td>signed compare / shamt</td><td>exp_diff / aligned mantissa</td></tr>
+<tr><td>product / DSP lanes</td><td>G/R/S / raw sum-diff</td></tr>
+<tr><td>result_o</td><td>normalized / rounded / packed co</td></tr></table>
+<pre>verdi -ssf ALU.fsdb &
+verdi -ssf FPU.fsdb &</pre>
+<p>如果 output 錯，不代表 output mux 就是 root cause。真正要找的是訊號鏈上<b>最早開始與預期不一致</b>的位置。</p>
+</div></section>
+
+<section id="lint" class="stage"><h2>Lint｜不用跑 Pattern 也能抓的 RTL 問題</h2>
+<div class="card note">
+<div class="eq"><code>jg -superlint superlint.tcl</code></div>
+<table><tr><th>Lint 問題</th><th>HW1 典型例子</th><th>修法方向</th></tr>
+<tr><td>Width mismatch</td><td>8-bit exponent 與 unsized 32-bit literal 混用</td><td>使用明確 sized literal/cast</td></tr>
+<tr><td>Signedness</td><td>signed DSP lane 被當 unsigned</td><td>明確宣告/cast signed</td></tr>
+<tr><td>Latch</td><td>always_comb 某 branch 沒賦值</td><td>default assignment + 完整 branch</td></tr>
+<tr><td>Unused/dead logic</td><td>宣告 intermediate 卻未使用</td><td>確認是否漏接 datapath</td></tr>
+<tr><td>Multiple driver</td><td>同一 reg/logic 多處賦值</td><td>統一 ownership</td></tr></table>
+<p>不要把「關掉 warning」當作修好。先理解 warning 指向的語意問題，再修改 RTL，最後重跑 simulation。</p>
+</div></section>
+
+<section id="reg" class="stage"><h2>Regression｜修一個 Bug 後，為什麼全部都要重跑？</h2>
+<div class="card good">
+<p>因為修正某個 case 可能破壞原本已通過的 case。Regression 的目的就是確認「新修正沒有造成舊功能退化」。</p>
+<div class="flow"><span class="node">Fix Root Cause</span><span class="arr">→</span><span class="node">Recompile</span><span class="arr">→</span><span class="node">Failing Case</span><span class="arr">→</span><span class="node">Directed Boundary</span><span class="arr">→</span><span class="node">Official ALU/FPU Patterns</span><span class="arr">→</span><span class="node">Superlint</span><span class="arr">→</span><span class="node">PASS</span></div>
+<p>HW1 最後應同時具備：official regression、你自己的 corner/hidden-defense tests、lint 結果，以及能對應報告內容的 waveform/log evidence。</p>
+</div></section>
+
+<section id="loop"><h2>完整 Debug 閉環｜FAIL 後到底怎麼走？</h2><div class="card danger">
+<div class="flow"><span class="node">Regression FAIL</span><span class="arr">→</span><span class="node">保存第一筆 FAIL</span><span class="arr">→</span><span class="node">建立最小 Reproducer</span><span class="arr">→</span><span class="node">Verdi 找第一個錯訊號</span><span class="arr">→</span><span class="node">定位 Root Cause</span><span class="arr">→</span><span class="node">修 RTL</span><span class="arr">→</span><span class="node">Lint</span><span class="arr">→</span><span class="node">Full Regression</span></div>
+<table><tr><th>症狀</th><th>優先方向</th></tr>
+<tr><td>Compile 根本失敗</td><td>syntax / include path / module / port</td></tr>
+<tr><td>ALU 某一 family 全錯</td><td>encoding/decode</td></tr>
+<tr><td>只有 signed case 錯</td><td>signedness / extension</td></tr>
+<tr><td>DSP saturation boundary 錯</td><td>intermediate width / per-lane clamp</td></tr>
+<tr><td>FPU 差最後 1 bit</td><td>GRS / RNE</td></tr>
+<tr><td>FPU 卡住</td><td>enable/valid handshake</td></tr>
+<tr><td>Simulation PASS 但 lint warning 多</td><td>RTL 結構仍需修正，不代表完成</td></tr></table>
+</div></section>
+
+<section id="commands"><h2>HW1 實際 Runbook</h2><div class="card">
+<pre># 1. 進入 simulation directory
+cd StudentID_HW1/Sim
+
+# 2. 先確認路徑
+pwd
+ls
+ls ../Src
+ls ./pattern
+
+# 3. ALU regression
+vcs -R -full64 -sverilog ALU_tb.sv -debug_access+all +define+FSDB
+
+# 4. FPU regression
+vcs -R -full64 -sverilog FPU_tb.sv -debug_access+all +define+FSDB
+
+# 5. 有 FAIL 時開 waveform
+verdi -ssf ALU.fsdb &
+verdi -ssf FPU.fsdb &
+
+# 6. RTL lint
+jg -superlint superlint.tcl
+
+# 7. 修正後重新跑 ALU + FPU + Lint
+
+# 8. 最後封裝
+cd ../..
+tar -cvf StudentID_HW1.tar StudentID_HW1
+
+# 9. 檢查封裝內容
+tar -tf StudentID_HW1.tar</pre>
+</div></section>
+
+<section id="check"><h2>最終 Checklist</h2><div class="card good">
+<table><tr><th>階段</th><th>完成條件</th></tr>
+<tr><td>Specification</td><td>每個 operation、特殊規則、I/O、timing 都能說明。</td></tr>
+<tr><td>Encoding</td><td>看到 instruction 能說明如何 decode 到 operation。</td></tr>
+<tr><td>RTL</td><td>signedness、width、combinational/sequential 結構清楚。</td></tr>
+<tr><td>TB</td><td>知道 CSV 如何被讀入、何時 drive、何時 sample。</td></tr>
+<tr><td>Golden</td><td>知道 GOT/EXP 如何 bit-exact compare。</td></tr>
+<tr><td>Wave</td><td>FAIL 時能找第一個錯的 intermediate signal。</td></tr>
+<tr><td>Lint</td><td>warning 逐項理解與處理，不只是 suppress。</td></tr>
+<tr><td>Regression</td><td>修正後重新跑全部測試，確認沒有 regression。</td></tr></table>
+<p><b>一句話總結附件：</b>Specification 告訴你要做什麼；Encoding 告訴 RTL 現在要做哪個 operation；Datapath 真正計算；TB 提供刺激；Golden 判定對錯；Waveform 找 root cause；Lint 找結構風險；Regression 證明修正後整體仍正確。</p>
+</div></section>
+</main></body></html>

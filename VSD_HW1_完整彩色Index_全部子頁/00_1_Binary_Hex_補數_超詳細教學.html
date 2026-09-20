@@ -1,0 +1,168 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Binary Hex 補數｜VSD HW1 先修</title><style>
+:root{--bg:#050b14;--p:#0d1b2e;--p2:#142b49;--tx:#edf5ff;--m:#a9bad0;--a:#68e0cf;--b:#9cc0ff;--y:#ffd166;--r:#ff8585;--g:#83e6a4;--line:#31506f}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(135deg,#050b14,#0a1930);color:var(--tx);font-family:system-ui,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.8}
+header{position:sticky;top:0;z-index:10;background:#07111ff2;border-bottom:1px solid var(--line);padding:12px 3vw}nav{display:flex;gap:7px;overflow:auto;margin-top:7px}nav a{white-space:nowrap;background:var(--a);color:#06111f;text-decoration:none;font-weight:800;padding:6px 9px;border-radius:8px}
+main{max-width:1450px;margin:auto;padding:28px 3vw 80px}h1{font-size:clamp(30px,4vw,50px);line-height:1.2}h2{color:var(--a);border-bottom:1px solid var(--line);padding-bottom:7px;margin-top:44px}h3{color:#bed5ff}
+.card{background:#0d1b2ef2;border:1px solid var(--line);border-radius:15px;padding:19px;margin:17px 0}.good{border-left:5px solid var(--g)}.note{border-left:5px solid var(--y)}.danger{border-left:5px solid var(--r)}
+table{width:100%;border-collapse:collapse;margin:13px 0}th,td{border:1px solid var(--line);padding:9px;vertical-align:top}th{background:#173450;color:#b7f2e9}
+.flow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px}.node{background:var(--p2);border:1px solid #567aaa;border-radius:10px;padding:10px 12px;font-weight:800}.arr{font-size:24px;color:var(--a)}
+pre,code{font-family:Consolas,"Cascadia Code",monospace}pre{background:#020812;padding:15px;border-radius:10px;overflow:auto;border:1px solid #294361}.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}.eq{text-align:center;font-size:1.15rem;background:#10243c;padding:10px;border-radius:10px}.muted{color:var(--m)}
+</style></head><body>
+<header><b>VSD HW1｜Binary / Hex / 補數</b><nav><a href="#map">總圖</a><a href="#binary">Binary</a><a href="#hex">Hex</a><a href="#convert">轉換</a><a href="#unsigned">Unsigned</a><a href="#twos">補數</a><a href="#signed">Signed</a><a href="#extend">Extension</a><a href="#overflow">Overflow</a><a href="#shift">Shift</a><a href="#mul">Multiply</a><a href="#dsp">DSP</a><a href="#rtl">SV</a><a href="#practice">練習</a></nav></header><main>
+<h1>00-1｜Binary / Hex / 補數：VSD HW1 必備數字表示法</h1>
+<p>這一章專門補強寫 ALU/FPU 前最基本、也最容易造成 RTL 錯誤的數字觀念：<b>二進位、十六進位、位元寬度、unsigned、signed two's complement、符號延伸、截斷、overflow</b>。這些概念會直接出現在 SLT/SLTU、SRL/SRA、MULH、DSP 8-bit lane，以及 IEEE-754 的 bit-level 操作。</p>
+
+<section id="map"><h2>一、整體學習流程</h2><div class="card good"><div class="flow">
+<span class="node">Decimal</span><span class="arr">↔</span><span class="node">Binary</span><span class="arr">↔</span><span class="node">Hex</span><span class="arr">→</span><span class="node">Fixed Width</span><span class="arr">→</span><span class="node">Unsigned / Signed</span><span class="arr">→</span><span class="node">Two's Complement</span><span class="arr">→</span><span class="node">Extend / Truncate</span><span class="arr">→</span><span class="node">RTL Arithmetic</span>
+</div></div></section>
+
+<section id="binary"><h2>二、Binary：電路真正看到的是 0 與 1</h2><div class="card">
+<p>一個 N-bit unsigned binary number的每一位具有權重 2<sup>i</sup>。例如：</p>
+<div class="eq">(101101)<sub>2</sub> = 1×2⁵ + 0×2⁴ + 1×2³ + 1×2² + 0×2¹ + 1×2⁰ = 45</div>
+<table><tr><th>bit</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th><th>0</th></tr><tr><td>value</td><td>1</td><td>0</td><td>1</td><td>1</td><td>0</td><td>1</td></tr><tr><td>weight</td><td>32</td><td>16</td><td>8</td><td>4</td><td>2</td><td>1</td></tr></table>
+<p>對 32-bit RTL 而言，<code>[31]</code> 是最高位 MSB，<code>[0]</code> 是最低位 LSB。</p>
+<pre>logic [31:0] x;
+x[31]       // MSB
+x[0]        // LSB
+x[7:0]      // 最低 8 bits
+x[31:24]    // 最高 8 bits</pre>
+</div></section>
+
+<section id="hex"><h2>三、Hex：為什麼 RTL 幾乎一定會用十六進位？</h2><div class="card note">
+<p><b>1 個 hex digit = 4 bits</b>，所以 32-bit 數剛好可寫成 8 個 hex digits。</p>
+<table><tr><th>Hex</th><th>Binary</th><th>Decimal</th><th>Hex</th><th>Binary</th><th>Decimal</th></tr>
+<tr><td>0</td><td>0000</td><td>0</td><td>8</td><td>1000</td><td>8</td></tr>
+<tr><td>1</td><td>0001</td><td>1</td><td>9</td><td>1001</td><td>9</td></tr>
+<tr><td>2</td><td>0010</td><td>2</td><td>A</td><td>1010</td><td>10</td></tr>
+<tr><td>3</td><td>0011</td><td>3</td><td>B</td><td>1011</td><td>11</td></tr>
+<tr><td>4</td><td>0100</td><td>4</td><td>C</td><td>1100</td><td>12</td></tr>
+<tr><td>5</td><td>0101</td><td>5</td><td>D</td><td>1101</td><td>13</td></tr>
+<tr><td>6</td><td>0110</td><td>6</td><td>E</td><td>1110</td><td>14</td></tr>
+<tr><td>7</td><td>0111</td><td>7</td><td>F</td><td>1111</td><td>15</td></tr></table>
+<h3>例：0xB6</h3><pre>B    6
+1011 0110
+</pre><p>因此 <code>8'hB6 = 8'b1011_0110 = unsigned 182</code>。</p>
+<h3>SystemVerilog 常數寫法</h3><table><tr><th>寫法</th><th>意思</th></tr><tr><td><code>8'b10110110</code></td><td>8-bit binary</td></tr><tr><td><code>8'hB6</code></td><td>8-bit hexadecimal</td></tr><tr><td><code>8'd182</code></td><td>8-bit decimal</td></tr><tr><td><code>32'hFFFF_FFFF</code></td><td>32 bits 全為 1</td></tr></table>
+</div></section>
+
+<section id="convert"><h2>四、Binary ↔ Hex 最快轉換法</h2><div class="card">
+<h3>Binary → Hex：從右邊每 4 bits 一組</h3>
+<pre>Binary : 1101 0110 0011 1010
+Group  :  D    6    3    A
+Hex    : 0xD63A</pre>
+<h3>Hex → Binary：每個 hex digit 直接展開 4 bits</h3>
+<pre>0x3F8C
+3    F    8    C
+0011 1111 1000 1100</pre>
+<p>在 debug waveform 時，Verdi 常用 hex 顯示 32-bit bus。若某個 bit field 有問題，可以把相關 hex digit 展開成 binary，再看特定位元。</p>
+</div></section>
+
+<section id="unsigned"><h2>五、Unsigned：N bits 能表示什麼？</h2><div class="card">
+<div class="eq">N-bit unsigned range = 0 ～ 2ᴺ − 1</div>
+<table><tr><th>width</th><th>min</th><th>max</th></tr><tr><td>4-bit</td><td>0</td><td>15</td></tr><tr><td>8-bit</td><td>0</td><td>255</td></tr><tr><td>16-bit</td><td>0</td><td>65535</td></tr><tr><td>32-bit</td><td>0</td><td>4294967295</td></tr></table>
+<p>所以 <code>32'hFFFF_FFFF</code> 若當 unsigned，就是 4294967295。</p>
+</div></section>
+
+<section id="twos"><h2>六、Two's Complement：硬體如何表示負數？</h2><div class="card good">
+<p>N-bit two's complement signed range：</p><div class="eq">−2ᴺ⁻¹ ～ 2ᴺ⁻¹ − 1</div>
+<p>8-bit signed 範圍就是 <b>-128 ～ +127</b>；32-bit 是 <b>-2147483648 ～ +2147483647</b>。</p>
+<h3>求 -5 的 8-bit two's complement</h3>
+<div class="flow"><span class="node">+5 = 0000 0101</span><span class="arr">→ 全部反相</span><span class="node">1111 1010</span><span class="arr">→ +1</span><span class="node">1111 1011 = -5</span></div>
+<h3>快速判讀負數</h3><p>若 MSB=1 且資料被解讀為 signed，可以做「反相 + 1」取得 magnitude。例如：</p>
+<pre>1111 1001
+反相 → 0000 0110
++1   → 0000 0111
+所以 = -7</pre>
+<table><tr><th>32-bit pattern</th><th>unsigned interpretation</th><th>signed interpretation</th></tr><tr><td>00000001</td><td>1</td><td>1</td></tr><tr><td>7FFFFFFF</td><td>2147483647</td><td>2147483647</td></tr><tr><td>80000000</td><td>2147483648</td><td>-2147483648</td></tr><tr><td>FFFFFFFF</td><td>4294967295</td><td>-1</td></tr></table>
+</div></section>
+
+<section id="why"><h2>七、為什麼補數可以讓加法器同時做正負數？</h2><div class="card">
+<p>固定 N-bit 硬體實際上做的是 modulo 2ᴺ arithmetic。例如 8-bit：</p>
+<pre>  0000 0101   (+5)
++ 1111 1011   (-5)
+-----------
+1 0000 0000</pre>
+<p>第 9 個 carry 被 8-bit result 截掉，留下 <code>0000_0000</code>，正好是 0。這使同一套 binary adder 能處理 two's complement signed addition。</p>
+<h3>減法也可以變加法</h3><div class="eq">A − B = A + (~B + 1)</div>
+<p>這就是 two's complement 對 ALU 設計非常重要的原因。</p>
+</div></section>
+
+<section id="signed"><h2>八、Signed vs Unsigned：bit pattern 一樣，答案可以完全不同</h2><div class="card danger">
+<p>考慮：</p><pre>A = 32'hFFFF_FFFF
+B = 32'h0000_0001</pre>
+<table><tr><th>解讀</th><th>A</th><th>B</th><th>A &lt; B?</th></tr><tr><td>unsigned</td><td>4294967295</td><td>1</td><td>false</td></tr><tr><td>signed</td><td>-1</td><td>1</td><td>true</td></tr></table>
+<p>因此 RISC-V 的 <b>SLT</b> 與 <b>SLTU</b> 絕對不能使用相同的 comparison interpretation。</p>
+<pre>// signed compare 的概念
+$signed(src_A_i) < $signed(src_B_i)
+
+// unsigned compare 的概念
+src_A_i < src_B_i</pre>
+</div></section>
+
+<section id="extend"><h2>九、Zero Extension 與 Sign Extension</h2><div class="card">
+<h3>Zero extension</h3><pre>8'b1111_1011  →  16'b0000_0000_1111_1011
+若原本視為 unsigned 251，擴展後仍是 251。</pre>
+<h3>Sign extension</h3><pre>8'b1111_1011  →  16'b1111_1111_1111_1011
+若原本視為 signed -5，擴展後仍是 -5。</pre>
+<p>sign extension 的本質是複製原本 MSB。DSP 8-bit signed lane、MULH/MULHSU 的 operand widening 都需要特別注意這件事。</p>
+</div></section>
+
+<section id="overflow"><h2>十、Overflow 與 Truncation</h2><div class="card note">
+<h3>Unsigned overflow</h3><pre>8'hFF + 8'h01 = 9'h100
+若 result 只有 8 bits → 8'h00</pre>
+<h3>Signed overflow</h3><pre>8'sd127 + 8'sd1
+0111_1111 + 0000_0001
+= 1000_0000
+若解讀為 signed → -128</pre>
+<p>一般 32-bit ALU ADD/SUB 只保留低 32 bits；但 DSP 的 <b>saturating arithmetic</b> 不同：超過上界時夾到最大值，低於下界時夾到最小值。</p>
+<table><tr><th>運算</th><th>Wrap-around</th><th>Saturation</th></tr><tr><td>8-bit signed 127 + 1</td><td>-128</td><td>127</td></tr><tr><td>8-bit signed -128 - 1</td><td>127</td><td>-128</td></tr></table>
+</div></section>
+
+<section id="shift"><h2>十一、Logical Shift 與 Arithmetic Shift</h2><div class="card">
+<table><tr><th>操作</th><th>左/右移後補什麼</th><th>用途</th></tr><tr><td>SLL</td><td>右側補 0</td><td>logical left shift</td></tr><tr><td>SRL</td><td>左側補 0</td><td>unsigned/logical right shift</td></tr><tr><td>SRA</td><td>左側複製 sign bit</td><td>signed arithmetic right shift</td></tr></table>
+<pre>8'b1111_0000 = 0xF0
+
+SRL 2 → 0011_1100
+SRA 2 → 1111_1100   // 若原 operand 被視為 signed</pre>
+<p>所以 RTL 中即使使用 <code>&gt;&gt;&gt;</code>，也必須注意左 operand 是否真的具有 signed interpretation。</p>
+</div></section>
+
+<section id="mul"><h2>十二、乘法為什麼要注意 64-bit Intermediate？</h2><div class="card">
+<p>兩個 32-bit operands 相乘，完整 product 最多需要 64 bits。MUL 只取低 32 bits；MULH 類則要高 32 bits。</p>
+<div class="flow"><span class="node">32-bit A</span><span class="arr">×</span><span class="node">32-bit B</span><span class="arr">→</span><span class="node">64-bit Product</span><span class="arr">→</span><span class="node">[63:32] / [31:0]</span></div>
+<p>若 expression 在乘法當下已經因位寬規則失去高位，之後再 assign 到 64-bit variable 也無法恢復。因此要先設計 operand extension 與 product width。</p>
+</div></section>
+
+<section id="dsp"><h2>十三、這些觀念如何直接用在 DSP？</h2><div class="card good">
+<p>32-bit operand 可拆成 4 個 8-bit lane：</p><pre>[31:24] [23:16] [15:8] [7:0]
+ lane3    lane2    lane1  lane0</pre>
+<p>若每個 lane 都是 signed two's complement，<code>8'hFF</code> 不是 255，而是 -1；<code>8'h80</code> 是 -128；<code>8'h7F</code> 是 +127。</p>
+<table><tr><th>Hex</th><th>8-bit unsigned</th><th>8-bit signed</th></tr><tr><td>00</td><td>0</td><td>0</td></tr><tr><td>01</td><td>1</td><td>1</td></tr><tr><td>7F</td><td>127</td><td>127</td></tr><tr><td>80</td><td>128</td><td>-128</td></tr><tr><td>FF</td><td>255</td><td>-1</td></tr></table>
+<p>這正是 DOTP4、SADD8、SSUB8、ABS、CLIP8 等題目必須先懂補數的原因。</p>
+</div></section>
+
+<section id="rtl"><h2>十四、SystemVerilog 中的數字表示</h2><div class="card">
+<table><tr><th>Code</th><th>解釋</th></tr><tr><td><code>32'hFFFF_FFFF</code></td><td>32-bit hex bit pattern，全 1。</td></tr><tr><td><code>8'shFF</code></td><td>8-bit signed hex；signed interpretation 為 -1。</td></tr><tr><td><code>logic signed [31:0] x;</code></td><td>x 宣告為 signed 32-bit signal。</td></tr><tr><td><code>$signed(x)</code></td><td>把 expression 以 signed 方式解讀。</td></tr><tr><td><code>$unsigned(x)</code></td><td>以 unsigned 方式解讀。</td></tr><tr><td><code>{a,b}</code></td><td>concatenation。</td></tr><tr><td><code>{8{x[7]}}</code></td><td>replication，複製 sign bit 8 次。</td></tr></table>
+<p class="muted">實際 expression 的 width/signedness 還會受到 SystemVerilog sizing 規則影響，所以複雜乘法、比較與 DSP intermediate 建議明確設計位寬，而不是依賴隱式轉型。</p>
+</div></section>
+
+<section id="practice"><h2>十五、10 題自我檢查</h2><div class="card note">
+<table><tr><th>#</th><th>題目</th><th>答案</th></tr>
+<tr><td>1</td><td>0xA 等於幾個 binary？</td><td>1010</td></tr>
+<tr><td>2</td><td>8'hFF unsigned 是多少？</td><td>255</td></tr>
+<tr><td>3</td><td>8'hFF signed two's complement 是多少？</td><td>-1</td></tr>
+<tr><td>4</td><td>8-bit signed range？</td><td>-128～127</td></tr>
+<tr><td>5</td><td>32'h80000000 signed 是多少？</td><td>-2147483648</td></tr>
+<tr><td>6</td><td>-5 的 8-bit representation？</td><td>11111011 = FB</td></tr>
+<tr><td>7</td><td>為何 SLT 與 SLTU 可能不同？</td><td>同一 bit pattern 的 signed/unsigned interpretation 不同。</td></tr>
+<tr><td>8</td><td>負數右移要保留符號通常用哪種 shift？</td><td>Arithmetic right shift。</td></tr>
+<tr><td>9</td><td>32×32 完整 product 需要最多幾 bits？</td><td>64 bits。</td></tr>
+<tr><td>10</td><td>8-bit signed 127+1，wrap 與 saturation 各是多少？</td><td>wrap=-128；saturation=127。</td></tr></table>
+</div></section>
+
+<section id="summary"><h2>十六、與 HW1 的直接連結</h2><div class="card danger">
+<div class="flow"><span class="node">Binary/Hex</span><span class="arr">→</span><span class="node">Instruction Fields</span><span class="arr">→</span><span class="node">Signed/Unsigned</span><span class="arr">→</span><span class="node">ALU</span><span class="arr">→</span><span class="node">DSP Lanes</span><span class="arr">→</span><span class="node">FPU Bit Fields</span></div>
+<p><b>如果 Binary / Hex / Two's Complement 不熟，後面最常出現的情況就是：RTL 語法沒有錯、simulation 也能跑，但 SLT/SRA/MULH/DSP boundary 一直得到錯誤答案。</b></p>
+<p>學完本章後，下一個最自然的先修主題是：<b>Combinational / Sequential Logic + SystemVerilog RTL</b>。</p>
+</div></section>
+</main></body></html>
