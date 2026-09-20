@@ -1,0 +1,113 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GRS RNE 超詳細教學｜VSD HW1</title><style>body{margin:0;background:linear-gradient(135deg,#050b14,#0a1930);color:#edf5ff;font-family:system-ui,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.78}header{position:sticky;top:0;z-index:9;background:#07111ff2;border-bottom:1px solid #31506f;padding:12px 3vw}nav{display:flex;gap:7px;overflow:auto}nav a{white-space:nowrap;background:#68e0cf;color:#06111f;text-decoration:none;font-weight:800;padding:6px 9px;border-radius:8px}main{max-width:1500px;margin:auto;padding:28px 3vw 80px}h1{font-size:clamp(30px,4vw,50px)}h2{color:#68e0cf;border-bottom:1px solid #31506f;padding-bottom:7px;margin-top:42px}h3{color:#bed5ff}.card{background:#0d1b2ef2;border:1px solid #31506f;border-radius:15px;padding:19px;margin:17px 0}.good{border-left:5px solid #83e6a4}.note{border-left:5px solid #ffd166}.danger{border-left:5px solid #ff8585}table{width:100%;border-collapse:collapse;margin:12px 0}th,td{border:1px solid #31506f;padding:8px;vertical-align:top}th{background:#173450;color:#b7f2e9}.flow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px}.node{background:#142b49;border:1px solid #567aaa;border-radius:10px;padding:10px 12px;font-weight:800}.arr{font-size:24px;color:#68e0cf}code,pre{font-family:Consolas,"Cascadia Code",monospace}pre{background:#020812;padding:15px;border-radius:10px;overflow:auto}.eq{text-align:center;background:#10243c;padding:10px;border-radius:10px;font-size:1.08rem}.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}.codewrap{max-height:82vh;overflow:auto;border:1px solid #31506f;border-radius:12px}.codetable{min-width:1200px;font-size:.9rem}.codetable th{position:sticky;top:0}.codetable td:first-child{width:50px;text-align:right;color:#8198b2}.codetable td:nth-child(2){background:#020812;white-space:pre}.bitbox{display:inline-block;padding:7px 10px;margin:3px;border:1px solid #5c7ca5;border-radius:8px;background:#10243c}.yes{color:#8df0ad;font-weight:800}.no{color:#ffaaaa;font-weight:800}</style></head><body><header><b>VSD HW1｜00-8 GRS / RNE</b><nav><a href="#master">總流程</a><a href="#grs">GRS</a><a href="#sticky">Sticky</a><a href="#rne">RNE</a><a href="#tie">Tie</a><a href="#examples">Cases</a><a href="#align">Align</a><a href="#norm">Normalize</a><a href="#carry">Carry</a><a href="#code">逐行SV</a><a href="#debug">Debug</a></nav></header><main>
+<h1>00-8｜GRS / RNE：Floating-Point Rounding 超詳細教學</h1>
+<p>這一章只聚焦 HW1 FPU 最容易差最後 1 bit 的地方：<b>Guard / Round / Sticky（GRS）</b>與<b>Round-to-Nearest, Ties-to-Even（RNE）</b>。依課堂講義，G 是第一個被 shift-out 的 bit、R 是第二個、S 是後面所有被移除 bits 是否曾出現 1；Round-to-even 對 <code>GRS=100</code> 還必須看最後保留的 LSB。</p>
+
+<section id="master"><h2>一、GRS 在整個 FPU 的位置</h2><div class="card good">
+<div class="flow"><span class="node">Unpack</span><span class="arr">→</span><span class="node">Exponent Align</span><span class="arr">→</span><span class="node">產生/保存 GRS</span><span class="arr">→</span><span class="node">Mantissa Add/Sub</span><span class="arr">→</span><span class="node">Normalize</span><span class="arr">→</span><span class="node">最終 GRS</span><span class="arr">→</span><span class="node">RNE</span><span class="arr">→</span><span class="node">Round Carry?</span><span class="arr">→</span><span class="node">Pack</span></div>
+<p>GRS 不是獨立演算法，而是從 alignment 到 normalization 一路保存「原本要被丟掉的低位資訊」，最後交給 rounding decision。</p></div></section>
+
+<section id="grs"><h2>二、G / R / S 到底是哪三個 bit？</h2><div class="card note">
+<div style="text-align:center"><span class="bitbox">保留的 Fraction ...</span><span class="bitbox">LSB</span><span class="bitbox"><b>G</b></span><span class="bitbox"><b>R</b></span><span class="bitbox"><b>S</b></span></div>
+<table><tr><th>名稱</th><th>定義</th><th>用途</th></tr>
+<tr><td>G — Guard</td><td>保留精度之外第一個 bit</td><td>先判斷是否至少到 half-way</td></tr>
+<tr><td>R — Round</td><td>第二個 discarded bit</td><td>判斷是否已經超過 exact half</td></tr>
+<tr><td>S — Sticky</td><td>R 後面所有 discarded bits 的 OR</td><td>記住更低位是否還有任何非零資訊</td></tr></table>
+<p><b>Sticky 不是某一個固定原始 bit。</b>例如低位尾巴是 <code>0000010000</code>，雖然最後一位是 0，但因為中間曾出現 1，所以 S=1。</p></div></section>
+
+<section id="sticky"><h2>三、Sticky 為什麼一定要 OR-reduction？</h2><div class="card danger">
+<pre>被丟掉的低位：
+0000000000  → S = 0
+0000000001  → S = 1
+0010000000  → S = 1
+1010101000  → S = 1</pre>
+<div class="eq">Sticky = discarded_bit0 OR discarded_bit1 OR discarded_bit2 OR ...</div>
+<p>如果 alignment shift 很大，很多 bits 都會離開可保留範圍。硬體不需要記住每一個 bit，只要知道「後面是否還存在至少一個 1」即可，因此可以壓縮成 Sticky。</p></div></section>
+
+<section id="meaning"><h2>四、GRS 與「距離最近值」的直覺</h2><div class="card">
+<table><tr><th>GRS</th><th>位置關係</th><th>基本方向</th></tr>
+<tr><td><code>0xx</code></td><td>小於 half-way</td><td>保留原值，不 +1</td></tr>
+<tr><td><code>100</code></td><td><b>exactly half-way</b></td><td>tie：看 retained LSB</td></tr>
+<tr><td><code>101 / 110 / 111</code></td><td>大於 half-way</td><td>round up</td></tr></table>
+<p>因此真正困難的只有 <b>100</b>：兩個可表示值距離一樣近，這時 IEEE-754 的 ties-to-even 規則用 LSB 決定。</p></div></section>
+
+<section id="rne"><h2>五、Round-to-Nearest, Ties-to-Even 完整決策表</h2><div class="card good">
+<table><tr><th>G</th><th>R</th><th>S</th><th>Retained LSB</th><th>Round?</th><th>原因</th></tr>
+<tr><td>0</td><td>X</td><td>X</td><td>X</td><td class="no">NO</td><td>小於 half</td></tr>
+<tr><td>1</td><td>0</td><td>0</td><td>0</td><td class="no">NO</td><td>exact tie，現在已是 even</td></tr>
+<tr><td>1</td><td>0</td><td>0</td><td>1</td><td class="yes">YES</td><td>exact tie，+1 後 LSB 變 0（even）</td></tr>
+<tr><td>1</td><td>0</td><td>1</td><td>X</td><td class="yes">YES</td><td>大於 half</td></tr>
+<tr><td>1</td><td>1</td><td>0</td><td>X</td><td class="yes">YES</td><td>大於 half</td></tr>
+<tr><td>1</td><td>1</td><td>1</td><td>X</td><td class="yes">YES</td><td>大於 half</td></tr></table>
+<div class="eq"><b>round_up = G &amp; (R | S | LSB)</b></div>
+<p>這個 Boolean expression 正好涵蓋講義的規則：<code>0xx</code> discard；<code>101/110/111</code> round up；<code>100</code> 則由 LSB 決定。</p></div></section>
+
+<section id="tie"><h2>六、為什麼叫 Ties-to-Even？</h2><div class="card note">
+<div class="two"><div><h3>Case A：LSB=0</h3><pre>保留部分 ...1010
+GRS = 100
+
+正好一半
+目前 LSB=0（even）
+→ 不加 1
+→ ...1010</pre></div>
+<div><h3>Case B：LSB=1</h3><pre>保留部分 ...1011
+GRS = 100
+
+正好一半
+目前 LSB=1（odd）
+→ 加 1
+→ ...1100
+→ LSB=0（even）</pre></div></div>
+<p>「even」不是說整個浮點數一定是偶數，而是說<b>最後保留下來的 significand LSB 要選成 0</b>。</p></div></section>
+
+<section id="examples"><h2>七、六組一定要會手算的 GRS Case</h2><div class="card">
+<table><tr><th>Case</th><th>GRS</th><th>LSB</th><th>Action</th></tr>
+<tr><td>1</td><td>000</td><td>0/1</td><td>Discard</td></tr>
+<tr><td>2</td><td>011</td><td>0/1</td><td>Discard，因 G=0</td></tr>
+<tr><td>3</td><td>100</td><td>0</td><td>Discard，tie-even</td></tr>
+<tr><td>4</td><td>100</td><td>1</td><td>Round up，tie-even</td></tr>
+<tr><td>5</td><td>101</td><td>0/1</td><td>Round up</td></tr>
+<tr><td>6</td><td>111</td><td>0/1</td><td>Round up</td></tr></table>
+<p>Hidden-defense 時至少要讓這六種情況都真正進到你的 rounding block，而不是只在紙上確認。</p></div></section>
+
+<section id="align"><h2>八、Alignment Shift 如何一路保住 Sticky？</h2><div class="card danger">
+<div class="flow"><span class="node">較小 significand</span><span class="arr">→</span><span class="node">右移 ΔE</span><span class="arr">→</span><span class="node">被移出 bits 做 OR</span><span class="arr">→</span><span class="node">Sticky</span><span class="arr">→</span><span class="node">後續 Add/Sub</span></div>
+<p>如果你只寫 <code>mant_small >> exp_diff</code>，被移出去的資訊直接消失，最後 RNE 就無法知道真實值是在 half 以下、剛好 half、還是 half 以上。這是 FPU「結果通常對，但少數 case 最後一 bit 錯」的常見原因。</p>
+<table><tr><th>ΔE</th><th>測試目的</th></tr><tr><td>0</td><td>確認沒有不必要的 GRS 改變</td></tr><tr><td>1</td><td>第一個 discarded bit</td></tr><tr><td>23</td><td>接近 fraction precision 邊界</td></tr><tr><td>24</td><td>hidden bit/precision 邊界</td></tr><tr><td>25</td><td>開始主要靠 GRS 判斷</td></tr><tr><td>&gt;31</td><td>幾乎全部 shift-out，Sticky 邏輯最重要</td></tr></table></div></section>
+
+<section id="norm"><h2>九、Normalization 之後 GRS 還可能改變</h2><div class="card">
+<p>GRS 不是 alignment 做完後就永遠固定。Mantissa arithmetic 後如果 normalization 需要 shift，保留位與 discarded bits 的相對位置也可能改變，因此 rounding 必須使用<b>最終 normalized precision boundary</b> 對應的 G/R/S。</p>
+<div class="flow"><span class="node">Aligned Mantissa + GRS</span><span class="arr">→</span><span class="node">Add/Sub</span><span class="arr">→</span><span class="node">Normalize Shift</span><span class="arr">→</span><span class="node">更新最終 G/R/S</span><span class="arr">→</span><span class="node">RNE</span></div></div></section>
+
+<section id="carry"><h2>十、Rounding 自己也可能造成 Carry</h2><div class="card danger">
+<pre>Before round:
+1.11111111111111111111111
+GRS says round_up = 1
+
++ 1 ulp
+--------------------------------
+10.00000000000000000000000</pre>
+<p>這時不能直接把低 23 bits pack 回去。必須：</p>
+<div class="flow"><span class="node">Round Carry</span><span class="arr">→</span><span class="node">Significand 右移 1</span><span class="arr">→</span><span class="node">Exponent +1</span><span class="arr">→</span><span class="node">再 Pack</span></div>
+<p>因此 rounded significand intermediate 最好比正常保留寬度多 1 bit。</p></div></section>
+
+<section id="code"><h2>十一、SystemVerilog GRS/RNE 教學片段：逐行中文註解</h2>
+<div class="card note"><b>注意：</b>此 code 假設前級已把 <code>mantissa_ext[2:0]</code> 整理成最終 G/R/S；真正 FPU 還要負責 alignment sticky generation、normalization、exponent overflow/underflow、special cases 與 valid control。</div>
+<div class="codewrap"><table class="codetable"><tr><th>行</th><th>SystemVerilog</th><th>中文解釋</th></tr><tr><td>1</td><td><code>// GRS + Round-to-Nearest-Even teaching fragment</code></td><td>教學片段：示範 G/R/S 與 Round-to-Nearest-Even，不是完整 FPU。</td></tr><tr><td>2</td><td><code>logic guard_bit;</code></td><td>Guard：保留精度之外的第一個 bit。</td></tr><tr><td>3</td><td><code>logic round_bit;</code></td><td>Round：Guard 後面的下一個 bit。</td></tr><tr><td>4</td><td><code>logic sticky_bit;</code></td><td>Sticky：更低位所有被捨棄 bits 的 OR；只要曾有 1 就是 1。</td></tr><tr><td>5</td><td><code>logic retained_lsb;</code></td><td>即將保留下來的 mantissa 最低 bit；exact tie 時用它決定是否進位。</td></tr><tr><td>6</td><td><code>logic round_up;</code></td><td>RNE 最後的進位控制。</td></tr><tr><td>7</td><td><code>logic [23:0] mantissa_keep;</code></td><td>準備保留的 24-bit significand（含 hidden bit 的示意）。</td></tr><tr><td>8</td><td><code>logic [24:0] mantissa_rounded;</code></td><td>多留 1 bit，因為 rounding +1 可能產生新的 carry。</td></tr><tr><td>9</td><td><code>&nbsp;</code></td><td>空行：區隔 GRS 擷取、round decision 與 mantissa rounding。</td></tr><tr><td>10</td><td><code>always_comb begin</code></td><td>純 combinational rounding logic。</td></tr><tr><td>11</td><td><code>    guard_bit   = mantissa_ext[2];</code></td><td>從 extended mantissa 擷取 G。這裡假設 [2:0] 已被前級整理成 G/R/S。</td></tr><tr><td>12</td><td><code>    round_bit   = mantissa_ext[1];</code></td><td>擷取 R。</td></tr><tr><td>13</td><td><code>    sticky_bit  = mantissa_ext[0];</code></td><td>擷取 S。注意真正 alignment stage 必須先把所有更低 discarded bits OR 進 sticky。</td></tr><tr><td>14</td><td><code>    retained_lsb = mantissa_ext[3];</code></td><td>取最後一個會被保留的 bit，供 tie-to-even 判斷。</td></tr><tr><td>15</td><td><code>&nbsp;</code></td><td>空行：區隔 GRS 擷取、round decision 與 mantissa rounding。</td></tr><tr><td>16</td><td><code>    round_up = guard_bit &amp;</code></td><td>RNE 核心公式開始：G 必須為 1 才可能 round up。</td></tr><tr><td>17</td><td><code>               (round_bit | sticky_bit | retained_lsb);</code></td><td>若 &gt;half（R/S 有 1）或 exact-half 且 retained LSB=1，就 +1。</td></tr><tr><td>18</td><td><code>&nbsp;</code></td><td>空行：區隔 GRS 擷取、round decision 與 mantissa rounding。</td></tr><tr><td>19</td><td><code>    mantissa_keep = mantissa_ext[26:3];</code></td><td>移除 GRS，留下要保存的 24-bit significand。</td></tr><tr><td>20</td><td><code>    mantissa_rounded = {1&#x27;b0, mantissa_keep};</code></td><td>先零擴展成 25 bits，保留 rounding carry 空間。</td></tr><tr><td>21</td><td><code>&nbsp;</code></td><td>空行：區隔 GRS 擷取、round decision 與 mantissa rounding。</td></tr><tr><td>22</td><td><code>    if (round_up)</code></td><td>只有 RNE 判定需要進位時才加 1 ulp。</td></tr><tr><td>23</td><td><code>        mantissa_rounded = {1&#x27;b0, mantissa_keep} + 25&#x27;d1;</code></td><td>先零擴展成 25 bits，保留 rounding carry 空間。</td></tr><tr><td>24</td><td><code>&nbsp;</code></td><td>空行：區隔 GRS 擷取、round decision 與 mantissa rounding。</td></tr><tr><td>25</td><td><code>    // If rounding creates a carry, normalize once more:</code></td><td>rounding 可能把 1.111... 變成 10.000...，因此要再次 normalize。</td></tr><tr><td>26</td><td><code>    // shift right by 1 and increment the exponent.</code></td><td>round carry 時 significand 右移 1，exponent +1。</td></tr><tr><td>27</td><td><code>end</code></td><td>結束 always_comb。</td></tr></table></div></section>
+
+<section id="wrong"><h2>十二、最常見的錯誤寫法</h2><div class="card danger">
+<table><tr><th>錯誤</th><th>結果</th><th>正確觀念</th></tr>
+<tr><td>只看 G</td><td>GRS=100 無法 tie-even</td><td>還要看 R/S/retained LSB</td></tr>
+<tr><td>GRS=100 一律 +1</td><td>LSB=0 的 tie case 錯</td><td>只有 LSB=1 才 +1</td></tr>
+<tr><td>Sticky=最後一個 discarded bit</td><td>漏掉前面曾出現的 1</td><td>Sticky 是所有更低 bits 的 OR</td></tr>
+<tr><td>Alignment 直接 &gt;&gt;</td><td>discarded 資訊消失</td><td>shift 同時產生 sticky</td></tr>
+<tr><td>Round 後直接 pack</td><td>round carry case exponent 錯</td><td>檢查 carry，再 normalize</td></tr>
+<tr><td>只在 alignment 算一次 GRS</td><td>normalization shift 後 boundary 不一致</td><td>rounding 要看最終 normalized GRS</td></tr></table></div></section>
+
+<section id="debug"><h2>十三、如果只差最後 1 bit，要怎麼 Debug？</h2><div class="card good">
+<div class="flow"><span class="node">GOT vs EXP 差 1 ULP?</span><span class="arr">→</span><span class="node">看 normalized mantissa</span><span class="arr">→</span><span class="node">看 LSB/G/R/S</span><span class="arr">→</span><span class="node">手算 round_up</span><span class="arr">→</span><span class="node">看 +1 後 carry</span><span class="arr">→</span><span class="node">看 exponent 是否 +1</span></div>
+<table><tr><th>Waveform 建議訊號</th><th>用途</th></tr><tr><td>exp_diff</td><td>確認 alignment 距離</td></tr><tr><td>mant_small_before/after_shift</td><td>確認被移掉哪些 bits</td></tr><tr><td>guard_bit / round_bit / sticky_bit</td><td>確認 GRS</td></tr><tr><td>retained_lsb</td><td>tie-even 決策</td></tr><tr><td>round_up</td><td>Boolean decision</td></tr><tr><td>mantissa_before/after_round</td><td>確認 +1 是否正確</td></tr><tr><td>round_carry / exponent</td><td>確認二次 normalization</td></tr></table></div></section>
+
+<section id="finish"><h2>十四、一張流程圖背完 GRS/RNE</h2><div class="card good">
+<div class="flow"><span class="node">Alignment / Normalize</span><span class="arr">→</span><span class="node">保留 LSB</span><span class="arr">+</span><span class="node">G</span><span class="arr">+</span><span class="node">R</span><span class="arr">+</span><span class="node">Sticky OR</span><span class="arr">→</span><span class="node">G &amp; (R|S|LSB)</span><span class="arr">→</span><span class="node">Round Up?</span><span class="arr">→</span><span class="node">+1 ULP</span><span class="arr">→</span><span class="node">Carry?</span><span class="arr">→</span><span class="node">Normalize + Pack</span></div>
+<p><b>最重要的三句：</b>① G=0 → 不 round up。② GRS=100 → exact tie，要看 retained LSB。③ Sticky 是所有更低 discarded bits 的 OR，不是單一 bit。</p></div></section>
+</main></body></html>

@@ -1,0 +1,139 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>10｜VSD HW1 最終報告與繳交完整流程</title><style>
+:root{--bg:#050b14;--p:#0d1b2e;--p2:#142b49;--tx:#edf5ff;--m:#9eb1c8;--a:#68e0cf;--b:#9cc0ff;--y:#ffd166;--r:#ff8585;--g:#83e6a4;--line:#31506f}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(135deg,#050b14,#0a1930);color:var(--tx);font-family:system-ui,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.75}
+header{position:sticky;top:0;z-index:10;background:#07111ff2;border-bottom:1px solid var(--line);padding:12px 3vw;backdrop-filter:blur(10px)}
+nav{display:flex;gap:7px;overflow:auto;margin-top:7px}nav a{white-space:nowrap;background:var(--a);color:#06111f;text-decoration:none;font-weight:800;padding:6px 9px;border-radius:8px}
+main{max-width:1450px;margin:auto;padding:28px 3vw 80px}h1{font-size:clamp(30px,4vw,50px);line-height:1.2}h2{color:var(--a);border-bottom:1px solid var(--line);padding-bottom:7px;margin-top:42px}h3{color:#bed5ff}
+.card{background:#0d1b2ef2;border:1px solid var(--line);border-radius:15px;padding:19px;margin:17px 0;box-shadow:0 12px 30px #0004}.good{border-left:5px solid var(--g)}.note{border-left:5px solid var(--y)}.danger{border-left:5px solid var(--r)}
+table{width:100%;border-collapse:collapse;margin:13px 0}th,td{border:1px solid var(--line);padding:8px;vertical-align:top}th{background:#173450;color:#b7f2e9}
+.flow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px}.node{background:var(--p2);border:1px solid #567aaa;border-radius:10px;padding:10px 12px;font-weight:800}.arr{font-size:24px;color:var(--a)}
+pre,code{font-family:Consolas,"Cascadia Code",monospace}pre{background:#020812;padding:15px;border-radius:10px;overflow:auto;border:1px solid #294361}
+.codewrap{max-height:80vh;overflow:auto;border:1px solid var(--line);border-radius:12px}.codetable{min-width:1150px;font-size:.9rem}.codetable th{position:sticky;top:0;z-index:2}.codetable td:first-child{width:50px;text-align:right;color:#8198b2}.codetable td:nth-child(2){background:#020812;white-space:pre}.codetable td:nth-child(3){min-width:430px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}.ok{color:var(--g)}.warn{color:var(--y)}.bad{color:var(--r)}.muted{color:var(--m)}
+.badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin:2px;background:#10243c}
+</style></head><body>
+<header><b>VSD HW1｜10 Final Report & Submission</b>
+<nav><a href="#master">總流程</a><a href="#report">報告</a><a href="#evidence">證據</a><a href="#tree">目錄</a><a href="#verify">最終驗證</a><a href="#commands">逐行指令</a><a href="#tar">打包</a><a href="#mistakes">常見錯誤</a><a href="#checklist">Checklist</a></nav></header>
+<main>
+<h1>10｜最後報告、最終驗證、打包與繳交：完整工程流程</h1>
+<p>這一章把前面 01～09 的工作收斂成最後交付流程。重點不是「程式曾經 PASS 過」，而是確保 <b>RTL、官方 regression、Superlint、報告證據、資料夾 hierarchy、tar 內容</b> 在課程指定環境中彼此一致。</p>
+
+<section id="master"><h2>一、Final Submission Master Flow</h2>
+<div class="card good">
+<div class="flow"><span class="node">RTL Freeze</span><span class="arr">→</span><span class="node">ALU Official Regression</span><span class="arr">→</span><span class="node">FPU Official Regression</span><span class="arr">→</span><span class="node">Defense Regression</span><span class="arr">→</span><span class="node">Superlint</span></div>
+<p style="text-align:center">↓</p>
+<div class="flow"><span class="node">整理 Waveform / Logs</span><span class="arr">→</span><span class="node">完成 StudentID.pdf</span><span class="arr">→</span><span class="node">檢查 Hierarchy</span><span class="arr">→</span><span class="node">tar -cvf</span><span class="arr">→</span><span class="node">tar -tf</span><span class="arr">→</span><span class="node">Upload</span></div>
+<p style="text-align:center">若任何一步 FAIL：<b>停止打包 → 回到 Debug → 修正 → 從 regression 重新開始</b></p>
+</div></section>
+
+<section id="report"><h2>二、StudentID.pdf 報告應該怎麼寫？</h2>
+<div class="card note"><p>原始 10 已明確把報告建議安排為 Problem interpretation → architecture → ALU → FPU → verification → pattern result → lint → hidden-defense → waveform → conclusion。新版將這個架構展開成可以直接照著準備的章節。</p>
+<pre>StudentID.pdf
+├─ 1. Problem Interpretation
+├─ 2. ALU Architecture
+│  ├─ RV32IM
+│  ├─ RV32B
+│  └─ Custom DSP
+├─ 3. FPU Architecture
+│  ├─ IEEE-754 S/E/F
+│  ├─ Special Cases
+│  ├─ Alignment
+│  ├─ Add/Sub
+│  ├─ Normalization
+│  └─ GRS / Round-to-Nearest-Even
+├─ 4. Verification Environment
+│  ├─ ALU_tb.sv + pattern_alu.csv
+│  ├─ FPU_tb.sv + pattern_fpu.csv
+│  └─ VCS / FSDB / Verdi
+├─ 5. Simulation Results
+├─ 6. Superlint Results
+├─ 7. Corner Cases / Hidden-Test Defense
+├─ 8. Debug Examples
+└─ 9. Conclusion
+</pre>
+<table><tr><th>章節</th><th>應放什麼</th><th>不要只放什麼</th></tr>
+<tr><td>Problem Interpretation</td><td>你如何理解 ALU 31 類操作、FPU 4 類 operation 與 protocol。</td><td>只截作業 PDF。</td></tr>
+<tr><td>Architecture</td><td>自己的 block diagram、decode/datapath、FPU stage flow。</td><td>整頁 RTL code。</td></tr>
+<tr><td>Verification</td><td>TB、CSV、DUT、compare、FSDB 的資料流。</td><td>只寫「用 VCS 測試」。</td></tr>
+<tr><td>Results</td><td>console summary + 代表性 waveform + 說明。</td><td>沒有文字解釋的截圖。</td></tr>
+<tr><td>Superlint</td><td>執行方法、重要 warning/error、如何處理。</td><td>只說「lint pass」。</td></tr>
+<tr><td>Corner Cases</td><td>signed boundary、DSP saturation、FPU NaN/Inf/zero/GRS 等。</td><td>宣稱知道 hidden CSV。</td></tr>
+<tr><td>Conclusion</td><td>完成項目、驗證方法、遇到的關鍵問題與修正。</td><td>空泛心得。</td></tr></table>
+</div></section>
+
+<section id="evidence"><h2>三、報告證據怎麼收集？</h2><div class="card">
+<div class="flow"><span class="node">VCS Console</span><span class="arr">→</span><span class="node">PASS Summary</span><span class="arr">→</span><span class="node">FSDB</span><span class="arr">→</span><span class="node">Verdi Representative Waveform</span><span class="arr">→</span><span class="node">Superlint Result</span><span class="arr">→</span><span class="node">Report Figures</span></div>
+<table><tr><th>證據</th><th>建議展示</th><th>圖旁邊要解釋</th></tr>
+<tr><td>ALU</td><td>一筆 decode + result waveform</td><td>instruction 是什麼 operation、A/B、expected、result。</td></tr>
+<tr><td>FPU</td><td>enable → processing → valid → co</td><td>哪一 cycle 接受 input、何時 output valid。</td></tr>
+<tr><td>Rounding</td><td>代表性 G/R/S case</td><td>為什麼 round up / keep。</td></tr>
+<tr><td>Special Case</td><td>NaN/Inf/zero 代表例</td><td>為什麼 bypass normal datapath。</td></tr>
+<tr><td>Lint</td><td>重要結果畫面</td><td>warning 的原因與修正，不只是截圖。</td></tr></table>
+</div></section>
+
+<section id="tree"><h2>四、提交資料夾 Hierarchy 檢查</h2><div class="card">
+<pre>StudentID_HW1/
+├── StudentID.pdf
+├── Src/
+│   ├── ALU.sv
+│   └── FPU.sv   ← 實際名稱必須與最新課程規定/TB include 一致
+└── Sim/
+    ├── ALU_tb.sv
+    ├── FPU_tb.sv
+    ├── superlint.tcl   ← 若最新課程包/要求包含
+    └── pattern/
+        ├── pattern_alu.csv
+        └── pattern_fpu.csv</pre>
+<p class="warn"><b>注意：</b>你目前接觸過的 starter 與 PDF 在 FPU 副檔名、pattern/Pattern、根目錄命名上曾有差異，因此提交前應以老師/TA 最新版本與實際 TB include 為準，而不是只靠這張示意 tree 改名。</p>
+</div></section>
+
+<section id="verify"><h2>五、最後驗收：每一層到底在驗什麼？</h2><div class="card">
+<table><tr><th>Layer</th><th>Input</th><th>Output</th><th>PASS 代表</th></tr>
+<tr><td>ALU VCS</td><td>ALU_tb + ALU RTL + ALU CSV</td><td>console + ALU.fsdb</td><td>公開 ALU patterns 對目前 RTL 一致。</td></tr>
+<tr><td>FPU VCS</td><td>FPU_tb + FPU RTL + FPU CSV</td><td>console + FPU.fsdb</td><td>公開 FPU patterns 與 handshake 對目前 RTL 一致。</td></tr>
+<tr><td>Defense</td><td>自行建立 corner cases</td><td>PASS/FAIL</td><td>擴大公開 pattern 之外的規格覆蓋。</td></tr>
+<tr><td>Superlint</td><td>RTL + TCL/tool setup</td><td>lint diagnostics</td><td>檢查靜態 RTL 結構與潛在風險。</td></tr>
+<tr><td>tar -tf</td><td>tar archive</td><td>archive file list</td><td>提交包層級/檔案至少可被直接檢視。</td></tr></table>
+</div></section>
+
+<section id="commands"><h2>六、Final Commands：每一行後面中文註解</h2>
+<div class="codewrap"><table class="codetable"><tr><th>行</th><th>Command</th><th>中文逐行解釋</th></tr><tr><td>1</td><td><code># 1. 進入作業的 Sim 目錄</code></td><td>Shell 註解：標示目前 final-check 階段，不會被 shell 當成 EDA command 執行。</td></tr><tr><td>2</td><td><code>cd StudentID_HW1/Sim</code></td><td>進入 Sim。官方 TB 使用相對路徑時，從這裡執行可避免 ../Src 與 ./pattern 找錯位置。</td></tr><tr><td>3</td><td><code>&nbsp;</code></td><td>空行：分隔不同驗收階段，方便依序執行。</td></tr><tr><td>4</td><td><code># 2. 確認目前位置與必要檔案</code></td><td>Shell 註解：標示目前 final-check 階段，不會被 shell 當成 EDA command 執行。</td></tr><tr><td>5</td><td><code>pwd</code></td><td>印出目前 working directory；正式驗收前先確認自己真的位於 StudentID_HW1/Sim。</td></tr><tr><td>6</td><td><code>ls</code></td><td>列出 Sim 內容，確認 ALU_tb.sv、FPU_tb.sv、superlint.tcl 等檔案存在。</td></tr><tr><td>7</td><td><code>ls ../Src</code></td><td>確認 RTL source 存在，並檢查 ALU/FPU 實際檔名、副檔名與 TB include 是否一致。</td></tr><tr><td>8</td><td><code>ls ./pattern</code></td><td>確認官方 CSV 測資存在；Linux 大小寫敏感，所以 pattern 與 Pattern 不能混用。</td></tr><tr><td>9</td><td><code>&nbsp;</code></td><td>空行：分隔不同驗收階段，方便依序執行。</td></tr><tr><td>10</td><td><code># 3. 最終 ALU official regression</code></td><td>Shell 註解：標示目前 final-check 階段，不會被 shell 當成 EDA command 執行。</td></tr><tr><td>11</td><td><code>vcs -R -full64 -sverilog ALU_tb.sv -debug_access+all +define+FSDB</code></td><td>執行 ALU 最終 VCS regression；-R 編譯後直接執行，+define+FSDB 啟用 TB 中的 FSDB dump。</td></tr><tr><td>12</td><td><code>&nbsp;</code></td><td>空行：分隔不同驗收階段，方便依序執行。</td></tr><tr><td>13</td><td><code># 4. 最終 FPU official regression</code></td><td>Shell 註解：標示目前 final-check 階段，不會被 shell 當成 EDA command 執行。</td></tr><tr><td>14</td><td><code>vcs -R -full64 -sverilog FPU_tb.sv -debug_access+all +define+FSDB</code></td><td>執行 FPU 最終 VCS regression；確認 handshake 不會 hang，且所有公開 pattern 都得到預期 bit pattern。</td></tr><tr><td>15</td><td><code>&nbsp;</code></td><td>空行：分隔不同驗收階段，方便依序執行。</td></tr><tr><td>16</td><td><code># 5. 最終 Superlint</code></td><td>Shell 註解：標示目前 final-check 階段，不會被 shell 當成 EDA command 執行。</td></tr><tr><td>17</td><td><code>jg -superlint superlint.tcl</code></td><td>啟動 JasperGold Superlint 並執行 superlint.tcl；最後確認 RTL 結構性問題與課程要求。</td></tr><tr><td>18</td><td><code>&nbsp;</code></td><td>空行：分隔不同驗收階段，方便依序執行。</td></tr><tr><td>19</td><td><code># 6. 如有需要，開啟最後的 waveform 證據</code></td><td>Shell 註解：標示目前 final-check 階段，不會被 shell 當成 EDA command 執行。</td></tr><tr><td>20</td><td><code>verdi -ssf ALU.fsdb &amp;</code></td><td>用 Verdi 開啟 ALU.fsdb；可擷取報告需要的代表性 waveform，而不是把整份 code 貼進報告。</td></tr><tr><td>21</td><td><code>verdi -ssf FPU.fsdb &amp;</code></td><td>用 Verdi 開啟 FPU.fsdb；適合展示 enable/valid 與 alignment/normalize/round 等代表性案例。</td></tr><tr><td>22</td><td><code>&nbsp;</code></td><td>空行：分隔不同驗收階段，方便依序執行。</td></tr><tr><td>23</td><td><code># 7. 回到 StudentID_HW1 的上一層</code></td><td>Shell 註解：標示目前 final-check 階段，不會被 shell 當成 EDA command 執行。</td></tr><tr><td>24</td><td><code>cd ../..</code></td><td>若目前在 StudentID_HW1/Sim，回兩層後位於 StudentID_HW1 的上一層；這是打包整個資料夾的合適位置。</td></tr><tr><td>25</td><td><code>&nbsp;</code></td><td>空行：分隔不同驗收階段，方便依序執行。</td></tr><tr><td>26</td><td><code># 8. 檢查即將提交的資料夾內容</code></td><td>Shell 註解：標示目前 final-check 階段，不會被 shell 當成 EDA command 執行。</td></tr><tr><td>27</td><td><code>find StudentID_HW1 -maxdepth 3 -type f | sort</code></td><td>列出即將被打包的檔案；用來抓漏檔、錯誤層級、暫存檔與命名問題。</td></tr><tr><td>28</td><td><code>&nbsp;</code></td><td>空行：分隔不同驗收階段，方便依序執行。</td></tr><tr><td>29</td><td><code># 9. 建立 tar</code></td><td>Shell 註解：標示目前 final-check 階段，不會被 shell 當成 EDA command 執行。</td></tr><tr><td>30</td><td><code>tar -cvf StudentID_HW1.tar StudentID_HW1</code></td><td>建立 tar archive。c=create、v=顯示加入項目、f=指定輸出檔名。實際 StudentID 應替換成自己的學號命名。</td></tr><tr><td>31</td><td><code>&nbsp;</code></td><td>空行：分隔不同驗收階段，方便依序執行。</td></tr><tr><td>32</td><td><code># 10. 不解壓，直接檢查 tar 內容</code></td><td>Shell 註解：標示目前 final-check 階段，不會被 shell 當成 EDA command 執行。</td></tr><tr><td>33</td><td><code>tar -tf StudentID_HW1.tar</code></td><td>不解壓直接列出 archive 內容；這一步能發現最常見的打包層級錯誤。</td></tr><tr><td>34</td><td><code>&nbsp;</code></td><td>空行：分隔不同驗收階段，方便依序執行。</td></tr><tr><td>35</td><td><code># 11. 檢查 tar 檔案本身</code></td><td>Shell 註解：標示目前 final-check 階段，不會被 shell 當成 EDA command 執行。</td></tr><tr><td>36</td><td><code>ls -lh StudentID_HW1.tar</code></td><td>查看 tar 是否真的存在及其檔案大小；只能確認檔案存在，不能取代 tar -tf 的內容檢查。</td></tr></table></div>
+</section>
+
+<section id="tar"><h2>七、打包流程：為什麼不能直接 tar 完就上傳？</h2><div class="card good">
+<div class="flow"><span class="node">find 檢查原資料夾</span><span class="arr">→</span><span class="node">tar -cvf</span><span class="arr">→</span><span class="node">產生 StudentID_HW1.tar</span><span class="arr">→</span><span class="node">tar -tf</span><span class="arr">→</span><span class="node">核對 top folder / Src / Sim / PDF</span><span class="arr">→</span><span class="node">Upload</span></div>
+<table><tr><th>檢查點</th><th>錯誤例子</th><th>為什麼危險</th></tr>
+<tr><td>Top folder</td><td><code>Downloads/StudentID_HW1/...</code></td><td>多包了本機路徑層級。</td></tr>
+<tr><td>RTL</td><td>只有舊版 ALU/FPU</td><td>你測的是新版，但交的是舊版。</td></tr>
+<tr><td>Report</td><td>StudentID.pdf 漏掉</td><td>報告部分直接缺件。</td></tr>
+<tr><td>Case</td><td><code>Pattern</code> vs <code>pattern</code></td><td>Linux 相對路徑可能直接失敗。</td></tr>
+<tr><td>Generated files</td><td>simv、大量 FSDB、暫存檔</td><td>若規定不要求，可能造成包過大/結構混亂。</td></tr></table>
+</div></section>
+
+<section id="mistakes"><h2>八、繳交前最容易發生的錯誤</h2><div class="card danger">
+<table><tr><th>問題</th><th>症狀</th><th>處理</th></tr>
+<tr><td>本機 PASS，SoC Lab FAIL</td><td>tool/version/path 差異</td><td>以課程指定環境重新完整驗證。</td></tr>
+<tr><td>修改 RTL 後沒重跑</td><td>報告結果與提交 RTL 不一致</td><td>RTL freeze 後跑 final regression。</td></tr>
+<tr><td>只看 FAIL=0</td><td>TB 本身可能有計數/流程限制</td><td>理解 TB、確認 total/pass/fail 與 waveform。</td></tr>
+<tr><td>為了 lint 把 warning 全關掉</td><td>真正 width/signedness 問題被藏起來</td><td>先理解 warning，再決定修正或有理由 suppress。</td></tr>
+<tr><td>tar 名稱正確但內容錯</td><td>上傳後才發現少檔/多層</td><td>一定執行 <code>tar -tf</code>。</td></tr>
+<tr><td>報告貼整份 code</td><td>篇幅很大但缺設計解釋</td><td>用架構圖、關鍵 snippet、波形與結果說明。</td></tr></table>
+</div></section>
+
+<section id="checklist"><h2>九、Final Checklist</h2><div class="card good">
+<table><tr><th>類別</th><th>提交前確認</th></tr>
+<tr><td>ALU</td><td>□ 31 類 operation 已驗證　□ 無已知 X/Z　□ corner cases 已補強</td></tr>
+<tr><td>FPU</td><td>□ 4 operations 已驗證　□ reset/enable/valid 正確　□ special/GRS/rounding 有測</td></tr>
+<tr><td>Regression</td><td>□ ALU official　□ FPU official　□ defense tests 在最後 RTL 上重跑</td></tr>
+<tr><td>Lint</td><td>□ Superlint 最後重跑　□ 重要 warning/error 已理解與處理</td></tr>
+<tr><td>Report</td><td>□ StudentID.pdf　□ architecture　□ verification　□ results　□ lint　□ waveform　□ conclusion</td></tr>
+<tr><td>Environment</td><td>□ SoC Lab 最終驗證，不只本機模擬</td></tr>
+<tr><td>Hierarchy</td><td>□ 根目錄名稱　□ Src/Sim　□ 大小寫　□ FPU 副檔名/include 一致</td></tr>
+<tr><td>Archive</td><td>□ tar 建立成功　□ <code>tar -tf</code> 已人工核對內容</td></tr>
+</table></div>
+
+<div class="card note"><h3>最後的完成判準</h3>
+<p><b>「可以繳交」不是只代表 RTL 曾經 PASS，而是：你準備上傳的那一份 RTL，在指定環境重新驗證過；報告記錄的是同一版本；Superlint 是同一版本；tar 裡也確實是同一版本。</b></p></div>
+</section>
+</main></body></html>

@@ -1,0 +1,146 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VCS Verdi Superlint 超詳細教學｜VSD HW1</title><style>body{margin:0;background:linear-gradient(135deg,#050b14,#0a1930);color:#edf5ff;font-family:system-ui,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.78}header{position:sticky;top:0;z-index:9;background:#07111ff2;border-bottom:1px solid #31506f;padding:12px 3vw}nav{display:flex;gap:7px;overflow:auto}nav a{white-space:nowrap;background:#68e0cf;color:#06111f;text-decoration:none;font-weight:800;padding:6px 9px;border-radius:8px}main{max-width:1500px;margin:auto;padding:28px 3vw 80px}h1{font-size:clamp(30px,4vw,50px)}h2{color:#68e0cf;border-bottom:1px solid #31506f;padding-bottom:7px;margin-top:42px}h3{color:#bed5ff}.card{background:#0d1b2ef2;border:1px solid #31506f;border-radius:15px;padding:19px;margin:17px 0}.good{border-left:5px solid #83e6a4}.note{border-left:5px solid #ffd166}.danger{border-left:5px solid #ff8585}table{width:100%;border-collapse:collapse;margin:12px 0}th,td{border:1px solid #31506f;padding:8px;vertical-align:top}th{background:#173450;color:#b7f2e9}.flow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px}.node{background:#142b49;border:1px solid #567aaa;border-radius:10px;padding:10px 12px;font-weight:800}.arr{font-size:24px;color:#68e0cf}code,pre{font-family:Consolas,"Cascadia Code",monospace}pre{background:#020812;padding:15px;border-radius:10px;overflow:auto}.eq{text-align:center;background:#10243c;padding:10px;border-radius:10px;font-size:1.08rem}.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}.terminal{background:#01060d;border:1px solid #29455f;border-radius:12px;padding:15px;overflow:auto;font-family:Consolas,monospace;color:#d9ecff}.ok{color:#83e6a4;font-weight:800}.warn{color:#ffd166;font-weight:800}.bad{color:#ff9b9b;font-weight:800}</style></head><body>
+<header><b>VSD HW1｜00-10 VCS / Verdi / Lint</b><nav><a href="#master">總流程</a><a href="#roles">工具</a><a href="#dir">路徑</a><a href="#vcs">VCS</a><a href="#alu">ALU</a><a href="#fpu">FPU</a><a href="#fsdb">FSDB</a><a href="#verdi">Verdi</a><a href="#lint">Lint</a><a href="#warnings">Warning</a><a href="#commands">Commands</a><a href="#final">Final</a></nav></header>
+<main>
+<h1>00-10｜VCS / Verdi / Superlint：從 RTL 到 PASS、Waveform、Lint 的完整操作</h1>
+<p>這是 VSD HW1 十個先修主題的最後一章。重點不是背三套工具，而是理解它們在驗證流程中的不同角色：<b>VCS 負責 compile/elaborate/simulate，Verdi 負責 waveform/debug，Superlint 負責靜態 RTL 品質檢查</b>。本頁的 HW1 指令以課程作業講義中的 command 為主，並結合 starter TB 的實際相對路徑說明。</p>
+
+<section id="master"><h2>一、整個工具流程先看懂</h2><div class="card good">
+<div class="flow"><span class="node">ALU.sv / FPU RTL</span><span class="arr">+</span><span class="node">TB + CSV</span><span class="arr">→</span><span class="node">VCS Compile</span><span class="arr">→</span><span class="node">Elaboration</span><span class="arr">→</span><span class="node">Simulation</span><span class="arr">→</span><span class="node">PASS / FAIL</span><span class="arr">+</span><span class="node">FSDB</span><span class="arr">→</span><span class="node">Verdi Debug</span></div>
+<div class="flow" style="margin-top:16px"><span class="node">RTL</span><span class="arr">→</span><span class="node">Superlint</span><span class="arr">→</span><span class="node">Warning / Error / Coverage</span><span class="arr">→</span><span class="node">修 RTL</span><span class="arr">→</span><span class="node">重新 Regression</span></div>
+<p><b>Simulation PASS ≠ Lint PASS；Lint clean ≠ Function correct。</b>兩種驗證解決的是不同問題，最後都要過。</p></div></section>
+
+<section id="roles"><h2>二、VCS、Verdi、Superlint 各自在做什麼？</h2><div class="card">
+<table><tr><th>工具</th><th>主要工作</th><th>你會看到什麼</th><th>回答的問題</th></tr>
+<tr><td>VCS</td><td>Compile + elaborate + simulate RTL/TB</td><td>compile errors、simulation log、PASS/FAIL、FSDB</td><td>「我的 RTL 對這些 test patterns 算得對嗎？」</td></tr>
+<tr><td>Verdi</td><td>Waveform / hierarchy / signal tracing</td><td>clk、inputs、intermediate、output、X</td><td>「第一個錯的訊號在哪一個 cycle 出現？」</td></tr>
+<tr><td>Superlint</td><td>Static RTL analysis</td><td>warning/error/structural issues/coverage</td><td>「即使 simulation 沒撞到，RTL 結構是否仍有危險？」</td></tr></table></div></section>
+
+<section id="dir"><h2>三、第一步永遠是 Working Directory</h2><div class="card danger">
+<p>Starter archive 的實際核心結構是：</p>
+<pre>StudentID_HW1/
+├─ Src/
+│  ├─ ALU.sv
+│  └─ FPU.v
+└─ Sim/
+   ├─ ALU_tb.sv
+   ├─ FPU_tb.sv
+   └─ pattern/
+      ├─ pattern_alu.csv
+      └─ pattern_fpu.csv</pre>
+<p>作業 PDF 的 hierarchy 範例與 starter archive 存在命名差異，例如 PDF 寫 <code>FPU.sv</code>、<code>Pattern/</code>，starter 則是 <code>FPU.v</code>、<code>pattern/</code>。實際提交時要以當期助教最新規定為準；若自行 rename，TB 的 <code>`include</code> 與 TCL 也要同步修改。</p>
+<div class="terminal">$ cd StudentID_HW1/Sim
+$ pwd
+$ ls
+$ ls ../Src
+$ ls ./pattern</div>
+<p>很多「VCS 壞掉」其實只是目前目錄不對，導致 <code>../Src/ALU.sv</code> 或 <code>./pattern/pattern_alu.csv</code> 找不到。</p></div></section>
+
+<section id="vcs"><h2>四、VCS Command 逐 token 解釋</h2><div class="card good">
+<pre>vcs -R -full64 -sverilog ALU_tb.sv -debug_access+all +define+FSDB</pre>
+<table><tr><th>Token</th><th>作用</th></tr>
+<tr><td><code>vcs</code></td><td>啟動 Synopsys VCS。</td></tr>
+<tr><td><code>-R</code></td><td>完成 compile/elaboration 後直接執行 simulation。</td></tr>
+<tr><td><code>-full64</code></td><td>使用 64-bit 執行環境。</td></tr>
+<tr><td><code>-sverilog</code></td><td>啟用 SystemVerilog parsing。</td></tr>
+<tr><td><code>ALU_tb.sv</code></td><td>以 testbench 為 compilation input；TB 再 include/instantiate DUT。</td></tr>
+<tr><td><code>-debug_access+all</code></td><td>保留較完整 debug visibility，方便 waveform/debug。</td></tr>
+<tr><td><code>+define+FSDB</code></td><td>定義 <code>FSDB</code> macro，讓 TB 中 <code>`ifdef FSDB</code> 的 dump code 生效。</td></tr></table></div></section>
+
+<section id="compile"><h2>五、Compile / Elaborate / Simulate 是三個不同概念</h2><div class="card note">
+<div class="flow"><span class="node">Parse / Compile</span><span class="arr">→</span><span class="node">Elaborate Hierarchy</span><span class="arr">→</span><span class="node">Run Simulation</span></div>
+<table><tr><th>階段</th><th>常見問題</th></tr>
+<tr><td>Compile</td><td>syntax error、undeclared signal、width/type 問題、include 找不到</td></tr>
+<tr><td>Elaboration</td><td>module 找不到、port mismatch、multiple definition、hierarchy 問題</td></tr>
+<tr><td>Simulation</td><td>功能答案錯、X、valid hang、timing/protocol 錯</td></tr></table>
+<p>所以看到 Error 時，第一件事不是直接開 Verdi，而是先判斷「現在到底有沒有成功進入 simulation」。Compile error 還沒產生可執行的正確 DUT 行為，waveform 通常不是第一優先。</p></div></section>
+
+<section id="alu"><h2>六、ALU Official Regression</h2><div class="card">
+<div class="terminal">$ cd StudentID_HW1/Sim
+$ vcs -R -full64 -sverilog ALU_tb.sv -debug_access+all +define+FSDB</div>
+<div class="flow"><span class="node">ALU_tb.sv</span><span class="arr">→</span><span class="node">pattern_alu.csv</span><span class="arr">→</span><span class="node">instruction/A/B</span><span class="arr">→</span><span class="node">ALU.sv</span><span class="arr">→</span><span class="node">result_o</span><span class="arr">↔</span><span class="node">expected</span></div>
+<p>ALU starter pattern 共涵蓋 31 個 operation IDs。若 FAIL，先記住第一筆 instruction/A/B/GOT/EXP，再回到 decoder、signedness、width、shift amount 或 DSP lane 邏輯找 root cause。</p></div></section>
+
+<section id="fpu"><h2>七、FPU Official Regression</h2><div class="card">
+<div class="terminal">$ vcs -R -full64 -sverilog FPU_tb.sv -debug_access+all +define+FSDB</div>
+<div class="flow"><span class="node">FPU_tb.sv</span><span class="arr">→</span><span class="node">pattern_fpu.csv</span><span class="arr">→</span><span class="node">enable + A/B/op</span><span class="arr">→</span><span class="node">FPU</span><span class="arr">→</span><span class="node">wait valid</span><span class="arr">→</span><span class="node">co === expected</span></div>
+<p>FPU starter pattern 有 2000 筆，四種 instruction 各 500 筆。若 simulation 卡住，優先看 <code>valid</code>；starter TB 的 <code>while(!ready)</code> 沒有 per-transaction timeout。</p></div></section>
+
+<section id="fsdb"><h2>八、FSDB 是 VCS 與 Verdi 中間的橋</h2><div class="card good">
+<div class="flow"><span class="node">VCS Simulation</span><span class="arr">→</span><span class="node">$dumpfile / $dumpvars</span><span class="arr">→</span><span class="node">ALU.fsdb / FPU.fsdb</span><span class="arr">→</span><span class="node">Verdi</span></div>
+<p>若沒有加 <code>+define+FSDB</code>，而 TB 的 dump code 又包在 <code>`ifdef FSDB</code> 中，就可能沒有產生預期的 FSDB。功能 simulation 可以跑，但你之後沒有 waveform 可看。</p></div></section>
+
+<section id="verdi"><h2>九、Verdi：不是看漂亮波形，而是找第一個錯誤</h2><div class="card danger">
+<div class="terminal">$ verdi -ssf ALU.fsdb &
+$ verdi -ssf FPU.fsdb &</div>
+<div class="flow"><span class="node">FAIL case</span><span class="arr">→</span><span class="node">定位時間</span><span class="arr">→</span><span class="node">確認 Inputs</span><span class="arr">→</span><span class="node">Decode/Classify</span><span class="arr">→</span><span class="node">Intermediate</span><span class="arr">→</span><span class="node">Output/valid</span><span class="arr">→</span><span class="node">第一個錯訊號</span></div>
+<table><tr><th>ALU 建議看</th><th>FPU 建議看</th></tr>
+<tr><td>instruction/opcode/funct3/funct7</td><td>clk/rst/enable/valid</td></tr>
+<tr><td>src_A/src_B</td><td>S/E/F classification</td></tr>
+<tr><td>signed compare / shamt</td><td>exp_diff/aligned mantissa</td></tr>
+<tr><td>product / lane intermediate</td><td>G/R/S、raw add/sub</td></tr>
+<tr><td>result_o</td><td>normalized/rounded mantissa、co</td></tr></table></div></section>
+
+<section id="lint"><h2>十、Superlint：Simulation 沒測到的問題也要抓</h2><div class="card good">
+<div class="terminal">$ jg -superlint superlint.tcl</div>
+<p>HW1 講義指定以這個 command 執行 Superlint，並且 grading 說明中特別提到 Superlint coverage；因此 lint 不是可有可無的額外步驟。</p>
+<table><tr><th>Lint 類型</th><th>典型問題</th><th>可能後果</th></tr>
+<tr><td>Width</td><td>8-bit 與 32-bit expression 混用</td><td>sign/zero extension 或截斷錯誤</td></tr>
+<tr><td>Signedness</td><td>signed/unsigned 混合比較/乘法</td><td>SLT、MULH、DSP/FPU 邊界錯</td></tr>
+<tr><td>Incomplete assignment</td><td>combinational path 沒有賦值</td><td>latch / X</td></tr>
+<tr><td>Unused/dead logic</td><td>訊號宣告但無作用</td><td>設計結構可疑、coverage 降低</td></tr>
+<tr><td>Multiple driver</td><td>同一 signal 被多個 procedural blocks 驅動</td><td>衝突/X/不可綜合風險</td></tr>
+<tr><td>Unreachable branch</td><td>decoder 條件永遠不可能成立</td><td>某 operation 永遠跑不到</td></tr></table></div></section>
+
+<section id="tcl"><h2>十一、Superlint.tcl 在扮演什麼角色？</h2><div class="card note">
+<div class="flow"><span class="node">superlint.tcl</span><span class="arr">→</span><span class="node">指定/讀取 RTL</span><span class="arr">→</span><span class="node">設定 Top / Language / Options</span><span class="arr">→</span><span class="node">Elaborate</span><span class="arr">→</span><span class="node">Lint Checks</span><span class="arr">→</span><span class="node">Report</span></div>
+<p>你可以把 TCL 想成「告訴 Superlint 這個 project 要讀哪些檔、top 是誰、要執行哪些分析」的腳本。starter archive 本身沒有附上 PDF hierarchy 所列的 <code>Superlint.tcl</code>，因此若課程平台另有最新版檔案，應使用助教提供版本，不要自行猜測完整內容。</p></div></section>
+
+<section id="warnings"><h2>十二、看到 Warning 不要先用 disable 壓掉</h2><div class="card danger">
+<p>例如 width warning 的正確處理流程：</p>
+<div class="flow"><span class="node">Warning</span><span class="arr">→</span><span class="node">看 operator 期望 width</span><span class="arr">→</span><span class="node">看兩側 expression width</span><span class="arr">→</span><span class="node">確認 signed/unsigned</span><span class="arr">→</span><span class="node">明確 extend/cast</span><span class="arr">→</span><span class="node">重跑 lint + regression</span></div>
+<p>例如 exponent 是 8-bit，卻與 unsized integer literal <code>1</code> 放在 conditional expression 中，工具可能把另一側擴展成較大的整數寬度。比起關閉 warning，更好的做法是明確寫出你真正要的 width，例如依語意使用 <code>8'd1</code>。</p></div></section>
+
+<section id="decision"><h2>十三、Error / FAIL / Warning 要開哪個工具？</h2><div class="card good">
+<table><tr><th>現象</th><th>第一步</th><th>主要工具</th></tr>
+<tr><td>Syntax Error</td><td>看第一個 compiler error 與 line number</td><td>VCS log/editor</td></tr>
+<tr><td>Module/File not found</td><td><code>pwd</code>、<code>ls</code>、檢查 relative path</td><td>Shell + VCS</td></tr>
+<tr><td>Simulation FAIL</td><td>保存第一筆 failing vector</td><td>VCS → Verdi</td></tr>
+<tr><td>Simulation Hang</td><td>看 clk/rst/enable/valid</td><td>Verdi</td></tr>
+<tr><td>X/Z</td><td>往 driver/source 逆追</td><td>Verdi + lint</td></tr>
+<tr><td>Width/Signed Warning</td><td>檢查 expression width/cast</td><td>Superlint/compiler</td></tr>
+<tr><td>Lint coverage 不佳</td><td>看未覆蓋/不可達/未使用結構</td><td>Superlint</td></tr></table></div></section>
+
+<section id="commands"><h2>十四、HW1 Command Runbook：逐行說明</h2><div class="card"><table><tr><th>Command</th><th>用途</th></tr><tr><td><code>pwd</code></td><td>顯示目前工作目錄。第一個 debug 動作通常就是確認自己到底在哪裡。</td></tr><tr><td><code>ls</code></td><td>列出目前目錄內容，確認 ALU_tb.sv、FPU_tb.sv、Superlint.tcl 等檔案是否真的存在。</td></tr><tr><td><code>ls ../Src</code></td><td>確認 testbench 使用的相對路徑能找到 Src/ALU.sv、FPU.v 或依最新版要求命名的 FPU.sv。</td></tr><tr><td><code>ls ./pattern</code></td><td>確認 pattern_alu.csv、pattern_fpu.csv 的相對路徑正確。</td></tr><tr><td><code>vcs -R -full64 -sverilog ALU_tb.sv -debug_access+all +define+FSDB</code></td><td>HW1 講義的 ALU VCS 執行方式：編譯、建立模擬執行檔並直接執行；同時開啟 SystemVerilog、debug access 與 FSDB define。</td></tr><tr><td><code>vcs -R -full64 -sverilog FPU_tb.sv -debug_access+all +define+FSDB</code></td><td>FPU 對應的 VCS simulation command；講義頁面有大小寫 Vcs 的排版，Unix/Linux command 實際應使用安裝環境中的 vcs executable。</td></tr><tr><td><code>verdi -ssf ALU.fsdb &amp;</code></td><td>用 Verdi 開啟 ALU FSDB waveform；&amp; 讓 shell 在背景啟動 GUI。</td></tr><tr><td><code>verdi -ssf FPU.fsdb &amp;</code></td><td>用 Verdi 開啟 FPU FSDB waveform。</td></tr><tr><td><code>jg -superlint superlint.tcl</code></td><td>HW1 講義指定的 Superlint 啟動方式：由 JasperGold/Superlint 讀取 TCL 設定並進行 RTL lint。</td></tr><tr><td><code>tar -cvf StudentID_HW1.tar StudentID_HW1</code></td><td>建立作業要求的 .tar 封裝；-c 建立、-v 顯示檔案、-f 指定輸出檔名。</td></tr><tr><td><code>tar -tf StudentID_HW1.tar</code></td><td>不解壓，直接列出 tar 內容，送出前確認 hierarchy 與檔案沒有漏掉。</td></tr></table></div></section>
+
+<section id="workflow"><h2>十五、真正建議的每日開發循環</h2><div class="card note">
+<div class="flow"><span class="node">改一小段 RTL</span><span class="arr">→</span><span class="node">Compile</span><span class="arr">→</span><span class="node">Directed Test</span><span class="arr">→</span><span class="node">Official Regression</span><span class="arr">→</span><span class="node">FAIL?</span><span class="arr">→</span><span class="node">Verdi Root Cause</span><span class="arr">→</span><span class="node">Superlint</span><span class="arr">→</span><span class="node">再 Regression</span></div>
+<p>不要累積 300 行修改後才第一次 compile。ALU 可按 operation family 分階段；FPU 可按 Classify → Special → Align → Add/Sub → Normalize → RNE → Pack → valid 分階段。</p></div></section>
+
+<section id="final"><h2>十六、送出前 Final Validation</h2><div class="card danger">
+<div class="flow"><span class="node">ALU Regression</span><span class="arr">→</span><span class="node">FPU Regression</span><span class="arr">→</span><span class="node">Defense Tests</span><span class="arr">→</span><span class="node">Superlint</span><span class="arr">→</span><span class="node">Report Evidence</span><span class="arr">→</span><span class="node">Hierarchy Check</span><span class="arr">→</span><span class="node">tar -cvf</span><span class="arr">→</span><span class="node">tar -tf</span></div>
+<pre>cd StudentID_HW1/Sim
+pwd
+ls
+ls ../Src
+ls ./pattern
+
+vcs -R -full64 -sverilog ALU_tb.sv -debug_access+all +define+FSDB
+vcs -R -full64 -sverilog FPU_tb.sv -debug_access+all +define+FSDB
+jg -superlint superlint.tcl
+
+cd ../..
+tar -cvf StudentID_HW1.tar StudentID_HW1
+tar -tf StudentID_HW1.tar</pre>
+<p>作業講義要求以 <code>.tar</code> 形式提交，並要求在 SoC Lab 環境確認 compile/simulation。最終原則是：<b>你報告裡描述的 RTL、最後 regression 的 RTL、lint 的 RTL、打進 tar 的 RTL 必須是同一版。</b></p></div></section>
+
+<section id="quiz"><h2>十七、學完十章後應能回答</h2><div class="card good">
+<table><tr><th>問題</th><th>答案</th></tr>
+<tr><td>VCS 做什麼？</td><td>Compile/elaborate/simulate RTL + TB。</td></tr>
+<tr><td>Verdi 做什麼？</td><td>從 waveform/hierarchy 找第一個錯誤訊號與時間。</td></tr>
+<tr><td>Superlint 做什麼？</td><td>靜態檢查 RTL 結構、width、signedness、latch、dead/unreachable 等問題。</td></tr>
+<tr><td>PASS 就不用 lint？</td><td>不對；simulation 與 lint 檢查不同面向。</td></tr>
+<tr><td>找不到 pattern 第一個查什麼？</td><td>pwd、ls、相對路徑。</td></tr>
+<tr><td>FPU simulation 卡住先看什麼？</td><td>clk/rst/enable/valid handshake。</td></tr>
+<tr><td>FAIL 後最重要原則？</td><td>保存最小 failing case，在 waveform 找第一個錯訊號，修 root cause，再全量 regression。</td></tr></table>
+<p><b>至此 00-1～00-10 的 HW1 先修鏈完成：</b>Binary/Hex → Combinational/Sequential → Decode → ALU → DSP → IEEE-754 → FPU Datapath → GRS/RNE → TB/Handshake → VCS/Verdi/Lint。</p></div></section>
+</main></body></html>

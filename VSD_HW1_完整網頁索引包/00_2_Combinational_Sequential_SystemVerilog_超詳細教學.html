@@ -1,0 +1,197 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Combinational Sequential SystemVerilog｜VSD HW1 先修</title><style>
+:root{--bg:#050b14;--p:#0d1b2e;--p2:#142b49;--tx:#edf5ff;--m:#a9bad0;--a:#68e0cf;--b:#9cc0ff;--y:#ffd166;--r:#ff8585;--g:#83e6a4;--line:#31506f}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(135deg,#050b14,#0a1930);color:var(--tx);font-family:system-ui,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.8}
+header{position:sticky;top:0;z-index:10;background:#07111ff2;border-bottom:1px solid var(--line);padding:12px 3vw}nav{display:flex;gap:7px;overflow:auto;margin-top:7px}nav a{white-space:nowrap;background:var(--a);color:#06111f;text-decoration:none;font-weight:800;padding:6px 9px;border-radius:8px}
+main{max-width:1450px;margin:auto;padding:28px 3vw 80px}h1{font-size:clamp(30px,4vw,50px)}h2{color:var(--a);border-bottom:1px solid var(--line);padding-bottom:7px;margin-top:44px}h3{color:#bed5ff}
+.card{background:#0d1b2ef2;border:1px solid var(--line);border-radius:15px;padding:19px;margin:17px 0}.good{border-left:5px solid var(--g)}.note{border-left:5px solid var(--y)}.danger{border-left:5px solid var(--r)}
+table{width:100%;border-collapse:collapse;margin:13px 0}th,td{border:1px solid var(--line);padding:9px;vertical-align:top}th{background:#173450;color:#b7f2e9}
+.flow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px}.node{background:var(--p2);border:1px solid #567aaa;border-radius:10px;padding:10px 12px;font-weight:800}.arr{font-size:24px;color:var(--a)}
+pre,code{font-family:Consolas,"Cascadia Code",monospace}pre{background:#020812;padding:15px;border-radius:10px;overflow:auto;border:1px solid #294361}.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}.eq{text-align:center;background:#10243c;padding:10px;border-radius:10px}.muted{color:var(--m)}
+</style></head><body>
+<header><b>VSD HW1｜Combinational / Sequential + SV</b><nav><a href="#map">總觀念</a><a href="#comb">Combinational</a><a href="#seq">Sequential</a><a href="#assign">= vs &lt;=</a><a href="#always">always</a><a href="#latch">Latch</a><a href="#case">case</a><a href="#reset">Clock/Reset</a><a href="#fsm">FSM</a><a href="#hw1">HW1</a><a href="#tb">TB</a><a href="#bugs">Debug</a><a href="#quiz">練習</a></nav></header><main>
+<h1>00-2｜Combinational / Sequential + SystemVerilog 超詳細先修</h1>
+<p>這一章回答最重要的問題：<b>「=、&lt;=、always_comb、always_ff 到底差在哪？」</b>，並把它連到 VSD HW1 的 ALU 與 FPU。你要建立的不是「語法背誦」，而是 <b>SystemVerilog code → hardware structure → timing behavior</b> 的對應。</p>
+
+<section id="map"><h2>一、先建立總觀念：RTL 在描述硬體</h2><div class="card good">
+<div class="flow"><span class="node">Specification</span><span class="arr">→</span><span class="node">Combinational?</span><span class="arr">或</span><span class="node">Sequential?</span><span class="arr">→</span><span class="node">always_comb / always_ff</span><span class="arr">→</span><span class="node">Synthesis</span><span class="arr">→</span><span class="node">Mux / Adder / Logic / Register</span></div>
+<p>軟體程式通常想的是「CPU 依序執行第 1 行、第 2 行」。RTL 更重要的是問：<b>這一段 code 最後要形成什麼電路？訊號是在同一個時間由組合邏輯傳遞，還是要等 clock edge 才保存？</b></p></div></section>
+
+<section id="comb"><h2>二、Combinational Logic：輸出只由「目前輸入」決定</h2><div class="card">
+<div class="eq">Y(t) = f(Input(t))</div><p>組合邏輯沒有「記住上一拍」的需求。典型硬體包括 AND/OR/XOR、adder、comparator、mux、decoder、ALU datapath。</p>
+<pre>always_comb begin
+    result_o = 32'b0;
+    case (operation)
+        ADD: result_o = src_A_i + src_B_i;
+        SUB: result_o = src_A_i - src_B_i;
+        XOR: result_o = src_A_i ^ src_B_i;
+        default: result_o = 32'b0;
+    endcase
+end</pre>
+<table><tr><th>行為</th><th>硬體理解</th></tr><tr><td>A/B/operation 改變</td><td>經 propagation delay 後 result 跟著改變</td></tr><tr><td>不需要 clock</td><td>沒有 register 才能運作</td></tr><tr><td>所有 branch 都賦值</td><td>避免意外推導 latch</td></tr></table></div></section>
+
+<section id="seq"><h2>三、Sequential Logic：輸出與「過去狀態」有關</h2><div class="card note">
+<div class="eq">State(t+1) = f(State(t), Input(t))</div>
+<p>Sequential logic 必須保存狀態，典型硬體是 flip-flop/register、counter、FSM、pipeline register。</p>
+<pre>always_ff @(posedge clk) begin
+    if (rst) begin
+        valid <= 1'b0;
+        state <= IDLE;
+    end else begin
+        valid <= next_valid;
+        state <= next_state;
+    end
+end</pre>
+<div class="flow"><span class="node">Inputs / Current State</span><span class="arr">→</span><span class="node">Combinational Next-State Logic</span><span class="arr">→</span><span class="node">D</span><span class="arr">→ clock edge</span><span class="node">Register Q</span><span class="arr">→</span><span class="node">New State</span></div>
+</div></section>
+
+<section id="compare"><h2>四、Combinational vs Sequential 一張表看懂</h2><div class="card">
+<table><tr><th>項目</th><th>Combinational</th><th>Sequential</th></tr>
+<tr><td>是否記憶</td><td>否</td><td>是</td></tr><tr><td>主要依賴</td><td>目前 inputs</td><td>inputs + previous state</td></tr><tr><td>Clock</td><td>通常不需要</td><td>通常需要</td></tr><tr><td>SV</td><td><code>always_comb</code></td><td><code>always_ff @(posedge clk)</code></td></tr><tr><td>常用 assignment</td><td><code>=</code></td><td><code>&lt;=</code></td></tr><tr><td>硬體</td><td>mux/adder/comparator/decoder</td><td>register/counter/FSM/pipeline</td></tr><tr><td>HW1</td><td>ALU datapath、FPU arithmetic combinational stages</td><td>FPU valid/state/output register</td></tr></table>
+</div></section>
+
+<section id="assign"><h2>五、Blocking「=」與 Nonblocking「&lt;=」</h2><div class="card danger">
+<h3>Blocking assignment：=</h3><pre>always_comb begin
+    temp = a + b;
+    y    = temp ^ c;
+end</pre>
+<p>在 procedural simulation semantics 中，第一個 assignment 更新 <code>temp</code> 後，下一行使用更新後的 temp。這種寫法適合表達組合計算步驟。</p>
+<h3>Nonblocking assignment：&lt;=</h3><pre>always_ff @(posedge clk) begin
+    q1 <= d;
+    q2 <= q1;
+end</pre>
+<p>在同一個 clock edge，右邊先依 edge 前的值求值，更新排到 nonblocking update。硬體意義接近兩級 register：</p>
+<div class="flow"><span class="node">d</span><span class="arr">→</span><span class="node">FF q1</span><span class="arr">→</span><span class="node">FF q2</span></div>
+<p>因此 q2 在這一拍取得的是<b>舊 q1</b>，不是剛更新的新 q1。</p>
+</div></section>
+
+<section id="example"><h2>六、為什麼 = / &lt;= 用錯會造成 simulation 行為完全不同？</h2><div class="card">
+<div class="two"><div><h3>Sequential 正確典型</h3><pre>always_ff @(posedge clk) begin
+    q1 <= d;
+    q2 <= q1;
+end</pre><p>edge 後：q1←舊 d；q2←舊 q1。</p></div>
+<div><h3>不建議用 blocking 描述這種 register chain</h3><pre>always @(posedge clk) begin
+    q1 = d;
+    q2 = q1;
+end</pre><p>procedural simulation 中 q1 先立刻改成 d，接著 q2 讀到新 q1，容易失去原本「兩級 FF」想表達的時序意義。</p></div></div>
+</div></section>
+
+<section id="always"><h2>七、always_comb / always_ff / assign</h2><div class="card good">
+<table><tr><th>寫法</th><th>適用</th><th>例子</th></tr>
+<tr><td><code>assign y = a &amp; b;</code></td><td>簡單 continuous combinational assignment</td><td>AND、簡單 expression</td></tr>
+<tr><td><code>always_comb</code></td><td>較複雜 combinational procedural logic</td><td>ALU decoder、mux、next-state</td></tr>
+<tr><td><code>always_ff @(posedge clk)</code></td><td>flip-flop/register</td><td>state、counter、valid、pipeline register</td></tr></table>
+<p><code>always_comb</code> 會比傳統 <code>always @(*)</code> 更清楚表達「這應該是組合邏輯」的設計意圖；<code>always_ff</code> 則清楚表達「這是 flip-flop」。</p>
+</div></section>
+
+<section id="latch"><h2>八、最重要的 Combinational 陷阱：Latch</h2><div class="card danger">
+<h3>有問題</h3><pre>always_comb begin
+    if (enable)
+        y = a;
+end</pre>
+<p>當 enable=0 時，y 沒被指定新值。若要求 y 保持舊值，就需要「記憶」，工具可能指出 latch 問題。</p>
+<h3>常見修法：先給 default</h3><pre>always_comb begin
+    y = 32'b0;
+    if (enable)
+        y = a;
+end</pre>
+<div class="flow"><span class="node">進入 always_comb</span><span class="arr">→</span><span class="node">先給 default</span><span class="arr">→</span><span class="node">case/if 覆蓋需要的結果</span><span class="arr">→</span><span class="node">每條 path 都有值</span><span class="arr">→</span><span class="node">No unintended latch</span></div>
+</div></section>
+
+<section id="case"><h2>九、case / if 如何變成硬體？</h2><div class="card">
+<pre>always_comb begin
+    result = 32'b0;
+    case (op)
+        2'b00: result = a + b;
+        2'b01: result = a - b;
+        2'b10: result = a ^ b;
+        2'b11: result = a & b;
+    endcase
+end</pre>
+<p>不要只把它想成「程式分支」。綜合後更接近：</p>
+<div class="flow"><span class="node">Adder</span><span class="node">Subtractor</span><span class="node">XOR</span><span class="node">AND</span><span class="arr">→</span><span class="node">MUX controlled by op</span><span class="arr">→</span><span class="node">result</span></div>
+<p>所以 ALU decoder 本質就是控制哪一條 datapath 被選到 output。</p></div></section>
+
+<section id="reset"><h2>十、Clock、Reset、Enable</h2><div class="card note">
+<pre>always_ff @(posedge clk) begin
+    if (rst) begin
+        valid <= 1'b0;
+        co    <= 32'b0;
+    end else if (enable) begin
+        valid <= 1'b1;
+        co    <= calculated_result;
+    end else begin
+        valid <= 1'b0;
+    end
+end</pre>
+<table><tr><th>Signal</th><th>概念</th></tr><tr><td>clk</td><td>決定 sequential state 何時更新。</td></tr><tr><td>rst</td><td>把 state/register 帶回已知狀態。</td></tr><tr><td>enable</td><td>決定是否接受/處理一筆 transaction。</td></tr><tr><td>valid</td><td>告訴外部目前 output 是否有效。</td></tr></table>
+<p>真正作業必須配合官方 FPU TB 的 handshake，而不是直接照這個教學片段複製。</p></div></section>
+
+<section id="fsm"><h2>十一、FSM：複雜 Sequential Control 的標準思考方式</h2><div class="card">
+<div class="flow"><span class="node">Current State Register</span><span class="arr">→</span><span class="node">Next-State Combinational Logic</span><span class="arr">→</span><span class="node">Next State</span><span class="arr">→ clock</span><span class="node">State Register</span></div>
+<pre>always_comb begin
+    next_state = state;
+    case (state)
+        IDLE: if (enable) next_state = CALC;
+        CALC:             next_state = DONE;
+        DONE:             next_state = IDLE;
+    endcase
+end
+
+always_ff @(posedge clk) begin
+    if (rst)
+        state <= IDLE;
+    else
+        state <= next_state;
+end</pre>
+<p>這種「next-state combinational + state register sequential」的拆法非常適合理解 FPU control。</p></div></section>
+
+<section id="hw1"><h2>十二、直接連到 VSD HW1：ALU 與 FPU 怎麼分？</h2><div class="card good">
+<h3>ALU</h3><div class="flow"><span class="node">instruction_i</span><span class="node">src_A_i</span><span class="node">src_B_i</span><span class="arr">→</span><span class="node">Decode + Datapath (Combinational)</span><span class="arr">→</span><span class="node">result_o</span></div>
+<p>ALU 沒有 clk/rst/valid interface，因此核心思路是 combinational decoder + datapath。</p>
+<h3>FPU</h3><div class="flow"><span class="node">ai / bi / instruction</span><span class="node">enable</span><span class="arr">→</span><span class="node">Arithmetic Datapath</span><span class="arr">+</span><span class="node">Sequential Control/Register</span><span class="arr">→</span><span class="node">co + valid</span></div>
+<p>FPU 不只要算對 floating-point bit pattern，也要在正確的 protocol/timing 下讓 valid 出現。</p>
+</div></section>
+
+<section id="tb"><h2>十三、RTL 與 Testbench 的時間觀念</h2><div class="card">
+<p>TB 的 <code>#10</code> 是 simulation delay；<code>@(posedge clk)</code> 是等待事件。這些常用於 testbench，但 synthesizable RTL 中不能隨便把 delay 當成真實硬體。</p>
+<table><tr><th>語法</th><th>TB</th><th>一般 synthesizable RTL</th></tr><tr><td><code>#10</code></td><td>常見</td><td>通常不可用來描述真正 delay hardware</td></tr><tr><td><code>@(posedge clk)</code></td><td>可等待 clock</td><td>用於 sequential event control</td></tr><tr><td><code>$display</code></td><td>debug 常用</td><td>不是 datapath hardware</td></tr><tr><td><code>$fopen/$fgets/$sscanf</code></td><td>讀 pattern</td><td>不是一般可綜合硬體</td></tr></table>
+</div></section>
+
+<section id="bugs"><h2>十四、常見 RTL Bug → 硬體原因</h2><div class="card danger">
+<table><tr><th>症狀</th><th>常見原因</th><th>思考方式</th></tr>
+<tr><td>result 變 X</td><td>未初始化/未賦值/driver 問題</td><td>追 signal driver</td></tr>
+<tr><td>Superlint latch</td><td>always_comb branch 不完整</td><td>default + complete branch</td></tr>
+<tr><td>FPU valid 永遠不來</td><td>state/enable/reset/control 錯</td><td>逐 clock 看 state transition</td></tr>
+<tr><td>pipeline 少/多一拍</td><td>誤解 nonblocking timing</td><td>畫 register timing table</td></tr>
+<tr><td>模擬與預期不同</td><td>blocking/nonblocking 使用不當</td><td>分清 combinational 與 sequential</td></tr>
+<tr><td>改了一個 signal 其他結果怪異</td><td>多重 driver/組合回授</td><td>檢查 assignment ownership</td></tr></table>
+</div></section>
+
+<section id="rules"><h2>十五、寫 HW1 時可先遵守的 RTL Coding Rules</h2><div class="card note">
+<table><tr><th>Rule</th><th>原因</th></tr>
+<tr><td>Combinational 優先用 <code>always_comb</code> + blocking <code>=</code></td><td>清楚表達組合 datapath。</td></tr>
+<tr><td>Clocked registers 優先用 <code>always_ff</code> + nonblocking <code>&lt;=</code></td><td>清楚表達 FF 同步更新。</td></tr>
+<tr><td>always_comb 開頭先給合理 default</td><td>降低漏 branch 造成 latch。</td></tr>
+<tr><td>同一 register 不要到處寫</td><td>避免 multiple driver / ownership 不清。</td></tr>
+<tr><td>明確處理 reset</td><td>simulation 起始 state 可預測。</td></tr>
+<tr><td>不要把 TB 的 #delay 搬進 RTL</td><td>simulation delay 不等於 synthesizable hardware。</td></tr>
+<tr><td>修改 sequential control 後看 waveform</td><td>一拍差異只看 console 很難發現。</td></tr></table>
+</div></section>
+
+<section id="quiz"><h2>十六、自我檢查</h2><div class="card good"><table><tr><th>#</th><th>問題</th><th>答案</th></tr>
+<tr><td>1</td><td>Combinational output 取決於什麼？</td><td>目前 inputs。</td></tr>
+<tr><td>2</td><td>Sequential circuit 多了什麼概念？</td><td>state / memory / clocked register。</td></tr>
+<tr><td>3</td><td>always_comb 常搭配哪種 assignment？</td><td>blocking <code>=</code>。</td></tr>
+<tr><td>4</td><td>always_ff 常搭配哪種 assignment？</td><td>nonblocking <code>&lt;=</code>。</td></tr>
+<tr><td>5</td><td>q1&lt;=d; q2&lt;=q1; 同一 edge 後 q2 取得？</td><td>edge 前的舊 q1。</td></tr>
+<tr><td>6</td><td>always_comb 某 branch 沒有指定 y，可能造成？</td><td>unintended latch。</td></tr>
+<tr><td>7</td><td>case(op) 綜合後常對應什麼結構？</td><td>decoder/control + mux/datapath。</td></tr>
+<tr><td>8</td><td>ALU 在本 HW1 核心屬於？</td><td>Combinational datapath。</td></tr>
+<tr><td>9</td><td>FPU 為何還需要 sequential 概念？</td><td>有 clk/rst/enable/valid 與 transaction timing。</td></tr>
+<tr><td>10</td><td>#10 適合直接拿來做可綜合 RTL delay 嗎？</td><td>不應把 TB simulation delay 當作實體硬體 delay。</td></tr></table></div></section>
+
+<section id="summary"><h2>十七、最後把四個關鍵字一次記住</h2><div class="card danger">
+<table><tr><th>關鍵字</th><th>一句話</th></tr><tr><td><code>=</code></td><td>blocking；常用於 combinational procedural calculation。</td></tr><tr><td><code>&lt;=</code></td><td>nonblocking；常用於 clocked sequential register update。</td></tr><tr><td><code>always_comb</code></td><td>「我要描述組合邏輯」。</td></tr><tr><td><code>always_ff</code></td><td>「我要描述由 clock 驅動的 flip-flop/register」。</td></tr></table>
+<div class="flow"><span class="node">先判斷硬體需要記憶嗎？</span><span class="arr">→ 否</span><span class="node">Combinational / always_comb / =</span><span class="arr">；是 →</span><span class="node">Sequential / always_ff / &lt;=</span></div>
+<p><b>下一個主題就可以進入 RISC-V Decode：如何從 32-bit instruction 的 opcode、funct3、funct7 分辨真正的 ALU operation。</b></p></div></section>
+</main></body></html>

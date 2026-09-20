@@ -1,0 +1,156 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TB Handshake 超詳細教學｜VSD HW1</title><style>body{margin:0;background:linear-gradient(135deg,#050b14,#0a1930);color:#edf5ff;font-family:system-ui,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.78}header{position:sticky;top:0;z-index:9;background:#07111ff2;border-bottom:1px solid #31506f;padding:12px 3vw}nav{display:flex;gap:7px;overflow:auto}nav a{white-space:nowrap;background:#68e0cf;color:#06111f;text-decoration:none;font-weight:800;padding:6px 9px;border-radius:8px}main{max-width:1500px;margin:auto;padding:28px 3vw 80px}h1{font-size:clamp(30px,4vw,50px)}h2{color:#68e0cf;border-bottom:1px solid #31506f;padding-bottom:7px;margin-top:42px}h3{color:#bed5ff}.card{background:#0d1b2ef2;border:1px solid #31506f;border-radius:15px;padding:19px;margin:17px 0}.good{border-left:5px solid #83e6a4}.note{border-left:5px solid #ffd166}.danger{border-left:5px solid #ff8585}table{width:100%;border-collapse:collapse;margin:12px 0}th,td{border:1px solid #31506f;padding:8px;vertical-align:top}th{background:#173450;color:#b7f2e9}.flow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px}.node{background:#142b49;border:1px solid #567aaa;border-radius:10px;padding:10px 12px;font-weight:800}.arr{font-size:24px;color:#68e0cf}code,pre{font-family:Consolas,"Cascadia Code",monospace}pre{background:#020812;padding:15px;border-radius:10px;overflow:auto}.eq{text-align:center;background:#10243c;padding:10px;border-radius:10px;font-size:1.08rem}.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}.codewrap{max-height:82vh;overflow:auto;border:1px solid #31506f;border-radius:12px}.codetable{min-width:1200px;font-size:.9rem}.codetable th{position:sticky;top:0}.codetable td:first-child{width:50px;text-align:right;color:#8198b2}.codetable td:nth-child(2){background:#020812;white-space:pre}.wave{font-family:Consolas,monospace;white-space:pre;background:#020812;border-radius:10px;padding:16px;overflow:auto;color:#d9ecff}.yes{color:#83e6a4;font-weight:800}.warn{color:#ffd166;font-weight:800}</style></head><body>
+<header><b>VSD HW1｜00-9 TB / Handshake</b><nav><a href="#master">TB</a><a href="#alu">ALU</a><a href="#fpu">FPU</a><a href="#timing">Timing</a><a href="#valid">valid</a><a href="#reset">Reset</a><a href="#task">逐行TB</a><a href="#csv">CSV</a><a href="#quirks">陷阱</a><a href="#wave">Wave</a><a href="#debug">Debug</a></nav></header>
+<main>
+<h1>00-9｜Testbench / Handshake：enable / valid 如何配合 Clock？</h1>
+<p>本章直接以 VSD HW1 的 starter testbench 行為為核心。ALU 是 combinational 驗證；FPU 則有 <code>clk / rst / enable / valid</code>，所以除了「數學答案正確」之外，還必須符合 transaction timing。尤其 FPU TB 會送入 <code>enable</code> pulse，接著等待 <code>valid</code>，最後才讀取 <code>co</code>。</p>
+
+<section id="master"><h2>一、Testbench 到底在做什麼？</h2><div class="card good">
+<div class="flow"><span class="node">CSV Golden Pattern</span><span class="arr">→</span><span class="node">TB 讀取一列</span><span class="arr">→</span><span class="node">Drive DUT Inputs</span><span class="arr">→</span><span class="node">等待 DUT 完成</span><span class="arr">→</span><span class="node">Capture Output</span><span class="arr">→</span><span class="node">Bit-exact Compare</span><span class="arr">→</span><span class="node">PASS / FAIL</span></div>
+<p>可以把它記成：<b>CSV 是答案資料、TB 是監考老師、RTL 是考生、waveform 是監視器。</b></p></div></section>
+
+<section id="alu"><h2>二、ALU TB：為什麼不需要 enable / valid？</h2><div class="card note">
+<p>HW1 ALU 介面只有 <code>instruction_i / src_A_i / src_B_i → result_o</code>。它是 combinational ALU，因此 TB 的概念是：</p>
+<div class="flow"><span class="node">設定 instruction/A/B</span><span class="arr">→</span><span class="node">等待 #10</span><span class="arr">→</span><span class="node">讀 result_o</span><span class="arr">→</span><span class="node">與 expected 比較</span></div>
+<p><code>#10</code> 在這裡是 TB 給 combinational logic 一段 simulation time 後再檢查，不是 ALU 內部「需要 10 ns 才完成」的硬體 handshake protocol。</p></div></section>
+
+<section id="fpu"><h2>三、FPU 為什麼需要 Handshake？</h2><div class="card danger">
+<table><tr><th>Signal</th><th>方向</th><th>角色</th></tr>
+<tr><td>enable</td><td>TB → FPU</td><td>「這個 clock edge 有一筆新 request」</td></tr>
+<tr><td>ai / bi</td><td>TB → FPU</td><td>operand data</td></tr>
+<tr><td>instruction</td><td>TB → FPU</td><td>MIN/MAX/ADD/SUB</td></tr>
+<tr><td>valid</td><td>FPU → TB</td><td>「現在 co 是這筆 request 的有效答案」</td></tr>
+<tr><td>co</td><td>FPU → TB</td><td>32-bit result</td></tr></table>
+<div class="eq">Request side：enable + input data　｜　Response side：valid + output data</div>
+<p>因此 enable 和 valid 不是同一件事。<b>enable 表示輸入被送進去；valid 表示輸出現在可以被讀。</b></p></div></section>
+
+<section id="timing"><h2>四、Starter FPU TB 的實際 Timing</h2><div class="card good">
+<p>Starter TB 使用 <code>forever #5 clk = ~clk;</code>，所以 clock period 是 10 ns。send_and_check 的核心時序為：</p>
+<div class="wave">time       ────────►
+
+clk       ___/‾‾‾\___/‾‾‾\___/‾‾‾\___/‾‾‾\___
+                 ↑         ↑         ↑
+               edge 1    edge 2    later edge
+
+A/B/op    ======= TRANSACTION N =================
+
+enable    ________/‾‾‾‾‾\________________________
+                 ↑
+                 DUT 接收 request
+
+valid     ________________________/‾‾‾\___________
+                                  ↑
+                                  TB 才可讀 co
+
+co        xxxxxxxxxxxxxxxxxxxxxxxx RESULT N =======
+                                  ↑
+                              valid=1 時有效</div>
+<p>TB 先把 <code>start(enable)=1</code>，等待一個 posedge，然後把 start 拉回 0；再至少等待下一個 posedge，之後以 <code>while(!ready)</code> 等待 valid。</p></div></section>
+
+<section id="cycle"><h2>五、逐 Clock 看一次 Transaction</h2><div class="card">
+<table><tr><th>階段</th><th>TB</th><th>DUT 應理解為</th></tr>
+<tr><td>送資料</td><td>設定 A/B/instruction，enable=1</td><td>request 已準備好</td></tr>
+<tr><td>posedge #1</td><td>TB 等待 edge</td><td>可在這個 edge latch request</td></tr>
+<tr><td>edge 後</td><td>enable=0</td><td>不要把同一筆資料重複接收</td></tr>
+<tr><td>posedge #2</td><td>TB 再等一個 edge</td><td>若尚未 valid，繼續計算</td></tr>
+<tr><td>later edges</td><td><code>while(!valid)</code></td><td>尚未完成就繼續等待</td></tr>
+<tr><td>valid=1</td><td>讀 co</td><td>co 必須與這筆 transaction 對應</td></tr></table></div></section>
+
+<section id="latency"><h2>六、Latency 與 Throughput 不要混在一起</h2><div class="card note">
+<table><tr><th>概念</th><th>意思</th><th>例子</th></tr>
+<tr><td>Latency</td><td>從 request 被接受到 result valid 經過多久</td><td>3 cycles 後 valid</td></tr>
+<tr><td>Throughput</td><td>多久可以接受一筆新的 request</td><td>每 cycle 1 筆 / 每 4 cycles 1 筆</td></tr></table>
+<p>Starter TB 是一筆一筆送：送完後等待 valid，再處理下一筆。因此你的第一優先是讓每筆 request 都能可靠完成，不需要自行假設 TB 會每 cycle pipeline 灌資料。</p></div></section>
+
+<section id="valid"><h2>七、valid 最安全的思考方式</h2><div class="card danger">
+<div class="flow"><span class="node">Idle</span><span class="arr">enable=1 →</span><span class="node">Capture Input</span><span class="arr">→</span><span class="node">Compute / Wait</span><span class="arr">→</span><span class="node">Write co</span><span class="arr">+</span><span class="node">valid=1</span><span class="arr">→</span><span class="node">回 Idle</span></div>
+<p>不論你設計是 1-cycle 或 multi-cycle，核心 invariant 都是：<b>當 valid=1 時，co 必須已經是正確且穩定的該筆答案。</b></p>
+<table><tr><th>錯誤</th><th>結果</th></tr>
+<tr><td>valid 永遠 0</td><td>TB 卡在 <code>while(!ready)</code>，simulation 不會前進到 compare。</td></tr>
+<tr><td>valid 太早</td><td>TB 讀到上一筆或尚未完成的 co。</td></tr>
+<tr><td>valid 與 co 差一 cycle</td><td>數學 datapath 可能正確，但 transaction 對不上。</td></tr>
+<tr><td>enable 每 cycle 都當新 request</td><td>同一筆可能重複啟動。</td></tr></table></div></section>
+
+<section id="reset"><h2>八、Reset 必須先看 TB 怎麼驅動</h2><div class="card good">
+<pre>rst   = 1;
+start = 0;
+a     = '0;
+b     = '0;
+#20;
+rst   = 0;</pre>
+<p>Starter TB 在 simulation 一開始令 <code>rst=1</code>，20 ns 後改成 0，因此這個介面預期的是 <b>active-high reset 行為</b>。Reset 期間至少要把 control state、valid 等初始化到已知狀態，避免一開始就出現 X 或假的 valid。</p></div></section>
+
+<section id="task"><h2>九、官方 FPU send_and_check：逐行中文解釋</h2><div class="card note">
+<p>下面保留 starter TB 的核心 transaction 結構。這段非常值得看懂，因為它直接告訴你 DUT 要如何與 TB 配合。</p></div>
+<div class="codewrap"><table class="codetable"><tr><th>行</th><th>Testbench Code</th><th>中文說明</th></tr><tr><td>1</td><td><code>task send_and_check;</code></td><td>定義一個 transaction task：送一筆 FPU input，等待 valid/ready，再比對 golden answer。</td></tr><tr><td>2</td><td><code>    input [31:0] ai, bi, expected;</code></td><td>task 收到 A、B 與 expected result，全部都是 32-bit IEEE-754 bit patterns。</td></tr><tr><td>3</td><td><code>    input [1:0]  ii;</code></td><td>2-bit operation：HW1 為 MIN/MAX/ADD/SUB。</td></tr><tr><td>4</td><td><code>    reg   [31:0] got;</code></td><td>保存 DUT 真正輸出的 32-bit result。</td></tr><tr><td>5</td><td><code>    begin</code></td><td>開始 task/條件式區塊。</td></tr><tr><td>6</td><td><code>        ins   &lt;= ii;</code></td><td>把 operation 放到 DUT instruction input。</td></tr><tr><td>7</td><td><code>        a     &lt;= ai;</code></td><td>送入 operand A。</td></tr><tr><td>8</td><td><code>        start &lt;= 1&#x27;d1;</code></td><td>start 對應 DUT enable；拉高表示送入一筆新 transaction。</td></tr><tr><td>9</td><td><code>        b     &lt;= bi;</code></td><td>送入 operand B。</td></tr><tr><td>10</td><td><code>&nbsp;</code></td><td>空行：分隔 transaction 的不同階段。</td></tr><tr><td>11</td><td><code>        @(posedge clk);</code></td><td>等待 clock rising edge；DUT 可在此 edge 接收 enable=1 的輸入。</td></tr><tr><td>12</td><td><code>        start &lt;= 1&#x27;d0;</code></td><td>接受 edge 後將 enable/start 拉低，形成一個 request pulse。</td></tr><tr><td>13</td><td><code>&nbsp;</code></td><td>空行：分隔 transaction 的不同階段。</td></tr><tr><td>14</td><td><code>        @(posedge clk);</code></td><td>等待 clock rising edge；DUT 可在此 edge 接收 enable=1 的輸入。</td></tr><tr><td>15</td><td><code>        while (!ready)</code></td><td>ready 對應 DUT valid；只要尚未完成，就持續等待。</td></tr><tr><td>16</td><td><code>            @(posedge clk);</code></td><td>等待 clock rising edge；DUT 可在此 edge 接收 enable=1 的輸入。</td></tr><tr><td>17</td><td><code>&nbsp;</code></td><td>空行：分隔 transaction 的不同階段。</td></tr><tr><td>18</td><td><code>        got = result;</code></td><td>valid/ready 已成立後，擷取 DUT 的 co/result。</td></tr><tr><td>19</td><td><code>        n_total = n_total + 1;</code></td><td>完成一筆 transaction，total counter +1。</td></tr><tr><td>20</td><td><code>&nbsp;</code></td><td>空行：分隔 transaction 的不同階段。</td></tr><tr><td>21</td><td><code>        if (n_fail &lt; 5) begin</code></td><td>開始 task/條件式區塊。</td></tr><tr><td>22</td><td><code>            if (equal_bits(got, expected))</code></td><td>使用 bit-exact comparison，浮點結果不是用近似 decimal tolerance 比較。</td></tr><tr><td>23</td><td><code>                n_pass = n_pass + 1;</code></td><td>bit pattern 完全相同才 PASS。</td></tr><tr><td>24</td><td><code>            else begin</code></td><td>開始 task/條件式區塊。</td></tr><tr><td>25</td><td><code>                n_fail = n_fail + 1;</code></td><td>錯誤筆數 +1。</td></tr><tr><td>26</td><td><code>                $display(&quot;[FAIL] line=%0d A=%h B=%h GOT=%h EXP=%h&quot;,</code></td><td>列印第一批 FAIL 的 line、A、B、GOT、EXP，方便回查 pattern/waveform。</td></tr><tr><td>27</td><td><code>                         line_no, ai, bi, got, expected);</code></td><td>FAIL 訊息中列出測資行號與實際/預期 bit pattern。</td></tr><tr><td>28</td><td><code>            end</code></td><td>結束目前 begin/else/if 區塊。</td></tr><tr><td>29</td><td><code>        end</code></td><td>結束目前 begin/else/if 區塊。</td></tr><tr><td>30</td><td><code>    end</code></td><td>結束目前 begin/else/if 區塊。</td></tr><tr><td>31</td><td><code>endtask</code></td><td>結束 send_and_check task。</td></tr></table></div></section>
+
+<section id="compare"><h2>十、為什麼 FPU 是 Bit-exact Compare？</h2><div class="card">
+<p>Starter TB 的 comparison function 使用 <code>x === y</code>。因此：</p>
+<div class="flow"><span class="node">co[31:0]</span><span class="arr">===</span><span class="node">expected[31:0]</span><span class="arr">→</span><span class="node">完全相同才 PASS</span></div>
+<p>這不是用 decimal 的「差小於 0.0001 就算對」。Sign、Exponent、Fraction，甚至 signed zero / NaN pattern 等，都可能影響 bit-exact 結果。這也是 GRS/RNE 為什麼重要。</p></div></section>
+
+<section id="csv"><h2>十一、Pattern CSV 如何變成一筆 Transaction？</h2><div class="card good">
+<h3>ALU</h3><div class="eq">inst_id, inst_hex, a_hex, b_hex, exp_hex</div>
+<h3>FPU</h3><div class="eq">a_hex, b_hex, exp_hex, instruction</div>
+<div class="flow"><span class="node">$fopen</span><span class="arr">→</span><span class="node">$fgets</span><span class="arr">→</span><span class="node">$sscanf</span><span class="arr">→</span><span class="node">send_and_check</span><span class="arr">→</span><span class="node">DUT</span><span class="arr">→</span><span class="node">Compare</span></div>
+<p>因此 pattern 不是 RTL 的一部分，而是 verification stimulus + golden result。</p></div></section>
+
+<section id="quirks"><h2>十二、Starter FPU TB 兩個很重要的陷阱</h2><div class="card danger">
+<h3>陷阱 1：<code>while(!ready)</code> 沒有 transaction timeout</h3>
+<p>如果你的 FPU 永遠不拉 valid，TB 可以一直卡住。檔案後面的 <code>#(10*MAX)</code> 是 pattern loop 結束後的額外 simulation delay，不是 while loop 的 per-operation timeout。</p>
+<h3>陷阱 2：<code>if(n_fail &lt; 5)</code> 包住 PASS/FAIL 計數</h3>
+<p>原 starter TB 在 fail 到 5 筆之後，後續 transaction 的 <code>n_total</code> 仍可能增加，但 <code>n_pass</code> 與 <code>n_fail</code> 都不再更新。因此不要把 summary 中最多 5 個 FAIL 誤認成「總共只有 5 筆錯」。Debug 應從第一個 failure 找 root cause，再 full regression。</p></div></section>
+
+<section id="timeout"><h2>十三、自己做 Defense TB 時建議加入 Timeout</h2><div class="card note">
+<pre>int wait_cycles;
+wait_cycles = 0;
+
+while (!valid && wait_cycles &lt; 100) begin
+    @(posedge clk);
+    wait_cycles++;
+end
+
+if (!valid) begin
+    $display("[TIMEOUT] DUT never asserted valid");
+    $finish;
+end</pre>
+<p>這不是要求你修改官方 TB，而是自己建立 debug/hidden-defense testbench 時很有用。否則 handshake bug 會讓 simulation 看起來像「當機」。</p></div></section>
+
+<section id="wave"><h2>十四、Verdi / Waveform 應該看哪些訊號？</h2><div class="card good">
+<table><tr><th>優先順序</th><th>訊號</th><th>確認事項</th></tr>
+<tr><td>1</td><td>clk / rst</td><td>reset release 與 active edge 正確嗎？</td></tr>
+<tr><td>2</td><td>enable</td><td>request 是否真的出現在預期 posedge？</td></tr>
+<tr><td>3</td><td>instruction / ai / bi</td><td>enable=1 時 inputs 是否就是該筆 pattern？</td></tr>
+<tr><td>4</td><td>state / busy（若有）</td><td>transaction 是否進入計算狀態？</td></tr>
+<tr><td>5</td><td>co</td><td>結果在哪一個 cycle 變成正確？</td></tr>
+<tr><td>6</td><td>valid</td><td>是否與正確 co 同 cycle 對齊？</td></tr></table></div></section>
+
+<section id="debug"><h2>十五、Handshake FAIL Debug Master Flow</h2><div class="card danger">
+<div class="flow"><span class="node">Simulation Hang / Wrong Result</span><span class="arr">→</span><span class="node">clk?</span><span class="arr">→</span><span class="node">rst released?</span><span class="arr">→</span><span class="node">enable sampled?</span><span class="arr">→</span><span class="node">input captured?</span><span class="arr">→</span><span class="node">datapath finished?</span><span class="arr">→</span><span class="node">co correct?</span><span class="arr">→</span><span class="node">valid same cycle?</span></div>
+<table><tr><th>現象</th><th>先查</th></tr>
+<tr><td>完全沒輸出</td><td>clk / reset / enable</td></tr>
+<tr><td>TB 永遠跑不完</td><td>valid 是否永遠 0</td></tr>
+<tr><td>每筆答案像上一筆</td><td>co/valid 是否 off-by-one cycle</td></tr>
+<tr><td>第一筆錯、後面正常</td><td>reset initialization / stale register</td></tr>
+<tr><td>偶爾重複 transaction</td><td>enable edge/pulse handling</td></tr>
+<tr><td>co 波形正確但 FAIL</td><td>valid 時刻與 TB capture 時刻</td></tr></table></div></section>
+
+<section id="rules"><h2>十六、寫 FPU Control 時的實作規則</h2><div class="card good">
+<table><tr><th>規則</th><th>原因</th></tr>
+<tr><td>Reset 時 valid=0</td><td>避免 TB 誤認為已有有效答案。</td></tr>
+<tr><td>只在接受 request 時 capture inputs</td><td>避免 inputs 後續改變影響正在處理的 transaction。</td></tr>
+<tr><td>co 與 valid 同步</td><td>valid=1 的那一刻 co 必須正確。</td></tr>
+<tr><td>明確定義 valid 是 pulse 或 held-high</td><td>避免重複消費同一結果；本作業需配合 starter TB 行為。</td></tr>
+<tr><td>先用單筆 directed transaction 測 timing</td><td>比直接跑 2000 筆更容易看出 off-by-one。</td></tr>
+<tr><td>再跑完整 official regression</td><td>單筆成功不代表所有 transaction sequence 都正確。</td></tr></table></div></section>
+
+<section id="quiz"><h2>十七、學完後一定要回答得出來</h2><div class="card note">
+<table><tr><th>問題</th><th>答案</th></tr>
+<tr><td>enable 是什麼？</td><td>輸入 request 有效的控制訊號。</td></tr>
+<tr><td>valid 是什麼？</td><td>輸出 co 已有效的控制訊號。</td></tr>
+<tr><td>enable=1 是否代表 co 同 cycle 一定有效？</td><td>不一定；取決於 DUT latency/protocol。</td></tr>
+<tr><td>valid 永遠不來會怎樣？</td><td>starter FPU TB 卡在 while(!ready)。</td></tr>
+<tr><td>co 正確但 valid 早一拍？</td><td>仍可能 FAIL，因 TB capture 到錯誤資料。</td></tr>
+<tr><td>ALU 為何沒有 handshake？</td><td>此作業 ALU 是 combinational interface。</td></tr>
+<tr><td>FPU comparison 是 tolerance 嗎？</td><td>不是；starter TB 做 32-bit bit-exact comparison。</td></tr></table>
+<p><b>下一個先修主題：VCS / Verdi / Superlint。</b>也就是把 RTL/TB 寫完後，如何 compile → simulate → 看 waveform → lint → 找 root cause。</p></div></section>
+</main></body></html>

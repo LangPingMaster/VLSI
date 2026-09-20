@@ -1,0 +1,99 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IEEE-754 超詳細教學｜VSD HW1</title><style>body{margin:0;background:linear-gradient(135deg,#050b14,#0a1930);color:#edf5ff;font-family:system-ui,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.78}header{position:sticky;top:0;z-index:9;background:#07111ff2;border-bottom:1px solid #31506f;padding:12px 3vw}nav{display:flex;gap:7px;overflow:auto}nav a{white-space:nowrap;background:#68e0cf;color:#06111f;text-decoration:none;font-weight:800;padding:6px 9px;border-radius:8px}main{max-width:1480px;margin:auto;padding:28px 3vw 80px}h1{font-size:clamp(30px,4vw,50px)}h2{color:#68e0cf;border-bottom:1px solid #31506f;padding-bottom:7px;margin-top:42px}h3{color:#bed5ff}.card{background:#0d1b2ef2;border:1px solid #31506f;border-radius:15px;padding:19px;margin:17px 0}.good{border-left:5px solid #83e6a4}.note{border-left:5px solid #ffd166}.danger{border-left:5px solid #ff8585}table{width:100%;border-collapse:collapse;margin:12px 0}th,td{border:1px solid #31506f;padding:8px;vertical-align:top}th{background:#173450;color:#b7f2e9}.flow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px}.node{background:#142b49;border:1px solid #567aaa;border-radius:10px;padding:10px 12px;font-weight:800}.arr{font-size:24px;color:#68e0cf}code,pre{font-family:Consolas,"Cascadia Code",monospace}pre{background:#020812;padding:15px;border-radius:10px;overflow:auto}.eq{text-align:center;background:#10243c;padding:10px;border-radius:10px;font-size:1.08rem}.bits{display:grid;grid-template-columns:1fr 3fr 7fr;gap:3px;text-align:center;font-weight:800;margin:18px 0}.bits div{padding:15px 5px;border:1px solid #567aaa;border-radius:8px}.codewrap{max-height:82vh;overflow:auto;border:1px solid #31506f;border-radius:12px}.codetable{min-width:1150px;font-size:.9rem}.codetable th{position:sticky;top:0}.codetable td:first-child{width:50px;text-align:right;color:#8198b2}.codetable td:nth-child(2){background:#020812;white-space:pre}</style></head><body>
+<header><b>VSD HW1｜00-6 IEEE-754</b><nav><a href="#map">格式</a><a href="#normal">Normal</a><a href="#class">分類</a><a href="#examples">例子</a><a href="#zero">±0</a><a href="#sub">Subnormal</a><a href="#special">Inf/NaN</a><a href="#grs">GRS</a><a href="#rne">RNE</a><a href="#flow">FPU流程</a><a href="#code">逐行SV</a><a href="#debug">Debug</a></nav></header>
+<main>
+<h1>00-6｜IEEE-754 Single Precision：FPU 前一定要懂的浮點表示法</h1>
+<p>這一章以 HW1 講義的 IEEE-754/FPU 部分為主要依據：Single Precision 為 32 bits，由 <b>1-bit Sign + 8-bit Exponent + 23-bit Fraction</b> 組成；講義接著用 Mantissa、GRS、Round-to-even 與特殊值分類銜接 FPU ADD/SUB。以下先把「一個 32-bit hex 到底代表什麼浮點數」徹底拆開。</p>
+
+<section id="map"><h2>一、32-bit IEEE-754 的整體地圖</h2><div class="card good">
+<div class="bits"><div>Sign<br>1 bit<br>[31]</div><div>Exponent<br>8 bits<br>[30:23]</div><div>Fraction<br>23 bits<br>[22:0]</div></div>
+<div class="flow"><span class="node">32-bit Hex</span><span class="arr">→</span><span class="node">拆 S/E/F</span><span class="arr">→</span><span class="node">先 Classification</span><span class="arr">→</span><span class="node">Normal / Subnormal / Zero / Inf / NaN</span><span class="arr">→</span><span class="node">建立有效 significand</span><span class="arr">→</span><span class="node">FPU Datapath</span></div>
+</div></section>
+
+<section id="normal"><h2>二、Normal Number：為什麼公式是 (-1)^S × (1.F) × 2^(E-127)？</h2><div class="card note">
+<div class="eq">Value = (-1)<sup>S</sup> × (1.F) × 2<sup>E-127</sup></div>
+<table><tr><th>部分</th><th>意義</th></tr><tr><td>(-1)^S</td><td>S=0 為正；S=1 為負。</td></tr><tr><td>1.F</td><td>Normal number 的 leading 1 不存進 fraction，稱 hidden/implicit 1。</td></tr><tr><td>E-127</td><td>8-bit exponent 採 bias=127；stored E 不是直接的真實次方。</td></tr></table>
+<h3>例：2.5 = 0x40200000</h3><pre>0x40200000
+S = 0
+E = 10000000₂ = 128
+F = 01000000000000000000000₂
+
+1.F = 1.01₂ = 1.25
+真實 exponent = 128 - 127 = 1
+
+Value = (+1) × 1.25 × 2¹ = 2.5</pre>
+<p>這裡也提醒：課堂投影片範例欄位與十六進位標示若出現不一致，實作時應以 32-bit S/E/F 位元拆解與官方測資為準。本頁用一致的 <code>0x40200000 = 2.5</code> 示範位元計算。</p></div></section>
+
+<section id="class"><h2>三、最重要的 Classification</h2><div class="card danger">
+<table><tr><th>Exponent</th><th>Fraction</th><th>Type</th><th>Hidden bit</th></tr>
+<tr><td>0</td><td>0</td><td>Zero</td><td>不使用 Normal 的 hidden 1</td></tr>
+<tr><td>0</td><td>非 0</td><td>Subnormal</td><td><b>0.F</b></td></tr>
+<tr><td>1~254</td><td>任意</td><td>Normal</td><td><b>1.F</b></td></tr>
+<tr><td>255</td><td>0</td><td>Infinity</td><td>特殊值</td></tr>
+<tr><td>255</td><td>非 0</td><td>NaN</td><td>特殊值</td></tr></table>
+<p>HW1 講義明確列出 NaN、Inf、Zero 的辨認條件。<b>Subnormal 是必須額外注意的邊界：</b><code>E=0, F≠0</code> 不能誤判為 Zero；它也沒有 Normal number 的 hidden 1。</p></div></section>
+
+<section id="examples"><h2>四、常見 Bit Pattern 一次看懂</h2><div class="card"><table><tr><th>值</th><th>Hex</th><th>S</th><th>E</th><th>F</th><th>分類</th></tr><tr><td>+0</td><td><code>00000000</code></td><td>0</td><td><code>00000000</code> (0)</td><td><code>00000000000000000000000</code></td><td>Zero</td></tr><tr><td>-0</td><td><code>80000000</code></td><td>1</td><td><code>00000000</code> (0)</td><td><code>00000000000000000000000</code></td><td>Zero</td></tr><tr><td>1.0</td><td><code>3F800000</code></td><td>0</td><td><code>01111111</code> (127)</td><td><code>00000000000000000000000</code></td><td>Normal</td></tr><tr><td>2.5</td><td><code>40200000</code></td><td>0</td><td><code>10000000</code> (128)</td><td><code>01000000000000000000000</code></td><td>Normal</td></tr><tr><td>+∞</td><td><code>7F800000</code></td><td>0</td><td><code>11111111</code> (255)</td><td><code>00000000000000000000000</code></td><td>Infinity</td></tr><tr><td>-∞</td><td><code>FF800000</code></td><td>1</td><td><code>11111111</code> (255)</td><td><code>00000000000000000000000</code></td><td>Infinity</td></tr><tr><td>NaN example</td><td><code>7FC00000</code></td><td>0</td><td><code>11111111</code> (255)</td><td><code>10000000000000000000000</code></td><td>NaN</td></tr><tr><td>Smallest positive subnormal</td><td><code>00000001</code></td><td>0</td><td><code>00000000</code> (0)</td><td><code>00000000000000000000001</code></td><td>Subnormal</td></tr></table></div></section>
+
+<section id="zero"><h2>五、為什麼有 +0 和 -0？</h2><div class="card note"><pre>+0 = 0x00000000
+-0 = 0x80000000</pre>
+<p>兩者 exponent=0、fraction=0，只有 sign 不同。這對 HW1 很重要，因為講義在 FPU ADD/SUB special cases 明確寫到 <b>0+0 的結果可能是 +0 或 -0，取決於 signs</b>。因此不能看到「數值都是 0」就把 sign bit 永遠清成 0。</p></div></section>
+
+<section id="sub"><h2>六、Subnormal：為什麼不能補 hidden 1？</h2><div class="card danger">
+<p>Normal 使用 <code>1.F</code>；但 Subnormal 的 exponent field 是 0、fraction 非 0，它的有效 significand 是 <b>0.F</b>。所以硬體 unpack 時不能寫成「所有非 Zero 都補 1」。</p>
+<div class="flow"><span class="node">E=0?</span><span class="arr">→</span><span class="node">F=0 → Zero</span><span class="arr">；</span><span class="node">F≠0 → Subnormal</span></div>
+<p>講義這幾頁沒有進一步完整指定所有 subnormal arithmetic/underflow 的實作細節，因此最終 FPU 行為仍應以正式作業規格與官方 patterns 驗證；但分類時絕對不能把它當 Zero。</p></div></section>
+
+<section id="special"><h2>七、Infinity / NaN 與 HW1 Special Cases</h2><div class="card good">
+<table><tr><th>情況</th><th>HW1 講義指定結果</th></tr>
+<tr><td>任一 operand 是 NaN</td><td><code>32'hFFC00000</code></td></tr>
+<tr><td>任一 operand 是 Inf，且不是 sign-mismatch 的無效組合</td><td>±Inf：<code>FF800000</code> 或 <code>7F800000</code></td></tr>
+<tr><td>+Inf + -Inf 類型 sign mismatch</td><td><code>32'hFFC00000</code></td></tr>
+<tr><td>0 + 0</td><td>+0 或 -0，依 signs</td></tr>
+<tr><td>只有一個 operand 是 0</td><td>回傳另一個 operand</td></tr></table>
+<p>所以 FPU 正常 mantissa datapath 之前，通常要先做 <b>Classify → Special-case bypass</b>。</p></div></section>
+
+<section id="grs"><h2>八、Mantissa 與 GRS：IEEE-754 如何接到 FPU 加減法？</h2><div class="card note">
+<div class="flow"><span class="node">Unpack S/E/F</span><span class="arr">→</span><span class="node">比較 Ea/Eb</span><span class="arr">→</span><span class="node">較小 Mantissa 右移 ΔE</span><span class="arr">→</span><span class="node">保留 G/R/S</span><span class="arr">→</span><span class="node">Add/Sub</span><span class="arr">→</span><span class="node">Normalize</span><span class="arr">→</span><span class="node">Round</span><span class="arr">→</span><span class="node">Pack</span></div>
+<table><tr><th>Bit</th><th>講義定義</th></tr><tr><td>G — Guard</td><td>Mantissa 被 shift 出去的第一個 bit。</td></tr><tr><td>R — Round</td><td>第二個被 shift 出去的 bit。</td></tr><tr><td>S — Sticky</td><td>R 後面任何一個被 shift 掉的 bit 是 1，Sticky 就設成 1。</td></tr></table>
+<p>GRS 的目的不是「多存三個 fraction bits」，而是保留被 alignment 丟掉的資訊，讓最後 rounding 能做正確決策。</p></div></section>
+
+<section id="rne"><h2>九、Round-to-Even：GRS=100 為什麼還要看 LSB？</h2><div class="card danger">
+<table><tr><th>GRS</th><th>保留結果的 LSB</th><th>Action</th><th>原因</th></tr>
+<tr><td>0xx</td><td>X</td><td>Discard</td><td>未到 half-way</td></tr>
+<tr><td>101 / 110 / 111</td><td>X</td><td>Round up</td><td>超過 half-way</td></tr>
+<tr><td>100</td><td>1</td><td>Round up</td><td>剛好 tie，往偶數方向讓 LSB 變 0</td></tr>
+<tr><td>100</td><td>0</td><td>Discard</td><td>剛好 tie，現在已是 even</td></tr></table>
+<div class="eq">常用判斷式：round_up = G &amp; (R | S | LSB)</div>
+<p>這就是表格裡「GRS=100 為什麼還要看 LSB？」的答案：因為 <b>100 表示 exactly halfway</b>，Round-to-nearest-even 必須選最後保留 bit 為偶數（LSB=0）的那一邊。</p></div></section>
+
+<section id="flow"><h2>十、從 IEEE-754 到 HW1 FPU 的完整流程</h2><div class="card good">
+<div class="flow"><span class="node">ai / bi</span><span class="arr">→</span><span class="node">Unpack S/E/F</span><span class="arr">→</span><span class="node">Classify</span><span class="arr">→</span><span class="node">Special Case?</span><span class="arr">No →</span><span class="node">Effective Sign</span><span class="arr">→</span><span class="node">ΔE Align</span><span class="arr">→</span><span class="node">Mantissa Add/Sub</span><span class="arr">→</span><span class="node">Normalize</span><span class="arr">→</span><span class="node">GRS RNE</span><span class="arr">→</span><span class="node">Repack 32-bit</span><span class="arr">→</span><span class="node">co + valid</span></div>
+<p>講義的 ADD/SUB 流程正是：較小 exponent 的 mantissa 右移 <code>ΔE=|Ea-Eb|</code> → 依 signs/instruction 做 mantissa add/sub → carry 或 cancellation normalization → GRS rounding → repack。</p></div></section>
+
+<section id="code"><h2>十一、SystemVerilog Unpack / Classify：每行中文註解</h2><div class="card note"><b>這是教學片段，不是完整 FPU。</b>它專門示範 IEEE-754 bit-field extraction、classification 與 Normal/Subnormal hidden-bit 差異。</div>
+<div class="codewrap"><table class="codetable"><tr><th>行</th><th>SystemVerilog</th><th>中文註解</th></tr><tr><td>1</td><td><code>logic        sign;</code></td><td>宣告 sign bit；0 表示正、1 表示負。</td></tr><tr><td>2</td><td><code>logic [7:0]  exponent;</code></td><td>宣告 8-bit exponent field；Normal 數使用 bias 127。</td></tr><tr><td>3</td><td><code>logic [22:0] fraction;</code></td><td>宣告 23-bit stored fraction field。</td></tr><tr><td>4</td><td><code>logic        is_zero;</code></td><td>Zero 分類旗標。</td></tr><tr><td>5</td><td><code>logic        is_inf;</code></td><td>Infinity 分類旗標。</td></tr><tr><td>6</td><td><code>logic        is_nan;</code></td><td>NaN 分類旗標。</td></tr><tr><td>7</td><td><code>logic        is_subnormal;</code></td><td>Subnormal 分類旗標；這是 exp=0 但 fraction 非 0，不能誤判成 Zero。</td></tr><tr><td>8</td><td><code>logic        is_normal;</code></td><td>Normal finite number 分類旗標。</td></tr><tr><td>9</td><td><code>logic [23:0] mantissa;</code></td><td>運算用 significand/mantissa；Normal 會補 hidden 1。</td></tr><tr><td>10</td><td><code>&nbsp;</code></td><td>空行：分隔欄位、分類與 mantissa 建立三個區塊。</td></tr><tr><td>11</td><td><code>always_comb begin</code></td><td>純組合式 unpack/classify logic。</td></tr><tr><td>12</td><td><code>    sign     = ai[31];</code></td><td>取 IEEE-754 bit31 作 sign。</td></tr><tr><td>13</td><td><code>    exponent = ai[30:23];</code></td><td>取 bits[30:23] 作 exponent。</td></tr><tr><td>14</td><td><code>    fraction = ai[22:0];</code></td><td>取 bits[22:0] 作 stored fraction。</td></tr><tr><td>15</td><td><code>&nbsp;</code></td><td>空行：分隔欄位、分類與 mantissa 建立三個區塊。</td></tr><tr><td>16</td><td><code>    is_zero      = (exponent == 8&#x27;h00) &amp;&amp; (fraction == 23&#x27;d0);</code></td><td>exp=0 且 fraction=0 才是 Zero。</td></tr><tr><td>17</td><td><code>    is_subnormal = (exponent == 8&#x27;h00) &amp;&amp; (fraction != 23&#x27;d0);</code></td><td>exp=0 且 fraction≠0 是 Subnormal。</td></tr><tr><td>18</td><td><code>    is_inf       = (exponent == 8&#x27;hFF) &amp;&amp; (fraction == 23&#x27;d0);</code></td><td>exp=255 且 fraction=0 是 Infinity。</td></tr><tr><td>19</td><td><code>    is_nan       = (exponent == 8&#x27;hFF) &amp;&amp; (fraction != 23&#x27;d0);</code></td><td>exp=255 且 fraction≠0 是 NaN。</td></tr><tr><td>20</td><td><code>    is_normal    = (exponent != 8&#x27;h00) &amp;&amp; (exponent != 8&#x27;hFF);</code></td><td>exp 介於 1~254 時是 Normal finite number。</td></tr><tr><td>21</td><td><code>&nbsp;</code></td><td>空行：分隔欄位、分類與 mantissa 建立三個區塊。</td></tr><tr><td>22</td><td><code>    if (is_normal)</code></td><td>exp 介於 1~254 時是 Normal finite number。</td></tr><tr><td>23</td><td><code>        mantissa = {1&#x27;b1, fraction};</code></td><td>Normal：建立 24-bit 1.F。</td></tr><tr><td>24</td><td><code>    else</code></td><td>IEEE-754 unpack/classification 邏輯的一部分。</td></tr><tr><td>25</td><td><code>        mantissa = {1&#x27;b0, fraction};</code></td><td>非 Normal 的示意處理；Subnormal 沒有 hidden 1。完整 FPU 還需依規格處理 Zero/Inf/NaN bypass。</td></tr><tr><td>26</td><td><code>end</code></td><td>結束 always_comb。</td></tr></table></div></section>
+
+<section id="debug"><h2>十二、IEEE-754/FPU 最常見錯誤</h2><div class="card danger">
+<table><tr><th>錯誤</th><th>為什麼錯</th><th>怎麼查</th></tr>
+<tr><td>所有數都補 hidden 1</td><td>Subnormal 沒有 hidden 1</td><td>看 E=0,F≠0 case</td></tr>
+<tr><td>E 直接當真實 exponent</td><td>Normal 要減 bias 127</td><td>用 1.0/2.0/0.5 手算</td></tr>
+<tr><td>NaN 當 Inf</td><td>兩者 E=255，但 fraction 是否為 0 不同</td><td>同時看 E/F</td></tr>
+<tr><td>把 -0 強制變 +0</td><td>HW1 有 signed-zero special behavior</td><td>測 ±0 組合</td></tr>
+<tr><td>Alignment 直接丟 bits</td><td>rounding 需要 GRS</td><td>看 exponent gap 與 shifted-out bits</td></tr>
+<tr><td>GRS=100 永遠 round up</td><td>tie-to-even 還要看 retained LSB</td><td>各測 LSB=0/1</td></tr>
+<tr><td>Normalize 後忘記 exponent 改變</td><td>右移 carry 要 E+1；cancellation 左移要 E-k</td><td>波形同時看 mantissa/exponent</td></tr></table></div></section>
+
+<section id="quiz"><h2>十三、學完後一定要能回答</h2><div class="card good">
+<table><tr><th>#</th><th>問題</th><th>答案</th></tr>
+<tr><td>1</td><td>Single precision 幾 bits？</td><td>32：1 Sign + 8 Exponent + 23 Fraction。</td></tr>
+<tr><td>2</td><td>Normal 的 hidden bit？</td><td>1，所以 significand 是 1.F。</td></tr>
+<tr><td>3</td><td>Exponent bias？</td><td>127。</td></tr>
+<tr><td>4</td><td>E=0,F=0？</td><td>Zero。</td></tr>
+<tr><td>5</td><td>E=0,F≠0？</td><td>Subnormal。</td></tr>
+<tr><td>6</td><td>E=255,F=0？</td><td>Infinity。</td></tr>
+<tr><td>7</td><td>E=255,F≠0？</td><td>NaN。</td></tr>
+<tr><td>8</td><td>為何 alignment 要 GRS？</td><td>保留被 shift 掉的資訊供正確 rounding。</td></tr>
+<tr><td>9</td><td>GRS=100 為何看 LSB？</td><td>exact tie，要 round-to-even。</td></tr>
+<tr><td>10</td><td>FPU ADD/SUB 的主流程？</td><td>Unpack/Classify → Align → Add/Sub → Normalize → Round → Pack。</td></tr></table>
+<p><b>下一章：FPU Datapath</b>，就能把本章的 S/E/F、Special Cases、GRS/RNE 真正串成 ADD/SUB 硬體。</p></div></section>
+</main></body></html>

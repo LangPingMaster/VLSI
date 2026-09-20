@@ -1,0 +1,211 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VSD HW1 完整學習網站 Index</title>
+<style>
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 20% 0,#153457 0,#071426 38%,#030912 100%);color:#eef7ff;font-family:system-ui,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.7}
+header{padding:52px 5vw 34px;max-width:1600px;margin:auto}h1{font-size:clamp(34px,5vw,68px);line-height:1.08;margin:.2em 0}.sub{max-width:1100px;color:#c4d8e9;font-size:1.08rem}.hero{border:1px solid #315a7c;background:#0a1c30dd;border-radius:22px;padding:24px;margin-top:25px}.flow{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px}.flow span{padding:9px 12px;border-radius:10px;background:#102c49;border:1px solid #4776a1;font-weight:800}.flow b{color:#5de9d8;font-size:24px}
+main{max-width:1600px;margin:auto;padding:0 5vw 90px}.toolbar{position:sticky;top:0;z-index:20;padding:12px 0;background:#071426ef;backdrop-filter:blur(8px);display:flex;gap:8px;overflow:auto;border-bottom:1px solid #274965}.toolbar a{white-space:nowrap;color:#04101a;background:#5de9d8;text-decoration:none;padding:7px 12px;border-radius:999px;font-weight:850}
+h2{color:#66eadb;margin-top:42px;border-bottom:1px solid #315a7c;padding-bottom:8px}.intro{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.ibox{background:#0b1d31;border:1px solid #315a7c;border-radius:15px;padding:17px}.ibox b{color:#9ef2e8}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px}.card{min-height:100%}.picbtn{height:100%;display:block;color:inherit;text-decoration:none;background:linear-gradient(145deg,#0c1e32,#091525);border:1px solid #315a7c;border-radius:19px;overflow:hidden;transition:.2s;box-shadow:0 12px 30px #0004}.picbtn:hover{transform:translateY(-5px);border-color:var(--card);box-shadow:0 18px 40px color-mix(in srgb,var(--card) 24%,transparent)}.art{height:128px;position:relative;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--card),#102842);overflow:hidden}.art span{font-size:58px;z-index:2;filter:drop-shadow(0 5px 10px #0006)}.rings{position:absolute;width:190px;height:190px;border:22px solid #ffffff22;border-radius:50%;right:-40px;top:-60px}.rings:after{content:"";position:absolute;width:90px;height:90px;border:10px solid #ffffff24;border-radius:50%;left:-75px;top:85px}.meta{padding:18px}.meta h3{font-size:1.25rem;margin:8px 0;color:#fff}.meta p{color:#bfd0df;margin:.5em 0 1em}.badge{display:inline-block;background:color-mix(in srgb,var(--card) 28%,#0a1625);border:1px solid var(--card);padding:2px 8px;border-radius:999px;font-size:.8rem;font-weight:800}.go{display:inline-block;background:var(--card);color:#031019;font-weight:900;padding:8px 12px;border-radius:9px}.path{background:#0b1d31;border:1px solid #315a7c;border-radius:16px;padding:20px}code{font-family:Consolas,monospace;color:#bff9ef}footer{text-align:center;color:#8fa8bd;padding:30px}
+</style></head><body>
+<header><div class="badge" style="--card:#5de9d8">VLSI System Design · HW1</div><h1>完整學習網站 Index</h1>
+<p class="sub">這個首頁把你目前所有 HW1 教學網頁整合成一個入口。每張彩色圖片卡都是可點擊的 Button，下面不只列檔名，而是先告訴你「這一頁在學什麼、什麼時候應該看」。建議第一次依照 00-1 → 00-10 打基礎，再進入 01 → 10 完成作業；遇到問題時則直接從 Debug、Commands、Validation 頁切入。</p>
+<div class="hero"><div class="flow"><span>Specification</span><b>→</b><span>Encoding</span><b>→</b><span>RTL Datapath</span><b>→</b><span>TB Stimulus</span><b>→</b><span>Golden Compare</span><b>→</b><span>Waveform Debug</span><b>→</b><span>Lint</span><b>→</b><span>Regression</span></div></div></header>
+<main>
+<div class="toolbar"><a href="#route">建議路線</a><a href="#prereq">00 先修</a><a href="#develop">01–04 開發</a><a href="#verify">05–07 驗證</a><a href="#tools">08–09 工具/Debug</a><a href="#submit">10 提交</a></div>
+<section id="route"><h2>如何使用這套網站</h2><div class="intro">
+<div class="ibox"><b>第一次學</b><br>從 00-1 開始依序學到 00-10。目標不是背 code，而是能回答 signedness、decode、FPU rounding、handshake 與 debug 的原因。</div>
+<div class="ibox"><b>開始寫 HW1</b><br>先讀 01 題目解讀，再看 02 starter files，接著分別用 03 ALU、04 FPU 開發。</div>
+<div class="ibox"><b>開始驗證</b><br>05 看 pattern/TB 實例，06 跑 validation，07 補 hidden-test defense。</div>
+<div class="ibox"><b>遇到 FAIL</b><br>直接開 09 Debug，再搭配 08 Commands 與 Verdi waveform，不要只盯著最後 output 猜。</div>
+<div class="ibox"><b>準備繳交</b><br>最後進 10，確認 regression、lint、報告證據、hierarchy 與 tar 都是同一版 RTL。</div>
+</div></section>
+
+<section id="prereq"><h2>00｜先修知識：先把底層觀念補齊</h2><div class="grid">
+
+    <article class="card" data-group="先修">
+      <a class="picbtn" href="00_VSD_HW1_作業前必備知識_超詳細先修教學.html" style="--card:#42d3c7">
+        <div class="art"><span>🗺️</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">先修</span><h3>先修總覽</h3>
+        <p>建立整份 HW1 的知識地圖。先看 Binary/Hex、SystemVerilog、RISC-V Decode、ALU/DSP、IEEE-754、FPU、Testbench 與工具之間如何串起來。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="先修">
+      <a class="picbtn" href="00_1_Binary_Hex_補數_超詳細教學.html" style="--card:#4da3ff">
+        <div class="art"><span>🔢</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">先修</span><h3>00-1 Binary / Hex / 補數</h3>
+        <p>從 bit、nibble、十六進位一路到 N-bit unsigned/signed、二補數、sign extension、overflow、shift 與 32×32 multiplication。這是理解 SLT/SLTU、SRA、MULH、DSP signed lane 的基礎。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="先修">
+      <a class="picbtn" href="00_2_Combinational_Sequential_SystemVerilog_超詳細教學.html" style="--card:#7c83ff">
+        <div class="art"><span>⚙️</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">先修</span><h3>00-2 Combinational / Sequential + SystemVerilog</h3>
+        <p>說明組合邏輯與循序邏輯的根本差異，以及 =、&lt;=、always_comb、always_ff、assign、latch、clock/reset/FSM。讀完後才適合開始寫可綜合 RTL。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="先修">
+      <a class="picbtn" href="00_3_RISC_V_Decode_超詳細教學.html" style="--card:#b06cff">
+        <div class="art"><span>🧩</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">先修</span><h3>00-3 RISC-V Decode</h3>
+        <p>把 32-bit instruction 拆成 opcode、funct3、funct7、rs1/rs2/rd，並建立分層 decoder。直接連到 HW1 RV32IM、RV32B 與 Custom DSP operation selection。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="先修">
+      <a class="picbtn" href="00_4_ALU_超詳細教學.html" style="--card:#ec6fc1">
+        <div class="art"><span>➕</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">先修</span><h3>00-4 ALU</h3>
+        <p>完整理解 ADD/SUB、SLT/SLTU、shift/rotate、MUL family、RV32B 與 DSP 在 ALU datapath 中如何被選擇；特別強調 signedness、位寬與高 32-bit product。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="先修">
+      <a class="picbtn" href="00_5_DSP_超詳細教學.html" style="--card:#ff7a7a">
+        <div class="art"><span>🎛️</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">先修</span><h3>00-5 DSP</h3>
+        <p>專門處理 HW1 的 DOTP4、SADD8、SSUB8、ABS、CLIP8。核心是 32-bit word 內的 4×8-bit signed lanes、per-lane saturation、widening 與 packing。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="先修">
+      <a class="picbtn" href="00_6_IEEE_754_超詳細教學.html" style="--card:#ffad5a">
+        <div class="art"><span>🧮</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">先修</span><h3>00-6 IEEE-754</h3>
+        <p>從 FP32 的 Sign / Exponent / Fraction 開始，建立 Zero、Subnormal、Normal、Infinity、NaN 的分類觀念，為 FPU ADD/SUB 與 special cases 打底。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="先修">
+      <a class="picbtn" href="00_7_FPU_Datapath_超詳細教學.html" style="--card:#f4d35e">
+        <div class="art"><span>🔬</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">先修</span><h3>00-7 FPU Datapath</h3>
+        <p>把 FPU 拆成 Unpack → Classify → Special Case → Align → Add/Sub → Normalize → Round → Pack，並連到 enable/valid 的 sequential control。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="先修">
+      <a class="picbtn" href="00_8_GRS_RNE_超詳細教學.html" style="--card:#8bd450">
+        <div class="art"><span>🎯</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">先修</span><h3>00-8 GRS / RNE</h3>
+        <p>專攻 Guard、Round、Sticky 與 Round-to-Nearest Ties-to-Even。說明 GRS=100 為何必須再看 retained LSB，以及 rounding carry 如何再次影響 exponent。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="先修">
+      <a class="picbtn" href="00_9_TB_Handshake_超詳細教學.html" style="--card:#3ddc97">
+        <div class="art"><span>🤝</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">先修</span><h3>00-9 TB / Handshake</h3>
+        <p>以 starter FPU_tb 為核心，逐 clock 解釋 enable、valid、posedge、latency、transaction、bit-exact compare，以及 valid 永遠不來時 TB 為何會 hang。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="先修">
+      <a class="picbtn" href="00_10_VCS_Verdi_Superlint_超詳細教學.html" style="--card:#36c5f0">
+        <div class="art"><span>🛠️</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">先修</span><h3>00-10 VCS / Verdi / Superlint</h3>
+        <p>最後的工具先修：如何 compile/elaborate/simulate、產生 FSDB、用 Verdi 找第一個錯誤訊號，以及用 Superlint 檢查 width、signedness、latch、dead logic。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+</div></section>
+<section id="develop"><h2>01–04｜從 Specification 到 RTL 開發</h2><div class="grid">
+
+    <article class="card" data-group="開發">
+      <a class="picbtn" href="01_題目解讀_超詳細完整版.html" style="--card:#4c8bf5">
+        <div class="art"><span>📘</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">開發</span><h3>01 題目解讀</h3>
+        <p>逐頁整理 HW1 specification：ALU/FPU I/O、31 個 ALU operations、DSP 規則、IEEE-754、GRS/RNE、FPU protocol、作業目錄、評分與繳交要求。建議正式開工前完整讀一次。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="開發">
+      <a class="picbtn" href="02_files_tb_超詳細逐行中文註解版.html" style="--card:#8a7cf6">
+        <div class="art"><span>📂</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">開發</span><h3>02 Starter Files / Testbench</h3>
+        <p>把 ALU.sv、FPU.v、ALU_tb.sv、FPU_tb.sv 的角色拆開，並逐行解釋 starter TB 如何讀 CSV、送 stimulus、等待 valid、compare golden answer。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="開發">
+      <a class="picbtn" href="03_ALU_超詳細開發_TB_逐行中文註解版.html" style="--card:#d86ce8">
+        <div class="art"><span>🧠</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">開發</span><h3>03 ALU 開發</h3>
+        <p>從 decoder、operation family、datapath、signed/unsigned、shift、multiply、DSP 到 TB 驗證，整理成可實際依序實作 ALU 的開發章節。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="開發">
+      <a class="picbtn" href="04_FPU_超詳細_Datapath_TB_逐行中文註解版.html" style="--card:#f16d9b">
+        <div class="art"><span>🧪</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">開發</span><h3>04 FPU 開發</h3>
+        <p>聚焦完整 FPU 實作思路：special cases、alignment、mantissa arithmetic、normalization、GRS/RNE、packing 與 valid timing，並配合 FPU_tb 分析。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+</div></section>
+<section id="verify"><h2>05–07｜Patterns、Validation、Hidden Defense</h2><div class="grid">
+
+    <article class="card" data-group="驗證">
+      <a class="picbtn" href="05_Patterns_TB_SV_TCL_超詳細逐行中文註解_20Examples.html" style="--card:#ff8b5c">
+        <div class="art"><span>🧾</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">驗證</span><h3>05 Patterns / TB / SV / TCL</h3>
+        <p>把 pattern CSV、Testbench、RTL 與 TCL 放在同一頁對照，並用實際 pattern examples 說明一筆測資如何一路走到 DUT 與 golden comparison。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="驗證">
+      <a class="picbtn" href="05_1_ALU_5Examples_TB_SV_TCL_逐行中文註解.html" style="--card:#4d9cff">
+        <div class="art"><span>🟦</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">驗證</span><h3>05-1 ALU 五筆實例</h3>
+        <p>挑出實際 ALU pattern，從 instruction hex 解碼到 A/B/expected，再對照 TB 與 RTL。適合在開始 full regression 前做手算與 directed-test 練習。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="驗證">
+      <a class="picbtn" href="05_1_FPU_5Examples_TB_SV_TCL_逐行中文註解.html" style="--card:#a66cff">
+        <div class="art"><span>🟪</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">驗證</span><h3>05-1 FPU 五筆實例</h3>
+        <p>以實際 MIN/MAX/ADD/SUB patterns 展示 FPU transaction，從 CSV 到 enable/valid，再到 bit-exact expected result。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="驗證">
+      <a class="picbtn" href="06_Validation_完整流程_逐行指令中文註解.html" style="--card:#49cf84">
+        <div class="art"><span>✅</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">驗證</span><h3>06 Validation</h3>
+        <p>完整驗證 runbook：目錄檢查、compile、ALU/FPU official regression、FSDB、Verdi、Superlint，以及不同錯誤類型應該從哪裡開始查。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="驗證">
+      <a class="picbtn" href="07_Hidden_Test_Defense_超詳細流程_逐行中文註解.html" style="--card:#efb84c">
+        <div class="art"><span>🛡️</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">驗證</span><h3>07 Hidden-Test Defense</h3>
+        <p>不是猜 hidden CSV，而是從 specification 系統化建立 boundary partitions、directed tests、random/differential tests，再用最小 reproducer 與 waveform 找 root cause。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+</div></section>
+<section id="tools"><h2>08–09｜Commands、Waveform、Debug</h2><div class="grid">
+
+    <article class="card" data-group="工具">
+      <a class="picbtn" href="08_Commands_VCS_Verdi_Superlint_tar_超詳細逐行中文註解.html" style="--card:#51b7d9">
+        <div class="art"><span>⌨️</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">工具</span><h3>08 Commands</h3>
+        <p>把 VCS、Verdi、Superlint、pwd/ls 與 tar commands 集中成可直接照著操作的指令手冊，並說明每個 option 與常見 path error。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+    <article class="card" data-group="工具">
+      <a class="picbtn" href="09_Debug_FAIL_Warning_超詳細流程_逐行中文註解.html" style="--card:#ff6b6b">
+        <div class="art"><span>🐞</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">工具</span><h3>09 Debug FAIL / Warning</h3>
+        <p>看到 Compile Error、FAIL、X、Hang、Lint Warning 時的診斷流程。重點是保存第一個錯誤、建立最小案例、在 waveform 找第一個錯訊號，而不是盲目改 code。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+</div></section>
+<section id="submit"><h2>10｜Final Report / Submission</h2><div class="grid">
+
+    <article class="card" data-group="提交">
+      <a class="picbtn" href="10_Final_Report_Submission_超詳細流程_逐行中文註解.html" style="--card:#67d5b5">
+        <div class="art"><span>📦</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">提交</span><h3>10 Final Report / Submission</h3>
+        <p>最後收尾：RTL freeze、regression、Superlint、waveform/log 證據、StudentID.pdf 報告架構、hierarchy check、tar -cvf 與 tar -tf。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+</div></section>
+<section><h2>整體流程總覽</h2><div class="grid">
+
+    <article class="card" data-group="總覽">
+      <a class="picbtn" href="VSD_HW1_Specification_to_Regression_完整流程.html" style="--card:#00d7c0">
+        <div class="art"><span>🚀</span><div class="rings"></div></div>
+        <div class="meta"><span class="badge">總覽</span><h3>Specification → Regression 總流程</h3>
+        <p>把整個作業濃縮成 Specification → Encoding → RTL Datapath → TB Stimulus → Golden Compare → Waveform Debug → Lint → Regression，適合作為全套教材的總導航圖。</p><div class="go">開啟完整子頁 <b>→</b></div></div>
+      </a>
+    </article>
+</div><div class="path"><b>推薦完整閱讀順序：</b><br>
+00 總覽 → 00-1 Binary/Hex → 00-2 SV → 00-3 Decode → 00-4 ALU → 00-5 DSP → 00-6 IEEE-754 → 00-7 FPU Datapath → 00-8 GRS/RNE → 00-9 TB/Handshake → 00-10 VCS/Verdi/Lint → 01 題目 → 02 Files/TB → 03 ALU → 04 FPU → 05 Patterns → 06 Validation → 07 Hidden Defense → 08 Commands → 09 Debug → 10 Submission。
+</div></section>
+</main><footer>VSD HW1 Complete Learning Site · 所有連結均使用 ZIP 內相對路徑，可離線開啟。</footer></body></html>
